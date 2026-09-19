@@ -1,0 +1,8 @@
+{
+  "influenza-a": ["Influenza A virus"],
+  "influenza-b": ["Influenza B virus"],
+  "rhinovirus": ["rhinovirus", "Human rhinovirus"],
+  "adenovirus": ["Human adenovirus", "Human mastadenovirus"],
+  "human-coronavirus": ["Human coronavirus", "HCoV-229E", "HCoV-NL63", "HCoV-OC43", "HCoV-HKU1"],
+  "sars-cov-2": ["SARS-CoV-2", "Severe acute respiratory syndrome coronavirus 2"]
+}

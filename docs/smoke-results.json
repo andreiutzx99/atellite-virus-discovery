@@ -1,0 +1,30 @@
+[
+  {
+    "run": "live-smoke",
+    "runs": 7,
+    "eligible": 0,
+    "status": "complete",
+    "identical_report_hashes": true,
+    "accessions": [
+      "ERR17600481",
+      "ERR17600482",
+      "ERR17600510",
+      "ERR17600518",
+      "ERR17600542",
+      "ERR17600554",
+      "ERR17600561"
+    ]
+  },
+  {
+    "run": "transcriptomic-smoke",
+    "runs": 3,
+    "eligible": 3,
+    "status": "complete",
+    "identical_report_hashes": true,
+    "accessions": [
+      "SRR39581559",
+      "SRR39581560",
+      "SRR39581561"
+    ]
+  }
+]
