@@ -1,0 +1,137 @@
+{
+  "software_version": "0.2.0",
+  "software_test_evidence": "Separately recorded in docs/STATUS.md",
+  "live_started_utc": "2026-09-19T21:27:05.174680+00:00",
+  "live_finished_utc": "2026-09-19T21:46:24.707025+00:00",
+  "live_metadata_runs": 4,
+  "offline_network_disabled": true,
+  "recomputed_qc": false,
+  "identical_qc_output_hashes": true,
+  "biological_validation": "not_performed",
+  "runs": [
+    {
+      "accession": "SRR3157747",
+      "downloads": [
+        {
+          "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR315/007/SRR3157747/SRR3157747.fastq.gz",
+          "name": "SRR3157747.fastq.gz",
+          "md5": "130467dda3ac0195b84b69398d9fa849",
+          "bytes": 169330557,
+          "role": "single",
+          "sha256": "3f63f0c8b223234f4bf26c703bdb7a8d0fb18bf8fe6e87df61539f56b7f75ddb",
+          "verified": true
+        }
+      ],
+      "before": {
+        "reads": 5124569,
+        "bases": 512456900,
+        "mean_phred": 30.0,
+        "q20_fraction": 1.0,
+        "q30_fraction": 1.0,
+        "gc_fraction_all_bases": 0.3770241536410184,
+        "base_counts": {
+          "N": 27885,
+          "A": 159853300,
+          "T": 159367086,
+          "C": 99695626,
+          "G": 93513003
+        },
+        "length_histogram": {
+          "100": 5124569
+        }
+      },
+      "after": {
+        "reads": 5123414,
+        "bases": 510559570,
+        "mean_phred": 30.0,
+        "q20_fraction": 1.0,
+        "q30_fraction": 1.0,
+        "gc_fraction_all_bases": 0.3765211334693031,
+        "base_counts": {
+          "N": 25085,
+          "A": 159224271,
+          "T": 159073746,
+          "C": 99201748,
+          "G": 93034720
+        },
+        "length_histogram": {
+          "100": 5060645,
+          "74": 1573,
+          "78": 1718,
+          "76": 1734,
+          "56": 656,
+          "81": 1973,
+          "63": 1122,
+          "77": 2058,
+          "30": 107,
+          "80": 2365,
+          "88": 3136,
+          "52": 720,
+          "33": 114,
+          "35": 122,
+          "57": 802,
+          "84": 2582,
+          "72": 1389,
+          "69": 1283,
+          "58": 946,
+          "65": 1045,
+          "68": 1370,
+          "79": 1837,
+          "66": 1096,
+          "82": 2622,
+          "85": 2509,
+          "67": 1171,
+          "59": 965,
+          "87": 2854,
+          "86": 2588,
+          "75": 1600,
+          "60": 1105,
+          "51": 469,
+          "53": 783,
+          "62": 1079,
+          "70": 1184,
+          "71": 1319,
+          "61": 1105,
+          "40": 213,
+          "55": 695,
+          "83": 2629,
+          "32": 113,
+          "64": 1056,
+          "41": 252,
+          "39": 217,
+          "73": 1388,
+          "46": 388,
+          "54": 712,
+          "50": 675,
+          "42": 232,
+          "38": 171,
+          "31": 111,
+          "49": 490,
+          "45": 310,
+          "37": 178,
+          "48": 449,
+          "47": 486,
+          "43": 271,
+          "44": 325,
+          "34": 121,
+          "36": 186
+        }
+      },
+      "counts": {
+        "reads_with_adapter_match": 63638,
+        "bases_trimmed": 1848392,
+        "retained_reads": 5123414,
+        "retained_single_reads": 5123414,
+        "rejected_reads": 1155
+      },
+      "rejection_reasons": {
+        "too_short_after_trimming": 865,
+        "too_many_N_bases": 290
+      },
+      "output_sha256": {
+        "clean_single.fastq.gz": "3baf11403d141b6c2a4685f0c11beef8f846cb92745b96903a2b1c6e62f36660",
+        "rejected.fastq.gz": "9c416fe76b6b023352a4e778d8025e78b08adde3e768e3376266f9b75ad13a33"
+      }
+    }
+  ]
+}

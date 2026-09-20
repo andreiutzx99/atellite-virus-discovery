@@ -17,9 +17,11 @@ def discover(helper, limit, min_spots, include_controls, directory, offline=Fals
         raise ValueError("limit must be 1–1000 and min_spots must be nonnegative")
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    config = dict(helper=helper, experiment_limit=limit, min_spots=min_spots,
-                  include_study_context=include_controls, query=query or helper_query(helper), version=__version__)
     config_path = directory / "parameters.json"
+    stored = json.loads(config_path.read_text()) if config_path.exists() else {}
+    resolved_query = query or (stored.get("query") if stored.get("helper") == helper else None) or helper_query(helper)
+    config = dict(helper=helper, experiment_limit=limit, min_spots=min_spots,
+                  include_study_context=include_controls, query=resolved_query, version=__version__)
     if config_path.exists() and json.loads(config_path.read_text()) != config:
         raise ValueError("This output directory belongs to different parameters. Choose a new run directory.")
     config_path.write_text(json.dumps(config, indent=2))
@@ -36,10 +38,28 @@ def discover(helper, limit, min_spots, include_controls, directory, offline=Fals
             handle.write(datetime.now(timezone.utc).isoformat() + " " + message + "\n")
     try:
         log("Searching NCBI SRA metadata")
-        search = client.search(config["query"], limit)
-        manifest["search"] = search
-        for start in range(0, len(search["ids"]), 20):
-            rows.extend(parse_packages(client.fetch(search["ids"][start:start + 20]), helper))
+        # Avoid spending the entire pilot budget on one recently deposited
+        # study. Sample at most two experiments before trying another study.
+        seen_ids, seen_studies, seen_experiments = set(), set(), set()
+        manifest["search_rounds"] = []
+        while len(seen_ids) < limit:
+            exclusions = sorted(seen_studies | seen_experiments)
+            term = config["query"]
+            if exclusions:
+                term += " NOT (" + " OR ".join(x + "[All Fields]" for x in exclusions) + ")"
+            search = client.search(term, min(2, limit - len(seen_ids)))
+            manifest["search_rounds"].append({"query": term, **search})
+            ids = [uid for uid in search["ids"] if uid not in seen_ids]
+            if not ids:
+                break
+            seen_ids.update(ids)
+            batch = parse_packages(client.fetch(ids), helper)
+            rows.extend(batch)
+            seen_studies.update(r["study_accession"] for r in batch if r.get("study_accession"))
+            seen_experiments.update(r["experiment_accession"] for r in batch if r.get("experiment_accession"))
+            if not batch:
+                break
+        manifest["examined_experiment_ids"] = sorted(seen_ids)
         if include_controls:
             studies = sorted({r["study_accession"] for r in rows if r.get("study_accession")})
             # Explicit bounded expansion: not a claim of complete control ascertainment.

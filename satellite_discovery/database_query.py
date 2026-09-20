@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import time
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -13,7 +14,16 @@ BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 
 
 def helper_query(helper):
-    return "(" + " OR ".join('"' + term + '"[All Fields]' for term in HELPERS[helper]) + ")"
+    terms = "(" + " OR ".join('"' + term + '"[All Fields]' for term in HELPERS[helper]) + ")"
+    # Target broad libraries before applying the experiment budget. Amplicon runs
+    # otherwise dominate recent respiratory-virus submissions.
+    libraries = '("RNA-Seq"[Strategy] OR ("WGS"[Strategy] AND "METAGENOMIC"[Source]))'
+    if helper == "adenovirus":
+        libraries = '("RNA-Seq"[Strategy] OR "WGS"[Strategy])'
+    # Mature records are more likely to have archive-generated FASTQ mirrors.
+    # The exact cutoff is recorded in parameters.json and reused on resume.
+    cutoff = (date.today() - timedelta(days=90)).strftime("%Y/%m/%d")
+    return terms + ' AND ' + libraries + ' AND "ILLUMINA"[Platform] NOT "PCR"[Selection] AND ("1900/01/01"[Publication Date] : "' + cutoff + '"[Publication Date])'
 
 
 class Client:
@@ -80,7 +90,7 @@ class Client:
         translation = None
         for start in range(0, limit, 100):
             result = json.loads(self.get(BASE + "esearch.fcgi", {
-                "db": "sra", "term": query, "retmode": "json", "sort": "pub date",
+                "db": "sra", "term": query, "retmode": "json", "sort": "relevance",
                 "retstart": start, "retmax": min(100, limit - start)}))["esearchresult"]
             count = int(result["count"])
             translation = result.get("querytranslation")

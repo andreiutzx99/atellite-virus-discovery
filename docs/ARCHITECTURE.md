@@ -2,7 +2,7 @@
 
 ## Boundaries and present scope
 
-Phase 1 establishes this repository and contracts; Phase 2 implements the metadata path. Everything below after metadata triage is a **design**, not an executable or tested sequence workflow. The smallest runnable proof-of-concept is helper selection → bounded SRA search → per-run metadata → ENA file lookup → transparent shortlist → replayable report. A biological proof-of-concept is a separate future milestone.
+Phases 1–2 establish the repository and metadata path. Version 0.2.0 adds phase 3: budgeted ENA download with checksums and a portable baseline QC engine. Mapping and all later sequence inference remain a **design**, not executable or validated analyses. The runnable proof-of-concept extends to original/trimmed FASTQ and QC metrics. Biological satellite rediscovery is a separate future milestone.
 
 Use a Python control layer with a prompt-based CLI now and a local web interface later. The future web interface submits jobs to a worker and displays stage logs, disk estimates, validation state and cancellation/resume controls. Use Nextflow DSL2 for expensive read-processing stages, SQLite for local catalogue/provenance, and content-addressed reference snapshots. Run Linux tools through WSL2, a Linux host or an HPC executor. Keep download/compute budgets explicit; 100 datasets can have radically different costs.
 
@@ -75,6 +75,8 @@ Planned directories: `workflow/modules/`, `config/references/`, `benchmarks/`, `
 Tool choices are evaluation candidates, not installed or pinned dependencies in this release. Primary documentation: [Nextflow resume](https://docs.seqera.io/nextflow/cache-and-resume), [fastp](https://github.com/OpenGene/fastp), [SRA Toolkit](https://github.com/ncbi/sra-tools), [SAMtools](https://www.htslib.org/), [SPAdes](https://github.com/ablab/spades), [MEGAHIT](https://github.com/voutcn/megahit), [BLAST](https://blast.ncbi.nlm.nih.gov/doc/blast-help/), [DIAMOND](https://github.com/bbuchfink/diamond). Verify compatibility and freeze exact versions/container digests at implementation time.
 
 ## Reference registry
+
+Phase 3 implementation note: `sequence_downloader.py`, `quality_control.py` and `read_workflow.py` implement ENA-only retrieval and the standard-library QC baseline described in the README. The module table above retains mature tool choices; SRA Toolkit, fastp and MultiQC integration are not yet implemented. Read preparation can be exercised before biological validation; the validation gate applies to exploratory candidate discovery rather than routine download/QC.
 
 Represent each reference collection with category, source URL, accessions **with version**, release/retrieval date, taxonomy snapshot, licence, SHA256, build command, tool version and benchmark holdout exclusions. Categories: known satellites/satellite RNAs; helper-dependent elements; documented DVGs; target/related viral genomes including segments; human genome/transcriptome; microbial references; vectors/synthetic constructs; adapters; and annotated reagent/cell-line contaminants.
 
