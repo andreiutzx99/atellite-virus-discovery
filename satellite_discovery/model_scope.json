@@ -1,0 +1,15 @@
+{
+  "policy_version": "named-laboratory-models-v1",
+  "models": {
+    "oc43-vr1558": {"name": "Human coronavirus OC43", "catalog": "VR-1558", "organism_terms": ["OC43", "HCoV-OC43"], "strain_terms": [], "source": "https://www.atcc.org/products/vr-1558"},
+    "229e-vr740": {"name": "Human coronavirus 229E", "catalog": "VR-740", "organism_terms": ["229E", "HCoV-229E"], "strain_terms": [], "source": "https://www.atcc.org/products/vr-740"},
+    "hpiv3-c243": {"name": "Human parainfluenza virus 3 C 243", "catalog": "VR-93", "organism_terms": ["Human parainfluenza virus 3", "HPIV-3", "HPIV3"], "strain_terms": ["C 243", "C243"], "source": "https://www.atcc.org/products/vr-93"},
+    "hrv1a-2060": {"name": "Human rhinovirus 1A 2060", "catalog": "VR-1559", "organism_terms": ["Human rhinovirus 1A", "HRV1A", "HRV-1A"], "strain_terms": ["2060"], "source": "https://www.atcc.org/products/vr-1559"},
+    "pr8-vr1469": {"name": "Influenza A PR8 A/PR/8/34", "catalog": "VR-1469", "organism_terms": ["Influenza A", "H1N1"], "strain_terms": ["A/PR/8/34", "A/Puerto Rico/8/1934", "PR8"], "source": "https://www.atcc.org/products/vr-1469"},
+    "rotavirus-wa": {"name": "Rotavirus A Wa", "catalog": "VR-2018", "organism_terms": ["Rotavirus A", "Rotavirus"], "strain_terms": ["Wa"], "source": "https://www.atcc.org/products/vr-2018"},
+    "rsv-long": {"name": "Human respiratory syncytial virus Long", "catalog": "VR-26", "organism_terms": ["Respiratory syncytial virus", "RSV", "hRSV"], "strain_terms": ["Long"], "source": "https://www.atcc.org/products/vr-26"},
+    "adenovirus2-vr846": {"name": "Human adenovirus 2", "catalog": "VR-846", "organism_terms": ["Human adenovirus 2", "HAdV-2", "HAdV2"], "strain_terms": [], "source": "https://www.atcc.org/products/vr-846"}
+  },
+  "excluded_mentions": ["SARS-CoV", "SARS-CoV-2", "SARS coronavirus", "Severe acute respiratory syndrome", "MERS", "Middle East respiratory syndrome", "H5N1", "H5N6", "H7N9", "H7N7", "highly pathogenic", "Ebola", "Marburg", "Nipah", "Hendra", "Variola"],
+  "review_mentions": ["reassortant", "recombinant", "chimeric", "engineered", "reverse genetics", "coinfection", "co-infection", "mixed infection", "mouse-adapted", "mouse adapted"]
+}

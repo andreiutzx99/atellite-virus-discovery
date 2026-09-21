@@ -1,22 +1,27 @@
 # Module contracts and incomplete stages
 
-This document defines artifact boundaries, not implementations or validated biological methods. Existing source modules remain in place. Listing a stage does not establish its readiness for real-data execution.
+These boundaries preserve modularity. They are not implementations of the original discovery methods. Every external adapter must receive a schema version, input paths and SHA256 hashes, method/version and parameters. It must return `complete`, `failed`, `blocked_dependency`, or `not_implemented`, plus output hashes and logs. Unimplemented stages emit **no findings** and block dependent execution. Missing evidence is never a negative observation. No arbitrary score is a calibrated probability.
 
-All stages should accept an input manifest with schema version, artifact paths, SHA256 hashes, method identifier and parameters. Results must declare one of `complete`, `failed`, `blocked_dependency`, or `not_implemented`. Unimplemented stages return no observations and must stop dependent execution. Missing evidence must never be converted to a negative finding.
-
-| Stage | Input artifact | Output artifact | Current limitation |
+| Interface | Expected input | Expected output | Released implementation / remaining boundary |
 |---|---|---|---|
-| Acquisition/QC/audit | Archived dataset metadata and verified files | QC files, metrics and integrity manifests | Existing implemented components preserved |
-| Library metadata review | Existing dataset metadata snapshot | RNA/DNA source evidence and conflict report | Implemented read-only; no automatic tool selection |
-| Read mapping/extraction | Verified reads and reference manifest | Alignment artifacts and partition manifests | Existing adapter; synthetic testing does not establish biological suitability |
-| Assembly | Verified input manifest | Contig file, runtime log and checksum manifest | Existing SPAdes adapter lacks local runtime validation; Tadpole is a standalone synthetic diagnostic |
-| Database comparison | Supplied sequences and versioned reference manifest | Descriptive matches and method provenance | Existing BLAST adapter; no validated comprehensive reference panel |
-| Contamination/artefact assessment | Descriptive matches and technical-control observations | Evidence flags and reasons, with unknown status permitted | Supplied-match/control evidence review implemented; automatic searches and biological validation pending |
-| Coverage/composition/ORF summary | Supplied sequence/alignment artifacts | Descriptive measurements with units and missing-data status | Basic composition and supplied interval/SAM coverage implemented; ORF reporting pending |
-| Recurrence/study comparisons | Unique sample table and explicit observation table | Stratified counts, SQLite export and HTML/CSV report | Implemented in observation_report; no read-level detection |
-| Clustering/catalogue/FASTA export | Independently supplied sequence records | Exact-sequence groups, SQLite and normalized FASTA export | Exact grouping/import/export and cross-import links implemented; approximate clustering pending |
-| Functional compatibility and biological identity | Independent external assessment, if available | Cited external conclusion and provenance | No implementation or automatic inference in this application |
+| Acquisition/QC/integrity | Archive metadata or existing QC folder | Verified FASTQ, metrics, source/output digests | Implemented; SRA Toolkit conversion unavailable |
+| Library review | datasets.json | RNA/DNA/mixed/unknown and conflict CSV/JSON/HTML | Implemented; does not select tools automatically |
+| Mapping | Verified read manifest plus independently supplied versioned reference manifest | SAM/BAM, command/version/log and conservation counts | Historical local prototype not released; automated helper-discovery mapping unsupported here |
+| Read partition | Existing alignments plus source-read IDs | Mapped/unmapped/partial partitions and exhaustive count manifest | Not released; no discovery read extraction is performed |
+| Assembly | Verified read manifest, external assembler method/version/parameters | FASTA, logs, graph if available and hashes | SPAdes runtime unavailable; Tadpole artificial-fixture diagnostic only; no automatic novel-element reconstruction |
+| BAM/CRAM decoder | Existing BAM/CRAM and reference manifest where required | Validated alignment-block stream with coordinate convention and exclusions | Dependency gap; SAM/gzip-SAM/interval alternative implemented |
+| Database search | Supplied sequences and independently curated reference manifest | Standard nucleotide BLAST table, database versions, command and logs | Execution adapter not released; no auto-curated biological panel |
+| BLAST evidence import | Existing 12-column nucleotide outfmt 6 and feature/reference manifests | Normalized matches, orientation, reported-hit status, provenance | Implemented; no inference from no-hit status |
+| Contamination review | Feature lengths, supplied matches and explicit technical-control calls | Per-role union coverage, evidence flags and uncertainty | Implemented; no validated automatic rejection or contamination probabilities |
+| Sequence inventory | Supplied nucleotide FASTA | Length, GC, ambiguity, single-symbol entropy, exact duplicates, SQLite/FASTA | Implemented; no biological low-complexity rejection threshold |
+| Coverage | Existing interval CSV or SAM/gzip-SAM | Alignment counts, covered bases, depth/breadth and exclusions | Implemented; does not establish unique molecule support or reliable assembly |
+| DVG / recombination assessment | External independently validated assessment with cited source | External category, provenance, uncertainty and assessed sequence ID | No automatic reconstruction, terminal/packaging analysis or functional inference |
+| ORF/domain/motif/structure assessment | External annotated records with method/reference provenance | Descriptive annotation table linked by sequence ID | Not implemented in this discovery context; no functional predictions generated |
+| Observations and studies | Explicit unique samples/observations and known/unknown status | Stratified recurrence/control counts and denominators, HTML/CSV/SQLite | Implemented; no read-level detection or causal dependency inference |
+| Catalogue and exact groups | Verified sequence snapshots with sample/study metadata | Stable exact-sequence IDs, linked occurrences, SQLite and CSV adapters | Implemented; no approximate-family discovery, consensus or phylogeny |
+| Approximate clustering | Independently supplied validated cluster membership | Cluster ID, sequence IDs, external method/threshold/provenance | Placeholder only; exact groups must not be substituted for similarity clusters |
+| External reference curation | Curated source/accession/version and role manifest | Verified snapshot manifest with update history | No comprehensive automatic reference curation or biological suitability claims |
+| Scientific validation | Independent truth labels and blinded benchmark protocol | Explicit denominators, sensitivity/false-positive/rank results and uncertainty | No biological benchmark or fabricated metrics; software fixtures remain separate |
+| UI/reporting/provenance | Implemented-stage artifacts | Linked reports, exports, status and dependency diagnostics | Implemented for supplied artifacts; no autonomous RUN DISCOVERY |
 
-No reserved field named probability should be populated from an arbitrary score. Reports should distinguish method-generated measurements, user-supplied observations and external interpretations. The observation importer does not consume a functional-compatibility result.
-
-Future adapters need separate tests for input validation, record conservation, resource failures, stale outputs and reproducibility before being connected to the user interface. This document does not authorize or validate downstream biological methods.
+For all placeholder interfaces, absence of an implementation is a hard stop, not an empty successful result. Future independent implementations require record-conservation, invalid-input, interruption, resource-limit, provenance and validation tests before any integration. The released launcher never calls these placeholders. The original biological methods are not prescribed by these interface declarations.

@@ -61,6 +61,14 @@ def report(directory, title, tables, notes):
         else:
             (directory / filename).write_text('status\nno_records\n', encoding='utf-8')
             body += '<p>' + html.escape(name) + ': no records supplied.</p>'
+        if name == 'coverage':
+            body += '<h2>Coverage breadth</h2><p>Fraction of the declared reference covered by supplied alignments; first 100 rows. Not unique molecule support.</p>'
+            for row in rows[:100]:
+                value = float(row['breadth_fraction'])
+                if not 0 <= value <= 1:
+                    raise ValueError('Coverage breadth must be between zero and one')
+                label = str(row['sample_id']) + ' / ' + str(row['reference_id'])
+                body += '<p>' + html.escape(label) + ': ' + format(value, '.1%') + ' <meter min="0" max="1" value="' + str(value) + '"></meter></p>'
         files.append(filename)
     body += '<ul>' + ''.join('<li>' + html.escape(x) + '</li>' for x in notes) + '</ul>'
     (directory / 'report.html').write_text('<!doctype html><meta charset="utf-8"><title>' + html.escape(title) + '</title><style>body{font:16px system-ui;margin:2rem}table{border-collapse:collapse}td,th{border:1px solid #aaa;padding:.4rem}</style>' + body, encoding='utf-8')

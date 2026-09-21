@@ -25,13 +25,13 @@ def main():
     parser.add_argument("--min-length", type=int, default=30, help="Minimum retained read length; baseline QC setting")
     parser.add_argument("--adapter", action="append", help="Exact adapter sequence; repeat for multiple adapters (default common Illumina core)")
     parser.add_argument("--offline", action="store_true", help="Replay existing response snapshots without network")
-    parser.add_argument("--query", help="Override SRA metadata query, e.g. a known-positive benchmark search")
+    parser.add_argument("--query", help="Additional SRA filter within the selected exact-model scope")
     parser.add_argument("--wizard", action="store_true", help="Interactive prompts for beginners")
     args = parser.parse_args()
     if args.wizard:
         helpers = list(HELPERS)
         for i, helper in enumerate(helpers, 1):
-            print(f"{i}. {helper}")
+            print(f"{i}. {HELPERS[helper]['name']} ({HELPERS[helper]['catalog']})")
         try:
             choice = int(input("Helper number [1]: ") or "1")
             if not 1 <= choice <= len(helpers):

@@ -1,6 +1,7 @@
 """Descriptive summaries of supplied observations; no sequence discovery or scoring."""
 import argparse
 import csv
+from collections import defaultdict
 from contextlib import closing
 from datetime import datetime, timezone
 import html
@@ -71,8 +72,11 @@ def summarize(samples, observations):
     lookup = {(r['sample_id'], r['feature_id']): r['detection'] for r in observations}
     features = sorted({r['feature_id'] for r in observations})
     summaries, comparisons = [], []
+    bio = [s for s in samples if s['sample_type'] == 'biological']
+    groups = defaultdict(list)
+    for sample in samples:
+        groups[(sample['study_id'], sample['library_molecule'], sample['sample_type'], sample['condition'])].append(sample['sample_id'])
     for feature in features:
-        bio = [s for s in samples if s['sample_type'] == 'biological']
         present = [s for s in bio if lookup.get((s['sample_id'], feature)) == 'present']
         absent = sum(lookup.get((s['sample_id'], feature)) == 'absent' for s in bio)
         studies = sorted({s['study_id'] for s in present if s['study_id'] != 'unknown'})
@@ -82,10 +86,8 @@ def summarize(samples, observations):
                           'distinct_studies_with_detection': len(studies), 'study_ids': studies,
                           'detections_without_study_id': sum(s['study_id'] == 'unknown' for s in present)})
         # Strata prevent RNA and DNA assays, studies, or technical controls being pooled.
-        strata = sorted({(s['study_id'], s['library_molecule'], s['sample_type'], s['condition']) for s in samples})
-        for study, molecule, kind, condition in strata:
-            group = [s for s in samples if (s['study_id'], s['library_molecule'], s['sample_type'], s['condition']) == (study, molecule, kind, condition)]
-            calls = [lookup.get((s['sample_id'], feature), 'unknown') for s in group]
+        for (study, molecule, kind, condition), identifiers in sorted(groups.items()):
+            calls = [lookup.get((sid, feature), 'unknown') for sid in identifiers]
             positive, negative = calls.count('present'), calls.count('absent')
             comparisons.append({'feature_id': feature, 'study_id': study, 'library_molecule': molecule,
                                 'sample_type': kind, 'condition': condition, 'present': positive,
@@ -129,6 +131,29 @@ def export_database(path, samples, observations):
     temporary.replace(path)
 
 
+def render_heatmap(comparisons):
+    """Bounded accessible display of supplied observations, including unassessed cells."""
+    features = sorted({r['feature_id'] for r in comparisons})[:40]
+    keys = ('study_id', 'library_molecule', 'sample_type', 'condition')
+    strata = sorted({tuple(r[k] for k in keys) for r in comparisons})[:30]
+    lookup = {(r['feature_id'], tuple(r[k] for k in keys)): r for r in comparisons}
+    body = '<h2>Observed-fraction heatmap</h2><p>At most 40 features and 30 strata; full values remain in CSV. Each column is study / assay / sample type / condition. Unassessed is not zero.</p><table><tr><th>Feature</th>'
+    body += ''.join('<th>' + html.escape(' / '.join(k)) + '</th>' for k in strata) + '</tr>'
+    for feature in features:
+        body += '<tr><th>' + html.escape(feature) + '</th>'
+        for group in strata:
+            row = lookup.get((feature, group))
+            value = row['observed_fraction'] if row else None
+            if value is None:
+                body += '<td style="background:#eee">not assessed</td>'
+            else:
+                shade = round(245 - 100 * value)
+                label = str(row['present']) + '/' + str(row['assessed_samples']) + ' (' + format(value, '.1%') + ')'
+                body += '<td style="background:rgb(' + str(shade) + ',' + str(shade) + ',255)">' + label + '</td>'
+        body += '</tr>'
+    return body + '</table>'
+
+
 def render(summary):
     def table(rows):
         keys = list(rows[0])
@@ -137,7 +162,7 @@ def render(summary):
     bars = ''.join('<p>' + html.escape(r['feature_id']) + ': ' + str(r['present_biological_samples']) +
                    ' biological samples <meter min="0" max="' + str(summary['sample_count']) +
                    '" value="' + str(r['present_biological_samples']) + '"></meter></p>' for r in summary['recurrence'])
-    return '<!doctype html><meta charset="utf-8"><title>Observed sequence associations</title><style>body{font:16px system-ui;margin:2rem}table{border-collapse:collapse}td,th{border:1px solid #aaa;padding:.5rem}th{background:#eef}meter{width:180px}</style><h1>Observed sequence associations</h1><p>Descriptive observations only; no discovery score or dependency inference.</p>' + bars + '<h2>Recurrence</h2>' + table(summary['recurrence']) + '<h2>Study and control comparisons</h2>' + table(summary['comparisons']) + '<h2>Interpretation</h2><ul>' + ''.join('<li>' + html.escape(x) + '</li>' for x in summary['limitations']) + '</ul>'
+    return '<!doctype html><meta charset="utf-8"><title>Observed sequence associations</title><style>body{font:16px system-ui;margin:2rem}table{border-collapse:collapse}td,th{border:1px solid #aaa;padding:.5rem}th{background:#eef}meter{width:180px}</style><h1>Observed sequence associations</h1><p>Descriptive observations only; no discovery score or dependency inference.</p>' + bars + render_heatmap(summary['comparisons']) + '<h2>Recurrence</h2>' + table(summary['recurrence']) + '<h2>Study and control comparisons</h2>' + table(summary['comparisons']) + '<h2>Interpretation</h2><ul>' + ''.join('<li>' + html.escape(x) + '</li>' for x in summary['limitations']) + '</ul>'
 
 
 def run(samples_path, observations_path, directory):

@@ -19,6 +19,8 @@ def write_reports(directory, rows):
             writer.writerow({k: "'" + v if isinstance(v, str) and v.startswith(("=", "+", "-", "@")) else v
                              for k, v in values.items()})
     display = ["run_accession", "proposed_helper", "study_accession", "library_strategy", "total_spots", "selection", "exclusion_reasons", "warnings"]
+    if any('scope' in row for row in rows):
+        display.insert(6, 'scope')
     table = "".join("<tr>" + "".join("<td>" + html.escape(str(r.get(k) or "unknown")) + "</td>" for k in display) + "</tr>" for r in rows)
     phase3 = directory / "phase3" / "manifest.json"
     stage_content = '<h2>Progress: metadata search completed</h2><p>Reads have not been downloaded or processed in this output folder. To continue, choose stage 2 in the launcher or use <code>--stage qc</code>.</p>'

@@ -86,10 +86,10 @@ class MetadataTests(unittest.TestCase):
             self.assertEqual(json.loads(Path(tmp, "datasets.json").read_text()), [])
 
     def test_query_is_not_taxonomy_only(self):
-        self.assertIn("[All Fields]", helper_query("influenza-a"))
+        self.assertIn("[All Fields]", helper_query("oc43-vr1558"))
 
     def test_default_query_targets_supported_broad_libraries(self):
-        query = helper_query("influenza-a")
+        query = helper_query("oc43-vr1558")
         self.assertIn('"ILLUMINA"[Platform]', query)
         self.assertIn('"RNA-Seq"[Strategy]', query)
         self.assertIn('NOT "PCR"[Selection]', query)
@@ -124,29 +124,29 @@ class TransportTests(unittest.TestCase):
         with scratch_directory() as tmp, patch.object(Client, "search", return_value={"ids": ["1"], "count": 1}), \
              patch.object(Client, "fetch", return_value=XML), \
              patch("satellite_discovery.workflow.enrich_ena"):
-            self.assertEqual(discover("influenza-a", 1, 0, False, tmp)["status"], "complete")
+            self.assertEqual(discover("oc43-vr1558", 1, 0, False, tmp)["status"], "complete")
             self.assertEqual(len(json.loads(Path(tmp, "datasets.json").read_text())), 2)
             with self.assertRaisesRegex(ValueError, "different parameters"):
-                discover("influenza-b", 1, 0, False, tmp)
+                discover("229e-vr740", 1, 0, False, tmp)
 
     def test_failed_ena_is_partial(self):
         with scratch_directory() as tmp, patch.object(Client, "search", return_value={"ids": ["1"], "count": 1}), \
              patch.object(Client, "fetch", return_value=XML), \
              patch("satellite_discovery.workflow.enrich_ena", side_effect=RuntimeError("unavailable")):
-            result = discover("influenza-a", 1, 0, False, tmp)
+            result = discover("oc43-vr1558", 1, 0, False, tmp)
             self.assertEqual(result["status"], "partial")
             self.assertEqual(len(result["errors"]), 2)
 
     def test_failure_writes_manifest(self):
         with scratch_directory() as tmp, patch.object(Client, "search", side_effect=RuntimeError("failed")):
             with self.assertRaises(RuntimeError):
-                discover("influenza-a", 1, 0, False, tmp)
+                discover("oc43-vr1558", 1, 0, False, tmp)
             self.assertEqual(json.loads(Path(tmp, "manifest.json").read_text())["status"], "failed")
 
     def test_study_diverse_search_stays_within_experiment_budget(self):
         with scratch_directory() as tmp, patch.object(Client, 'search', side_effect=[{'ids': ['1', '2'], 'count': 9}, {'ids': ['3'], 'count': 7}]) as search, \
              patch.object(Client, 'fetch', return_value=XML), patch('satellite_discovery.workflow.enrich_ena'):
-            result = discover('influenza-a', 3, 0, False, tmp)
+            result = discover('oc43-vr1558', 3, 0, False, tmp)
             self.assertEqual(result['examined_experiment_ids'], ['1', '2', '3'])
             self.assertEqual(search.call_args_list[1].args[1], 1)
             self.assertIn('NOT (', search.call_args_list[1].args[0])
@@ -154,9 +154,9 @@ class TransportTests(unittest.TestCase):
 
     def test_resume_reuses_frozen_query_cutoff(self):
         with scratch_directory() as tmp, patch.object(Client, 'search', return_value={'ids': [], 'count': 0}):
-            first = discover('influenza-a', 1, 0, False, tmp)
+            first = discover('oc43-vr1558', 1, 0, False, tmp)
             with patch('satellite_discovery.workflow.helper_query', side_effect=AssertionError('Must retain old cutoff')):
-                second = discover('influenza-a', 1, 0, False, tmp)
+                second = discover('oc43-vr1558', 1, 0, False, tmp)
             self.assertEqual(first['parameters'], second['parameters'])
 
 

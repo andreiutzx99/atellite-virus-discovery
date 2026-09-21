@@ -1,8 +1,38 @@
 {
-  "influenza-a": ["Influenza A virus"],
-  "influenza-b": ["Influenza B virus"],
-  "rhinovirus": ["rhinovirus", "Human rhinovirus"],
-  "adenovirus": ["Human adenovirus", "Human mastadenovirus"],
-  "human-coronavirus": ["Human coronavirus", "HCoV-229E", "HCoV-NL63", "HCoV-OC43", "HCoV-HKU1"],
-  "sars-cov-2": ["SARS-CoV-2", "Severe acute respiratory syndrome coronavirus 2"]
+  "oc43-vr1558": [
+    "OC43",
+    "HCoV-OC43"
+  ],
+  "229e-vr740": [
+    "229E",
+    "HCoV-229E"
+  ],
+  "hpiv3-c243": [
+    "Human parainfluenza virus 3",
+    "HPIV-3",
+    "HPIV3"
+  ],
+  "hrv1a-2060": [
+    "Human rhinovirus 1A",
+    "HRV1A",
+    "HRV-1A"
+  ],
+  "pr8-vr1469": [
+    "Influenza A",
+    "H1N1"
+  ],
+  "rotavirus-wa": [
+    "Rotavirus A",
+    "Rotavirus"
+  ],
+  "rsv-long": [
+    "Respiratory syncytial virus",
+    "RSV",
+    "hRSV"
+  ],
+  "adenovirus2-vr846": [
+    "Human adenovirus 2",
+    "HAdV-2",
+    "HAdV2"
+  ]
 }
