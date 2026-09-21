@@ -11,10 +11,10 @@ All stages should accept an input manifest with schema version, artifact paths, 
 | Read mapping/extraction | Verified reads and reference manifest | Alignment artifacts and partition manifests | Existing adapter; synthetic testing does not establish biological suitability |
 | Assembly | Verified input manifest | Contig file, runtime log and checksum manifest | Existing SPAdes adapter lacks local runtime validation; Tadpole is a standalone synthetic diagnostic |
 | Database comparison | Supplied sequences and versioned reference manifest | Descriptive matches and method provenance | Existing BLAST adapter; no validated comprehensive reference panel |
-| Contamination/artefact assessment | Descriptive matches and technical-control observations | Evidence flags and reasons, with unknown status permitted | Comprehensive implementation and validation pending |
-| Coverage/composition/ORF summary | Supplied sequence/alignment artifacts | Descriptive measurements with units and missing-data status | Basic composition implemented in sequence_catalogue; coverage/ORF reporting pending |
+| Contamination/artefact assessment | Descriptive matches and technical-control observations | Evidence flags and reasons, with unknown status permitted | Supplied-match/control evidence review implemented; automatic searches and biological validation pending |
+| Coverage/composition/ORF summary | Supplied sequence/alignment artifacts | Descriptive measurements with units and missing-data status | Basic composition and supplied interval/SAM coverage implemented; ORF reporting pending |
 | Recurrence/study comparisons | Unique sample table and explicit observation table | Stratified counts, SQLite export and HTML/CSV report | Implemented in observation_report; no read-level detection |
-| Clustering/catalogue/FASTA export | Independently supplied sequence records | Exact-sequence groups, SQLite and normalized FASTA export | Exact grouping/import/export implemented; approximate clustering and cross-import merge pending |
+| Clustering/catalogue/FASTA export | Independently supplied sequence records | Exact-sequence groups, SQLite and normalized FASTA export | Exact grouping/import/export and cross-import links implemented; approximate clustering pending |
 | Functional compatibility and biological identity | Independent external assessment, if available | Cited external conclusion and provenance | No implementation or automatic inference in this application |
 
 No reserved field named probability should be populated from an arbitrary score. Reports should distinguish method-generated measurements, user-supplied observations and external interpretations. The observation importer does not consume a functional-compatibility result.

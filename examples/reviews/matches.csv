@@ -1,0 +1,3 @@
+feature_id,reference_id,reference_role,query_start,query_end,percent_identity,reference_source,reference_version
+artificial_feature,artificial_vector,vector,0,5,99,software_fixture,v1
+artificial_feature,artificial_vector,vector,3,8,99,software_fixture,v1

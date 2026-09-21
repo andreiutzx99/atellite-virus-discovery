@@ -2,7 +2,7 @@
 
 This roadmap supplements the historical architecture. Implementation, runtime testing and scientific validation are separate statuses. Existing acquisition/QC stages and local development work are preserved.
 
-## Published development branch
+## Merged foundation (PR #1)
 
 1. **Observational reports:** supplied tables, explicit missing observations, sample/control and RNA/DNA stratification, recurrence counts, SQLite and HTML/CSV, verified reuse and failed-attempt recovery. Complete for the documented table contract.
 2. **Library metadata review:** existing metadata snapshots, assay-source evidence, conflict/missingness flags and reports. Complete for the documented read-only review contract. It does not choose downstream tools or alter archive-selection filters.
@@ -12,16 +12,22 @@ This roadmap supplements the historical architecture. Implementation, runtime te
 
 The QC audit, generic mapping adapter, SPAdes adapter, BLAST adapter and runtime diagnostics remain in the working directory. Not all of that earlier work is part of these focused publication commits. Mapping/BLAST tests used artificial fixtures; SPAdes lacks a validated local runtime and Tadpole remains a standalone runtime diagnostic. Published reporting milestones must not be described as completing those stages.
 
-## Remaining permitted engineering work
+## Implemented infrastructure follow-up
 
-- A unified interface showing stage readiness and linking existing artifacts.
-- Generic supplied-alignment coverage summaries with explicit coordinate conventions and separate validation fixtures.
-- Descriptive contamination evidence from independently supplied reference matches and technical controls, preserving uncertainty.
-- Cross-import catalogue linking and reviewed observation-table adapters, with sample identity/provenance checks.
-- Additional resource-failure and interrupted-job integration tests when those stages are implemented.
+4. **Unified review interface:** `Run-reviews.cmd` dispatches the existing tools and the new reviews. A bounded, read-only dashboard links existing reports and labels statuses as reported, not integrity-verified.
+5. **Supplied-alignment coverage:** interval-table and bounded plain-text SAM imports, explicit coordinate/CIGAR conventions, gap-aware breadth/depth and exclusion counts. Validated with artificial overlaps, gaps, clipping, invalid inputs and empty assessed panels.
+6. **Descriptive contamination evidence:** externally supplied reference matches, required provenance fields and explicit technical-control calls. Union coverage and review flags preserve uncertainty; no automatic rejection or probability inference.
+7. **Cross-import catalogue linking:** verified existing snapshots, exact-sequence links, consistent sample metadata, per-sample presence deduplication, SQLite provenance and CSV adapters compatible with the completed observational stage.
+8. **Resource/recovery tests:** shared review lifecycle, exclusive locks, failed-write recovery, changed-input detection, output integrity checks, row limits and interrupted SQLite/report recovery without duplicate imports.
 
-Approximate sequence clustering, ORF reporting and the combined discovery workflow remain unimplemented here. External biological interpretations use provenance-bearing interfaces rather than empty successful results. See [module contracts](MODULE_INTERFACES.md). No milestone in this branch establishes helper dependency or biological novelty.
+These complete the five concrete items previously listed under remaining permitted engineering work. Each remains limited to its documented artifact contract; completion does not mean the historical biological discovery design is implemented.
+
+## Unsupported broader components
+
+BAM/CRAM and compressed-SAM input, automatic contamination reference searches, approximate sequence clustering, ORF reporting and the combined discovery workflow remain outside these implemented contracts. Functional compatibility and biological identity are not inferred. The earlier local assembly/mapping prototypes remain separate from this published infrastructure. See [review interfaces and exact limits](REVIEW_INFRASTRUCTURE.md) and [module contracts](MODULE_INTERFACES.md).
 
 ## Verification
 
 The observational milestone added nine tests; the library-review milestone added seven; the inventory milestone added eight. Their examples use fictional metadata or artificial sequences. Run `python -m unittest discover -s tests -q` to test the checkout you have; totals differ between the focused published branch and the broader local development checkout.
+
+The infrastructure follow-up adds 19 targeted tests, including adapter round trips into the existing observation module. It does not repeat completed public-data QC.

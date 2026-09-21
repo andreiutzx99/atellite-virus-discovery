@@ -1,0 +1,4 @@
+sample_id,reference_id,alignment_id,start,end
+artificial_sample,artificial_reference,alignment_one,0,3
+artificial_sample,artificial_reference,alignment_one,2,5
+artificial_sample,artificial_reference,alignment_two,3,8
