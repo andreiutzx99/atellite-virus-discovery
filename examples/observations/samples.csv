@@ -1,0 +1,5 @@
+sample_id,study_id,condition,sample_type,library_molecule
+example_a,study_one,positive,biological,RNA
+example_b,study_one,negative,biological,RNA
+example_c,study_two,positive,biological,DNA
+example_blank,study_one,unknown,technical_control,RNA
