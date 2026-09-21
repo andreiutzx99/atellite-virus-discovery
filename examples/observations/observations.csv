@@ -1,0 +1,5 @@
+sample_id,feature_id,detection
+example_a,unclassified_001,present
+example_b,unclassified_001,absent
+example_blank,unclassified_001,unknown
+example_c,unclassified_002,present
