@@ -10,18 +10,25 @@ from .database_query import Client, helper_query
 from .metadata import parse_packages, enrich_ena
 from .metadata_filter import assess
 from .report_generator import write_reports
+from .model_scope import require_model, enforce, POLICY_SHA256
 
 
 def discover(helper, limit, min_spots, include_controls, directory, offline=False, query=None):
+    require_model(helper)
     if not 1 <= limit <= 1000 or min_spots < 0:
         raise ValueError("limit must be 1–1000 and min_spots must be nonnegative")
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     config_path = directory / "parameters.json"
     stored = json.loads(config_path.read_text()) if config_path.exists() else {}
-    resolved_query = query or (stored.get("query") if stored.get("helper") == helper else None) or helper_query(helper)
+    resolved_query = (stored.get('query') if stored.get('helper') == helper and stored.get('query_filter') == query else None)
+    if not resolved_query:
+        resolved_query = helper_query(helper)
+        if query:
+            resolved_query = '(' + resolved_query + ') AND (' + query + ')'
     config = dict(helper=helper, experiment_limit=limit, min_spots=min_spots,
-                  include_study_context=include_controls, query=resolved_query, version=__version__)
+                  include_study_context=include_controls, query=resolved_query, query_filter=query,
+                  scope_policy_sha256=POLICY_SHA256, version=__version__)
     if config_path.exists() and json.loads(config_path.read_text()) != config:
         raise ValueError("This output directory belongs to different parameters. Choose a new run directory.")
     config_path.write_text(json.dumps(config, indent=2))
@@ -81,6 +88,7 @@ def discover(helper, limit, min_spots, include_controls, directory, offline=Fals
                 row["ena_status"] = "failed"
                 manifest["errors"].append({"accession": row["run_accession"], "step": "ena", "message": str(exc)})
             assess(row, min_spots)
+            enforce(row, helper)
         write_reports(directory, rows)
         manifest["run_accessions"] = [r["run_accession"] for r in rows]
         manifest["status"] = "partial" if manifest["errors"] else "complete"

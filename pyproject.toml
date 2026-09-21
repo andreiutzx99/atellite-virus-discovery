@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "satellite-discovery"
-version = "0.2.0"
-description = "Reproducible public sequencing metadata discovery; phases 1 and 2"
+version = "0.3.0"
+description = "Public sequencing retrieval, QC and descriptive artifact reviews"
 requires-python = ">=3.11"
 dependencies = []
 
@@ -16,4 +16,4 @@ satellite-discovery = "satellite_discovery.cli:main"
 include = ["satellite_discovery*"]
 
 [tool.setuptools.package-data]
-satellite_discovery = ["helpers.json"]
+satellite_discovery = ["helpers.json", "model_scope.json"]

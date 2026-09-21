@@ -65,3 +65,17 @@ An exclusive `.review.lock` prevents concurrent writers. After a forced terminat
 ## Remaining unsupported work
 
 BAM/CRAM or compressed-SAM import, automatic reference searches, approximate clustering, ORF reporting and functional inference are not implemented by these review tools. The existing assembly/mapping runtime prototypes remain separate. The new infrastructure operates on supplied evidence, not an end-to-end biological discovery workflow.
+
+## BLAST table import (menu 9)
+
+Inputs are UTF-8 CSV `features` with `feature_id,length`, and CSV `references` with `reference_id,reference_role,reference_source,reference_version`. Roles use the existing contamination-review vocabulary. Every query/reference ID in the hit file must appear in these manifests. The hit file is an existing **nucleotide** BLAST standard 12-column tab-separated outfmt 6 table, without a header. Translated/protein-search coordinates are not supported by this adapter.
+
+Output `matches.csv` can feed menu 5 alongside the same feature table and a separately supplied controls table. It preserves all hits without a hidden significance cutoff. Reverse query endpoints are normalized to zero-based half-open intervals with a separate orientation field. `features.csv` distinguishes reported matches from no reported hits; neither is a biological classification. Missing hits never imply novelty. Required reference source/version fields are user-supplied assertions, not independently verified database provenance.
+
+Input cap: 64 MB and 200,000 hits. Invalid, non-finite or inconsistent numeric values and unknown IDs fail explicitly. Empty hit tables retain the output schema. Outputs use the shared hash-checked, resumable review lifecycle.
+
+## Compressed SAM and dependencies
+
+Menu 8 now also recognizes gzip by file magic, regardless of extension. The decoded stream is bounded to 256 MB, 2 million lines, 1 million characters per line and 200,000 aligned blocks. The compressed file also has a 256 MB limit. Corrupt/truncated gzip fails. This is a bounded artifact review, not a whole-genome BAM analysis service. BAM/CRAM are not decoded.
+
+Menu 11 checks exact version commands for discovered tools, records executable hashes and version output, and produces HTML/CSV/JSON. PATH has priority; one unambiguous portable project installation is a fallback for BLAST and Bowtie2. Missing/ambiguous tools and version failures are distinguished. This diagnostic always requires a new directory because the environment can change; it never silently reuses an old health report or installs software. A successful version command does not establish functional correctness.

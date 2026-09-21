@@ -1,0 +1,86 @@
+id,requested_feature,category,actual_status_and_remaining_boundary
+F001,Architecture and modular stages,1,"Independent modules, artifact contracts and tests; unavailable stages documented in MODULE_INTERFACES.md."
+F002,NCBI SRA query and ENA metadata retrieval,1,Existing query/client tests and historical metadata smoke results; no new live retrieval needed.
+F003,Automatic dataset metadata collection,1,"Accession, project, sample, platform, library, layout, sample/host, location/date and study fields supported; archive omissions retained as unknown."
+F004,Eight requested exact-model metadata scope,1,model_scope registry and tests enforce exact-model gates; broad legacy labels retired. Metadata is not infection proof.
+F005,Dataset suitability and sequencing-depth filters,1,Existing filters and archive spot counts tested; archive spots are not mapped coverage.
+F006,Confirmed helper infection from reads,4,Not implemented; metadata association is not confirmation. Mapping interface reserved.
+F007,Cross-laboratory geography and biological-sample selection,2,"Metadata recorded where supplied; completeness and independence cannot be recovered when absent. Needs source-study curation, not invented values."
+F008,Study negative-control selection,2,Study-context metadata flags supported; confirmed negative labels require independent source evidence. Supplied-control comparison is implemented separately.
+F009,Automatic complete FASTQ downloads,1,"Budgeted ENA retrieval with paired layout, hashes, retry and resume; real QC run previously completed."
+F010,SRA Toolkit conversion when FASTQ unavailable,3,No configured/tested SRA Toolkit fallback. Download manifest interface preserves unavailable status; ENA FASTQ is the implemented alternative.
+F011,Checksums interrupted downloads and paired-read integrity,1,"Existing download tests and QC audit cover corruption, interruption and pair conservation."
+F012,Raw reads rejected reads and orphans preserved,1,QC outputs retain categories; integrity audit tests and historical full audit verify conservation.
+F013,Read quality metrics and baseline filtering,1,"Existing QC implementation tested; earlier real run completed. Baseline exact-adapter/end-trim algorithm, not fastp."
+F014,Adapter and low-quality trimming,1,Tested baseline algorithm; no claim of exhaustive adapter detection or tool equivalence.
+F015,RNA/DNA library handling,1,Assay-source review covers RNA/DNA/conflicts/unknown; revised metadata query permits RNA or DNA as appropriate. No automatic downstream method selection.
+F016,Library strand and mixed-assay inference,2,Missing/contradictory evidence remains unknown. Reliable strand or mixed-source identity requires archive metadata or independent assessment.
+F017,Completed QC integrity audit UI,1,"Read-only checksums, counts and optional full paired-read recount; published audit_wizard/qc_audit tests."
+F018,Generic read-mapping execution for discovery,4,Historical local artificial-fixture adapter retained but not released into the human-virus discovery workflow; mapping I/O interface documented.
+F019,Unmapped and partially mapped discovery-read extraction,4,"Not released; source-read/partition conservation interface retained, without enabling discovery reconstruction."
+F020,Helper-read biological characterisation,4,No helper replication or genomic-function inference; supplied alignment coverage is available separately.
+F021,Host-read removal before discovery assembly,4,Automatic discovery read-routing not implemented; supplied host-match evidence can be reviewed without removing reads.
+F022,SPAdes runtime integration,3,Local adapter prototype exists but runtime absent; no usable Linux/WSL environment. Not a validated assembly stage.
+F023,Tadpole installation/runtime diagnostic,1,Pinned local BBTools/Java artificial-fixture reconstruction passed. Diagnostic source is published; runtimes are not bundled.
+F024,Tadpole substitution in biological discovery flow,4,Diagnostic does not implement or validate autonomous novel-element assembly; assembly interface retained.
+F025,De novo novel helper-dependent element assembly,4,Not implemented in supported workflow; no real-data reconstruction performed.
+F026,Contig sequence-format validation,1,"FASTA IDs, characters, sizes, normalization, checksums and round-trip tests in sequence_catalogue."
+F027,Contig assembly reliability assessment,2,Supplied coverage and sequence sanity evidence available; reliable assembly claims require independently produced alignments/validation. No arbitrary pass threshold.
+F028,Comprehensive known satellite and satellite-RNA reference curation,4,Not implemented for targeted novel helper-dependent discovery; external reference-manifest interface retained.
+F029,Known helper-dependent element and DVG reference panel,4,No auto-curated discovery panel; external provenance interface only.
+F030,Target/helper and related-virus genome reference panel,4,No automatic discovery-specific reference construction; imported reference evidence records source/version.
+F031,Human microbial bacterial vector adapter contaminant references,2,"User-supplied reference-role/source/version manifests and match review implemented; no comprehensive curated, maintained database bundled. Requires independently curated reference snapshot."
+F032,Reagent cell-line and synthetic-construct reference coverage,2,Can record appropriate supplied technical/reference evidence; no claim of complete reference coverage or reliable source attribution.
+F033,BLAST database comparison execution,2,Existing hit-table import and descriptive comparison implemented; historical local synthetic execution adapter not released. Automatic biological search needs validated external references and search provenance.
+F034,BLAST standard nucleotide table import,1,"Strict 12-column parser, coordinate/orientation normalization, provenance, numeric validation, empty hits and contamination adapter round-trip tested."
+F035,No-hit handling and descriptive classification,1,No reported hit remains unclassified; supplied reference roles and observed matches are reported without novelty claims.
+F036,Known virus known satellite and co-infection identity calls,4,No autonomous biological identity or satellite/co-infection declaration. External classification interface retained.
+F037,Host microbial vector adapter match evidence,1,Supplied matches summarized by role with union coverage and source/version; explicit control observations retained.
+F038,Aggressive automatic contamination rejection,2,Evidence review implemented; validated rejection rules and truth-labelled controls not available. Cannot infer a calibrated contamination probability.
+F039,Index hopping lane-specific artefact discrimination,2,No lane/library truth or independently validated model available; supplied technical controls can be compared. No causal artefact calls.
+F040,Environmental inconsistency and reagent origin inference,2,Descriptive evidence only; requires contextual study information and independent attribution.
+F041,Low complexity repetitive sequence screening,2,Single-symbol entropy and ambiguity reported; no calibrated repeat/artefact classifier. Entropy alone does not detect all repeats or establish artefact.
+F042,Sequencing artefact filtering,2,QC addresses explicit low quality length and ambiguous bases; no exhaustive artefact classifier or biological rejection benchmark.
+F043,Interval CSV alignment coverage,1,"Union within alignment, sweep-line depth/breadth, gaps, tails, explicit assessed panels and units tested."
+F044,SAM and gzip-SAM coverage,1,"Bounded decoding, CIGAR conventions, exclusions and corruption checks tested. Mates counted separately, not unique molecules."
+F045,BAM and CRAM file support,3,No samtools/usable WSL or compatible pysam wheel in the configured Windows index during this audit. Existing SAM/interval contract is available.
+F046,Read support paired support and coverage uniformity,2,Primary alignment counts and depth variation provided; duplicate-free molecules and paired assembly support need independently validated alignments/assumptions.
+F047,Sequence length GC nucleotide ambiguity and entropy,1,Tested descriptive catalogue metrics with explicit denominator; no biological score.
+F048,ORFs predicted proteins domains and viral motifs,4,Not implemented for discovery functional characterization; external annotation table interface documented.
+F049,Terminal motifs secondary structure replication compatibility,4,No helper-compatibility inference or discovery functional analysis implemented.
+F050,Packaging-signal compatibility,4,Unsupported functional discovery component; no compatibility score or optimization.
+F051,Helper homology deletion rearrangement segment-origin DVG analysis,4,No automated DVG reconstruction/discrimination; external assessment/provenance interface preserved.
+F052,Breakpoint recombination and DVG probability,4,No breakpoint reconstruction or calibrated DVG probability. Descriptive imported alignments must not be relabelled DVG calls.
+F053,DVG rejection and separate biological candidate list,4,Not implemented; external classification interface does not automatically reject sequences.
+F054,Cross-sample presence and recurrence,1,Explicit supplied detections; unknown is not absent. Per-sample exact sequence links and tested counts.
+F055,Helper-positive negative and technical-control comparisons,1,Supplied condition labels stratified by study assay and sample type; no infection verification or causal inference.
+F056,Independent studies laboratories geography association,2,Study counts supported; laboratory/geographic independence requires externally curated labels and adequate observations. No automatic independence claims.
+F057,Abundance/load correlation,2,Presence-only observation contract implemented; quantitative load normalization/confounding schema and validated measurements not available. No correlation fabricated.
+F058,Observed co-occurrence and absence fractions,1,"Explicit assessed denominators and condition counts; associations only, no dependency inference."
+F059,Helper-dependency genome-size or organisation inference,4,No functional plausibility or dependence estimate; length remains descriptive.
+F060,Candidate rejection classes 0 through 7,4,Biological discovery ranking/classification not implemented; neutral unclassified and observed-evidence labels used.
+F061,Transparent satellite/helper confidence scoring,4,No satellite-likeness or helper-dependency score; arbitrary scores are not probabilities.
+F062,Candidate/unclassified sequence database,1,"SQLite source records, exact groups, sample linkage and provenance tested; no automatic biological candidate promotion."
+F063,Cross-dataset candidate search in SRA,4,No autonomous follow-up discovery search for novel helper-dependent sequences.
+F064,Exact duplicate clustering and FASTA export,1,Exact normalized-sequence SHA groups and export tested; preserves distinctions such as U/T and reverse orientation.
+F065,Approximate sequence family clustering consensus alignment phylogeny,4,Not implemented for novel viral-family discovery; external membership/provenance interface retained.
+F066,Known-positive blind satellite rediscovery,4,Not run in this scope; software artificial fixtures must not be described as this benchmark.
+F067,Sensitivity false-positive rate and ranking validation,4,"No biological truth-labelled benchmark, denominator or rank score generated; scientific-validation interface retained."
+F068,Negative-control and artificial software fixtures,1,"Mocked archive failures, supplied negative/unknown observations and artificial sequence/coverage fixtures tested; not biological false-positive estimation."
+F069,Exploratory novel-virus screening,4,Not implemented or initiated; no claims of novel satellite discovery.
+F070,HTML CSV JSON reporting,1,"Escaped descriptive reports and machine-readable exports, bounded UI tables, digest-checked artifacts tested."
+F071,Original ranked candidate table and follow-up recommendations,4,No biological ranked candidate output; descriptive tables export supported fields without invented metrics.
+F072,Sequence catalogue FASTA and SQLite exports,1,"Tested round-trip sequences, exact groups and database integrity."
+F073,Recurrence visualisation and report dashboard,1,Descriptive report graphics/tables and existing report links implemented; reported status is not integrity certification.
+F074,Coverage breadth and study/control heatmaps; genome maps correlation plots trees,2,"Coverage breadth meters and bounded study/control observed-fraction heatmap implemented and tested, with unassessed distinct from zero. Biological genome maps, load-correlation plots and trees lack validated upstream data."
+F075,Software database parameter and accession provenance,1,"Version/source hashes, archive metadata, parameters and supplied reference source/version retained; user assertions labelled as such."
+F076,Automatic reference database maintenance,2,Versioned evidence manifests supported; no independently curated update source or benchmark policy supplied. No silent updates to scientific evidence.
+F077,Commands dependency versions logs and timestamps,1,Acquisition/review manifests and version diagnostic cover implemented stages; absent external executions have no fabricated command logs.
+F078,Resumable execution and changed-input detection,1,"Completed-artifact digest checks, exclusive locks and failed-attempt recovery tested for implemented stages."
+F079,Resource and performance limits,1,"Bounded parsers, interval sweep-line coverage and preindexed observation strata; no per-base coverage array or repeated full-sample scan per stratum."
+F080,Dependency detection and failure reporting,1,"PATH plus unambiguous portable tools, hashes, version output, timeout/failure tests and explicit missing state."
+F081,Automatic installation of all external tools,3,Published source does not bundle optional runtimes; SPAdes/decoder platform gaps remain. Local Tadpole/BLAST availability does not establish portable install coverage.
+F082,Simple numbered local interface,1,Run-reviews menu covers implemented artifact reviews and audit/dependency checks; tested dispatch/dashboard behavior.
+F083,Plain-language autonomous RUN DISCOVERY interface,4,Not implemented; numbered artifact review UI does not masquerade as autonomous discovery.
+F084,GitHub modular development CI and documentation,1,"PR review and CI gates; stable tested source published, local prototypes distinguished and preserved."
+F085,Replit or ChatGPT plugin execution integration,3,No configured Replit runtime/integration in this session. Local Python and installed tool diagnostics are the available execution paths.

@@ -9,16 +9,17 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-HELPERS = json.loads(Path(__file__).with_name("helpers.json").read_text())
+from .model_scope import MODELS, search_terms
+HELPERS = MODELS
 BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 
 
 def helper_query(helper):
-    terms = "(" + " OR ".join('"' + term + '"[All Fields]' for term in HELPERS[helper]) + ")"
+    terms = search_terms(helper)
     # Target broad libraries before applying the experiment budget. Amplicon runs
     # otherwise dominate recent respiratory-virus submissions.
     libraries = '("RNA-Seq"[Strategy] OR ("WGS"[Strategy] AND "METAGENOMIC"[Source]))'
-    if helper == "adenovirus":
+    if helper == "adenovirus2-vr846":
         libraries = '("RNA-Seq"[Strategy] OR "WGS"[Strategy])'
     # Mature records are more likely to have archive-generated FASTQ mirrors.
     # The exact cutoff is recorded in parameters.json and reused on resume.

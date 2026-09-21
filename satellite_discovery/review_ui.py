@@ -81,20 +81,33 @@ def launch(choice):
         return dashboard(ask('Existing reports root folder'), ask('New dashboard HTML path'))
     elif choice == '8':
         from .coverage_review import run_sam
-        source = ask('Existing uncompressed SAM path')
+        source = ask('Existing SAM or gzip-compressed SAM path')
         output = ask('SAM coverage output folder')
         run_sam(source, output)
+    elif choice == '9':
+        from .blast_import import run
+        features, references, hits = ask('Feature lengths CSV'), ask('Reference provenance CSV'), ask('Existing BLAST outfmt 6 table')
+        output = ask('BLAST import output folder')
+        run(features, references, hits, output)
+    elif choice == '10':
+        from .audit_wizard import main as audit_main
+        if audit_main():
+            raise ValueError('QC integrity audit did not complete')
+        return 'QC audit report path printed above'
+    elif choice == '11':
+        from .dependency_review import run
+        return run(Path(__file__).resolve().parents[1], ask('New dependency report folder'))
     else:
-        raise ValueError('Choose a number from 0 to 8')
+        raise ValueError('Choose a number from 0 to 11')
     return Path(output).resolve() / 'report.html'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--choice', choices=list('12345678'))
+    parser.add_argument('--choice', choices=[str(n) for n in range(1,12)])
     args = parser.parse_args()
     while True:
-        print('\n1 Library metadata review\n2 Observation comparisons\n3 Sequence inventory\n4 Supplied alignment blocks coverage\n5 Contamination evidence review\n6 Link catalogue imports\n7 Existing report dashboard\n8 Supplied text SAM coverage\n0 Exit')
+        print('\n1 Library metadata review\n2 Observation comparisons\n3 Sequence inventory\n4 Supplied alignment blocks coverage\n5 Contamination evidence review\n6 Link catalogue imports\n7 Existing report dashboard\n8 Supplied SAM/gzip-SAM coverage\n9 Import existing BLAST table\n10 Audit existing QC integrity\n11 Check optional dependency versions\n0 Exit')
         try:
             choice = args.choice or input('Choose a review: ').strip()
             if choice == '0':

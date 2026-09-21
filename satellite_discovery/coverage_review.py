@@ -1,6 +1,7 @@
 """Descriptive coverage from supplied zero-based, half-open alignment blocks."""
 from collections import defaultdict
 from pathlib import Path
+import gzip
 import re
 from .review_stage import execute, table, unique, report
 
@@ -72,15 +73,22 @@ def run(references, samples, blocks, output):
     return execute('coverage-review-v1', {'references': references, 'samples': samples, 'blocks': blocks}, output, __file__, produce)
 
 
-def read_sam(path):
+def _read_sam(path):
     """Read bounded text SAM, counting primary nonduplicate alignment records."""
     path = Path(path)
     if path.stat().st_size > 256_000_000:
         raise ValueError('SAM review currently supports text files up to 256 MB')
     references, blocks, skipped = {}, [], defaultdict(int)
     records_started = False
-    with path.open(encoding='utf-8') as source:
-        for number, line in enumerate(source, 1):
+    with path.open('rb') as probe:
+        compressed = probe.read(2) == b'\x1f\x8b'
+    opener = gzip.open if compressed else open
+    decoded = 0
+    with opener(path, 'rt', encoding='utf-8') as source:
+        for number, line in enumerate(iter(lambda: source.readline(1_000_001), ''), 1):
+            decoded += len(line.encode('utf-8'))
+            if len(line) > 1_000_000 or decoded > 256_000_000:
+                raise ValueError('SAM decoded size or line length exceeds review limits')
             if number > 2_000_000:
                 raise ValueError('SAM exceeds the two-million-line review limit')
             fields = line.rstrip('\r\n').split('\t')
@@ -151,6 +159,13 @@ def read_sam(path):
     return list(references.values()), blocks, dict(skipped)
 
 
+def read_sam(path):
+    try:
+        return _read_sam(path)
+    except (EOFError, UnicodeError, gzip.BadGzipFile) as error:
+        raise ValueError('Invalid or truncated SAM/gzip-SAM input: ' + str(error)) from error
+
+
 def run_sam(sam, output):
     def produce(paths, directory):
         references, blocks, skipped = read_sam(paths['sam'])
@@ -160,5 +175,5 @@ def run_sam(sam, output):
             'M, = and X consume covered reference positions. Deletions and reference skips contribute no coverage; clipping and insertions do not cover reference positions.',
             'Mates are counted separately; overlapping mates can contribute depth twice. This is alignment depth, not unique molecule support.',
             'No MAPQ threshold is applied, including records with unavailable MAPQ. This report does not establish reliable biological support.',
-            'sam_sample denotes one input alignment file, not an independently verified biological sample. BAM/CRAM and compressed SAM are not accepted.'])
+            'sam_sample denotes one input alignment file, not an independently verified biological sample. Text SAM and gzip-compressed SAM are accepted; BAM/CRAM require a separate decoder.'])
     return execute('sam-coverage-review-v1',{'sam':sam},output,__file__,produce)

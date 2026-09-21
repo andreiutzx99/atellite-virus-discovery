@@ -30,6 +30,7 @@ def spec_for(content=b'example', name='SRR123.fastq.gz'):
 def row_for(content=b'example'):
     spec = spec_for(content)
     return {'run_accession': 'SRR123', 'selection': 'eligible_for_review', 'platform': 'ILLUMINA',
+            'proposed_helper': 'oc43-vr1558', 'attributes': {'virus stock': 'ATCC VR-1558'},
             'library_strategy': 'RNA-Seq', 'total_spots': 1000000, 'layout': 'SINGLE',
             'study_accession': 'SRP1', 'fastq_ftp': spec['url'], 'fastq_md5': spec['md5'],
             'fastq_bytes': str(spec['bytes'])}

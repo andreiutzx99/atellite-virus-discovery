@@ -10,12 +10,13 @@ from pathlib import Path
 from . import __version__
 from .quality_control import QCConfig, run_qc
 from .sequence_downloader import check_disk, checksum, download_file, make_plan, write_json
+from .model_scope import enforce, POLICY_SHA256
 
 
 def prepare_reads(directory, max_runs=1, max_bytes=1_000_000_000, offline=False, qc_config=None):
     directory = Path(directory)
     source = directory / "datasets.json"
-    rows = json.loads(source.read_text(encoding="utf-8"))
+    rows = [enforce(row) for row in json.loads(source.read_text(encoding="utf-8"))]
     qc_config = qc_config or QCConfig()
     qc_config.validate()
     stage = directory / "phase3"
@@ -41,7 +42,8 @@ def _prepare(source, rows, stage, max_runs, max_bytes, offline, qc_config):
 
     plan = make_plan(rows, max_runs, max_bytes)
     parameters = {"version": __version__, "datasets_sha256": checksum(source), "max_runs": max_runs,
-                  "max_bytes": max_bytes, "qc": json.loads(json.dumps(asdict(qc_config)))}
+                  "max_bytes": max_bytes, "scope_policy_sha256": POLICY_SHA256,
+                  "qc": json.loads(json.dumps(asdict(qc_config)))}
     parameters_path = stage / "parameters.json"
     if parameters_path.exists() and json.loads(parameters_path.read_text()) != parameters:
         raise ValueError("Phase 3 parameters changed: use a new run output directory")
