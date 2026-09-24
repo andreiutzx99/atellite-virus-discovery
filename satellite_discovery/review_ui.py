@@ -158,19 +158,25 @@ def launch(choice):
         previous,current=ask('Previous snapshot folder'),ask('Current snapshot folder')
         output=ask('New snapshot comparison output folder')
         compare_snapshots(previous,current,output)
+    elif choice == '23':
+        from .artifact_benchmark import run
+        datasets,expectations,artifacts=ask('Dataset status CSV'),ask('Expected file digests CSV'),ask('Observed artifact CSV')
+        output=ask('Benchmark report folder')
+        run(datasets,expectations,artifacts,output)
     else:
-        raise ValueError('Choose a number from 0 to 22')
+        raise ValueError('Choose a number from 0 to 23')
     return Path(output).resolve() / 'report.html'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--choice', choices=[str(n) for n in range(1,23)])
+    parser.add_argument('--choice', choices=[str(n) for n in range(1,24)])
     args = parser.parse_args()
     while True:
         print('\n1 Library metadata review\n2 Observation comparisons\n3 Sequence inventory\n4 Supplied alignment blocks coverage\n5 Contamination evidence review\n6 Link catalogue imports\n7 Existing report dashboard\n8 Supplied alignment coverage (SAM/BAM/CRAM)\n9 Import existing BLAST table\n10 Audit existing QC integrity\n11 Check optional dependency versions\n12 Run artifact workflow\n13 Local supplied-reference BLAST comparison\n14 Supplied study context\n15 Supplied quantitative associations\n16 Sequence quality descriptors\n17 Pinned reference snapshot\n18 Set up portable Windows BLAST\n19 Convert local SRA archive (optional Toolkit)\n0 Exit')
         try:
             print('20 Inspect workflow configuration\n21 Open an existing report\n22 Compare reference snapshots\nUse 12 with the same specification/output folder to resume. Outputs remain at the folder you select.')
+            print('23 Evaluate supplied artifact digests and control counts')
             choice = args.choice or input('Choose a review: ').strip()
             if choice == '0':
                 return

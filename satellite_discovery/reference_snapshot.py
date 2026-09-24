@@ -19,7 +19,9 @@ def snapshot(manifest,output,offline=False):
     if not isinstance(spec,dict):raise ValueError('Snapshot specification must be an object')
     entries=spec.get('files',[])
     if not isinstance(entries,list) or not entries or len(entries)>100:raise ValueError('Provide 1..100 reference files')
-    inputs={'specification':manifest};seen=set();total=0
+    inputs={'specification':manifest};seen=set();ids=set();total=0
+    snapshot_id=spec.get('snapshot_id',checksum(manifest))
+    if not isinstance(snapshot_id,str) or not portable_name(snapshot_id):raise ValueError('Invalid snapshot ID')
     for i,row in enumerate(entries):
         if not isinstance(row,dict):raise ValueError('Snapshot file entries must be objects')
         name=row.get('name','')
@@ -29,9 +31,14 @@ def snapshot(manifest,output,offline=False):
         total+=row['bytes']
         if total>MAX_TOTAL:raise ValueError('Reference snapshot exceeds 100 MB')
         if any(not isinstance(row.get(key),str) or not row[key].strip() or len(row[key])>2000 for key in ('source','version','role')):raise ValueError('Source, version and role are required')
-        for key in ('accession','database_version'):
+        for key in ('accession','database_version','reference_id','display_name','category','provenance','update_status'):
             if key in row and (not isinstance(row[key],str) or not row[key].strip() or len(row[key])>2000):
                 raise ValueError('Optional accession/database_version must be nonempty text')
+        rid=row.get('reference_id',name)
+        if rid.casefold() in ids:raise ValueError('Duplicate reference ID')
+        ids.add(rid.casefold())
+        if row.get('update_status','unknown') not in {'unknown','current','superseded','withdrawn'}:
+            raise ValueError('Invalid supplied update status')
         if ('path' in row)==('url' in row):raise ValueError('Specify exactly one local path or HTTPS URL')
         if not isinstance(row.get('path',row.get('url')),str):raise ValueError('Reference path or URL must be text')
         if 'path' in row:
@@ -58,7 +65,12 @@ def snapshot(manifest,output,offline=False):
             if target.stat().st_size!=row['bytes'] or checksum(target)!=row['sha256']:raise ValueError('Reference size or checksum mismatch: '+row['name'])
         rows=[{**{k:r[k] for k in ('name','bytes','sha256','source','version','role')},
                'accession':r.get('accession','unknown'),'database_version':r.get('database_version','unknown'),
-               'retrieved_utc':retrieved_utc} for r in entries]
+               'retrieved_utc':retrieved_utc,'snapshot_id':snapshot_id,
+               'reference_id':r.get('reference_id',r['name']),
+               'display_name':r.get('display_name',r['name']),
+               'category':r.get('category',r['role']),
+               'provenance':r.get('provenance','unknown'),
+               'update_status':r.get('update_status','unknown')} for r in entries]
         return report(directory,'Pinned supplied-reference snapshot',{'references':rows},['An immutable snapshot of explicitly supplied sources; no database completeness or biological suitability is inferred.','Updates require a new manifest and output folder. No reference is silently replaced.'])+[r['name'] for r in entries]
     return execute('reference-snapshot-v1',inputs,output,__file__,produce)
 
@@ -93,7 +105,8 @@ def compare_snapshots(previous,current,output):
         before={r['name']:r for r in old};after={r['name']:r for r in new};rows=[]
         for name in sorted(before.keys()|after.keys()):
             a,b=before.get(name),after.get(name)
-            fields=('sha256','bytes','source','version','role','accession','database_version')
+            fields=('sha256','bytes','source','version','role','accession','database_version',
+                    'reference_id','display_name','category','provenance','update_status')
             changes=[k for k in fields if a and b and a.get(k,'unknown')!=b.get(k,'unknown')]
             status='added' if a is None else 'removed' if b is None else 'changed' if changes else 'unchanged'
             rows.append({'name':name,'status':status,'changed_fields':','.join(changes),

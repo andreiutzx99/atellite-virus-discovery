@@ -1,6 +1,9 @@
 """Transport-neutral fallback contract; no network or biological routing here."""
 import errno
 import subprocess
+import copy
+import time
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 
 
@@ -36,7 +39,7 @@ def classify(error):
     return 'execution_failed'
 
 
-def run(methods, providers, verify, record):
+def run(methods, providers, verify, record, *, retries=0, history=None):
     """Execute configured trusted callables, verifying every success before acceptance.
 
     `record` persists the full attempt list after each transition. Providers and
@@ -47,9 +50,20 @@ def run(methods, providers, verify, record):
         raise ValueError('Configure one to five named acquisition methods')
     if len(set(methods)) != len(methods) or any(m not in providers for m in methods):
         raise ValueError('Unknown or duplicate acquisition backend')
-    attempts = []
-    for method in methods:
-        item = {'method': method, 'status': 'running'}
+    if type(retries) is not int or not 0 <= retries <= 2:
+        raise ValueError('Retries must be an integer from zero to two')
+    if history is not None and (not isinstance(history, list) or len(history) > 1000 or
+                               any(not isinstance(item, dict) for item in history)):
+        raise ValueError('Invalid prior attempt history')
+    # Prior success never bypasses verification: providers must safely reacquire or
+    # return an existing artifact for the verifier. Preserve prior records verbatim.
+    attempts = copy.deepcopy(history or [])
+    for method, attempt in ((m, n) for m in methods for n in range(1, retries + 2)):
+        # Success returns; permanent errors break. A transient exhausted retry is
+        # followed by the next explicitly configured provider.
+        started = time.monotonic()
+        item = {'method': method, 'attempt': attempt, 'status': 'running',
+                'started_utc': datetime.now(timezone.utc).isoformat()}
         attempts.append(item); record(attempts)
         try:
             artifact = providers[method]()
@@ -60,13 +74,15 @@ def run(methods, providers, verify, record):
                 raise VerificationError('Artifact verification failed: '+str(exc)) from exc
             if not isinstance(provenance, dict) or provenance.get('verified') is not True:
                 raise VerificationError('Verifier did not certify the artifact')
-            item.update(status='complete', verification=provenance)
+            item.update(status='complete', verification=provenance,
+                        finished_utc=datetime.now(timezone.utc).isoformat(), elapsed_seconds=time.monotonic()-started)
             record(attempts)
             return artifact
         except BaseException as exc:
             reason = classify(exc)
             item.update(status='interrupted' if reason == 'interrupted' else 'failed',
-                        failure_class=reason, error_type=type(exc).__name__, message=str(exc))
+                        failure_class=reason, error_type=type(exc).__name__, message=str(exc),
+                        finished_utc=datetime.now(timezone.utc).isoformat(), elapsed_seconds=time.monotonic()-started)
             record(attempts)
             if reason == 'interrupted':
                 raise

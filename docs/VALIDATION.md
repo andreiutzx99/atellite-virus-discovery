@@ -26,3 +26,7 @@ Choose a published known satellite/helper system with public raw reads, independ
 ## Acceptance and gate artifact
 
 Before implementation evaluation, record numeric acceptance criteria justified by benchmark size and the intended screening burden. Do not invent a universal acceptable sensitivity/FPR from this prototype. The planned gate artifact includes benchmark manifest hash, software commit, reference hashes, predeclared criteria, measured metrics/intervals, exclusions, held-out status and pass/fail. Changes to software, references or major thresholds invalidate the applicable pass until re-evaluation. Until this exists and passes, only metadata exploration and benchmark development are enabled.
+
+## Supplied-artifact validation follow-up
+
+See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.

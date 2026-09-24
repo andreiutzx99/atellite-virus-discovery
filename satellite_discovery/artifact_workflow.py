@@ -14,9 +14,13 @@ FIELDS={
  'observations':{'samples','observations'},'context':{'samples','observations'},
  'quantitative':{'measurements'},'alignment':{'alignment'},'cram':{'alignment','reference'},
  'blast_import':{'features','references','hits'},'blast_compare':{'query','reference','roles'},
- 'contamination':{'features','matches','controls'},'catalogue_links':{'imports'},'reference_snapshot':{'manifest'}}
+ 'contamination':{'features','matches','controls'},'catalogue_links':{'imports'},'reference_snapshot':{'manifest'},
+ 'artifact_benchmark':{'datasets','expectations','artifacts'}}
 
 def dispatch(kind,inputs,output):
+    if kind=='artifact_benchmark':
+        from .artifact_benchmark import run
+        return run(inputs['datasets'],inputs['expectations'],inputs['artifacts'],output)
     if kind=='sra_conversion':
         from .sra_conversion import convert
         return convert(inputs['archive'],output)
@@ -166,7 +170,8 @@ def run(manifest,output):
             active['execution']='verified_reuse' if before is not None and stage_marker.is_file() and checksum(stage_marker)==before else 'executed'
             if stage['kind']=='reference_snapshot':
                 source=reproducibility.bounded_json(inputs['manifest'],inputs['manifest'].parent)
-                fields=('name','bytes','sha256','source','version','role','accession','database_version')
+                fields=('name','bytes','sha256','source','version','role','accession','database_version',
+                        'reference_id','display_name','category','provenance','update_status')
                 active['reference_specification']=[{k:r[k] for k in fields if k in r} for r in source['files']]
             active.update(status='complete',finished_utc=datetime.now(timezone.utc).isoformat())
             write_status(output,result)

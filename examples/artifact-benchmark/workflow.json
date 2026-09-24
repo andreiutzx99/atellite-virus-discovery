@@ -1,0 +1,14 @@
+{
+  "schema": "artifact-workflow-v1",
+  "stages": [
+    {
+      "id": "assessment",
+      "kind": "artifact_benchmark",
+      "inputs": {
+        "datasets": "datasets.csv",
+        "expectations": "expectations.csv",
+        "artifacts": "artifacts.csv"
+      }
+    }
+  ]
+}

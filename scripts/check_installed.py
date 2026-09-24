@@ -37,6 +37,13 @@ try:
     assert report.is_file() and before==(root/'output/inventory/manifest.json').read_bytes()
     assert json.loads((root/'output/reproducibility.json').read_text())['status']=='complete'
     print('Installed dependency check, artificial workflow, report, provenance and verified resume passed')
+    from satellite_discovery.artifact_benchmark import run as evaluate
+    (root/'datasets.csv').write_text('dataset_id,role,processing_status,reference_version\nzero,negative,complete,fixture-v1\n')
+    (root/'expected.csv').write_text('benchmark_id,artifact_sha256\nfixture,'+'0'*64+'\n')
+    (root/'artifacts.csv').write_text('dataset_id,artifact_id,artifact_sha256,classification\n')
+    evaluate(root/'datasets.csv',root/'expected.csv',root/'artifacts.csv',root/'benchmark')
+    assert json.loads((root/'benchmark/summary.json').read_text())['tables']['counts'][0]['produced']==0
+    print('Installed supplied-artifact evaluator and explicit zero-output control passed')
 finally:
     if root.resolve().parent!=temporary_root:raise RuntimeError('Scratch path escaped its parent')
     shutil.rmtree(root)

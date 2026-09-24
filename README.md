@@ -33,3 +33,5 @@ See [module interfaces](docs/MODULE_INTERFACES.md) for unsupported/unavailable s
 ## Conditional tools and workflow extension
 
 The 22 partial/dependency-limited audit entries have now been reconsidered individually: [A/B/C decisions](docs/PARTIAL_FEATURE_FOLLOWUP.md). See the [quick progress report](docs/PROGRESS_REPORT.md) and [conditional-tool instructions](docs/CONDITIONAL_TOOLS.md). `Run-artifact-workflow.cmd` connects permitted existing-artifact stages with verified resume. It does not activate category-4 biological discovery functions.
+
+See [the artifact validation report](docs/ARTIFACT_VALIDATION_REPORT.md) for the post-PR6 changes, tested capabilities and remaining work. Menu23 evaluates supplied file-digest/control tables. An executable example is in `examples/artifact-benchmark/workflow.json`.

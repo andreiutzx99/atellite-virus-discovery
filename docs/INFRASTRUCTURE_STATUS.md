@@ -43,3 +43,7 @@ The follow-up suite contains 182 tests. Dependency-free jobs skip three existing
 3. Implemented conditional paths elsewhere require compatible tools, PATH/environment, adequate disk and an explicit CRAM reference. WSL/HPC requires platform/site setup. Production remote fallback needs implementation and policy, not just installation.
 4. Biological identity/dependence, reference completeness, contamination causality, reliability and discovery sensitivity/specificity need external scientific evidence and truth-labelled validation.
 5. Category-4 analysis, automatic production remote-SRA routing, scheduler-specific adapters and provider-specific connectors remain outside implemented scope. Engineering success does not complete the scientific discovery system.
+
+## Supplied-artifact validation follow-up
+
+See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.

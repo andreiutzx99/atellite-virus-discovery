@@ -45,3 +45,7 @@ The 161-test/five-job baseline was preserved and the remaining supported foundat
 SRA Toolkit 3.4.1 was temporarily downloaded and verified on Windows. A tiny public brewing-yeast accession passed retrieval, paired conversion (two records per mate), integrity checks, provenance, successful scratch cleanup and verified reuse. [Evidence and limits](validation/SRA_VALIDATION.md) are recorded. Regression tests also found and fixed stale-mate reuse across failed conversion attempts; failed outputs are now preserved separately before retry.
 
 The expanded suite contains 182 tests (three optional-tool skips in dependency-free jobs). CI retains Windows/Ubuntu Python 3.11/3.12 and real Linux optional-tool fixtures, with clean installed dependency checks, an artificial workflow/report/provenance check, and verified resume. The final PR checks are the runtime evidence for each platform. No completed user QC was rerun and no category-4 component was activated. See the [final engineering audit answers](INFRASTRUCTURE_STATUS.md#final-audit-answers).
+
+## Supplied-artifact validation follow-up
+
+See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.
