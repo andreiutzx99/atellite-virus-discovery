@@ -69,7 +69,7 @@ def verified_snapshot(directory):
     manifest=directory/'manifest.json'
     if manifest.stat().st_size>2_000_000:raise ValueError('Snapshot manifest exceeds 2 MB')
     state=json.loads(manifest.read_text(encoding='utf-8'))
-    if not isinstance(state,dict) or state.get('status')!='complete' or state.get('identity',{}).get('stage')!='reference-snapshot-v1':
+    if not isinstance(state,dict) or state.get('status')!='complete' or not isinstance(state.get('identity'),dict) or state['identity'].get('stage')!='reference-snapshot-v1':
         raise ValueError('Use a completed reference snapshot')
     digests=state.get('output_sha256')
     if not isinstance(digests,dict) or 'references.csv' not in digests or len(digests)>110:

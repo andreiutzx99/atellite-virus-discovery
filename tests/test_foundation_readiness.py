@@ -147,6 +147,9 @@ class SnapshotComparisonTests(unittest.TestCase):
             reference_snapshot.compare_snapshots(a,b,root/'comparison')
             (a/'fixture.fa').write_text('tampered')
             with self.assertRaisesRegex(ValueError,'integrity'):reference_snapshot.compare_snapshots(a,b,root/'comparison')
+            state=json.loads((a/'manifest.json').read_text());state['identity']=[]
+            (a/'manifest.json').write_text(json.dumps(state))
+            with self.assertRaisesRegex(ValueError,'completed reference snapshot'):reference_snapshot.verified_snapshot(a)
 
 
 class LauncherTests(unittest.TestCase):
