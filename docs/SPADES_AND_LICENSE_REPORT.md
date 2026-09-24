@@ -4,7 +4,7 @@ Baseline: merged PR #8, `40804a62`, 208 tests. This is a partial delivery of the
 
 | Component | Implemented | Runtime tested | Dependency | Remaining limitation |
 |---|---|---|---|---|
-| SPAdes fixed artificial diagnostic | Yes: single/paired fixtures, detection/version, input validation, bounded execution, raw output preservation, provenance, failure reports and verified reuse | Unit fixtures locally; actual single/paired execution is required by optional Linux CI | Externally installed `spades.py` or `spades`; CI obtains the distribution package | No native Windows installation here; only fixed generated data, no arbitrary-read adapter, no equivalence to Tadpole |
+| SPAdes fixed artificial diagnostic | Yes: single/paired fixtures, detection/version, input validation, bounded execution, raw output preservation, provenance, failure reports and verified reuse | Actual Linux SPAdes 3.15.5 passed both layouts and reuse; software fixtures locally | Externally installed `spades.py` or `spades`; CI obtains the distribution package | No native Windows installation here; only fixed generated data, no arbitrary-read adapter, no equivalence to Tadpole |
 | SPAdes failures | Missing dependency, malformed generated input, empty/malformed output, timeout, interruption, byte-budget failure, changed executable/layout and corrupt reports/raw outputs | Software tests; missing dependency also exercised on this Windows host | None for mocked tests | Failure injections are wrapper tests, not proof of every real SPAdes failure mode |
 | Per-record reference import | No new importer | No new runtime test | Existing file-level snapshots | Still missing; not promoted to operational |
 | Production acquisition fallback | Existing contract only | Existing regression tests | No production alternative registered | Still not operational as automatic alternative acquisition |
@@ -36,7 +36,7 @@ Actual integration choice: **not integrated**. From packaging/maintenance consid
 
 ## Eight requested answers
 
-1. **Genuine SPAdes runtime validation:** the new Linux CI diagnostic must execute both fixtures and verify reuse before runtime success is claimed; local Windows only validates software behavior and the unavailable state. See the final PR/CI evidence for the actual outcome and version.
+1. **Genuine SPAdes runtime validation:** yes, Linux SPAdes 3.15.5 passed single/paired fixed artificial fixtures and reuse. Local Windows validates software behavior and the unavailable state only. This does not establish arbitrary biological-data performance.
 2. **Per-record reference import:** still not operational as a new reference importer.
 3. **Production acquisition fallback:** no registered automatic production alternative.
 4. **Independent withholding:** still not verified by the existing benchmark evaluator.
@@ -44,3 +44,9 @@ Actual integration choice: **not integrated**. From packaging/maintenance consid
 6. **ViReMa disposition:** not integrated or installed; no vendoring, container or new detector.
 7. **ViReMa artificial execution:** none.
 8. **Remaining generic work:** fuller dependency pinning/fingerprinting, additional platform diagnostics, hard resource containment, and independent general-purpose acquisition/import/benchmark tooling remain. Viral/helper-dependent discovery integration and DVG discrimination are not supplied by this pass. Artificial success is not biological sensitivity evidence.
+
+## Runtime and regression evidence
+
+[Linux run 36057938938](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/36057938938), source `9b7ceef44ab3e08efc38c9dba31e94c62723b1da`, used the Ubuntu package `3.15.5+dfsg-7`, reporting SPAdes 3.15.5. Single-end: 1,524 reads; paired-end: 2,888 reads. Each produced one exact 2,000-base artificial contig and passed verified reuse. Structured summaries are in [validation/spades-linux.json](validation/spades-linux.json). All five jobs passed; optional Linux ran 217 tests without skips. The final PR checks rerun the same diagnostics and upload their full artificial output folders as `artificial-spades-evidence`, retained for 14 days.
+
+The first CI attempt exposed a resource-monitor race when SPAdes removed a scratch directory during traversal. The monitor now tolerates disappearance of child directories while retaining errors for a missing stage root or denied access. A dedicated regression test covers those cases. No biological assembly parameters were tuned to resolve the failure.

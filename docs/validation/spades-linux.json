@@ -1,0 +1,30 @@
+{
+  "kind": "artificial_spades_runtime_validation",
+  "run_url": "https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/36057938938",
+  "source_commit": "9b7ceef44ab3e08efc38c9dba31e94c62723b1da",
+  "platform": "Ubuntu Linux GitHub Actions",
+  "package_version": "3.15.5+dfsg-7",
+  "scientific_validation": false,
+  "results": [
+    {
+      "status": "passed",
+      "version": "SPAdes genome assembler v3.15.5",
+      "paired": false,
+      "input_reads": 1524,
+      "contig_count": 1,
+      "contig_length": 2000,
+      "elapsed_seconds": 0.5904630130000044,
+      "verified_reuse": true
+    },
+    {
+      "status": "passed",
+      "version": "SPAdes genome assembler v3.15.5",
+      "paired": true,
+      "input_reads": 2888,
+      "contig_count": 1,
+      "contig_length": 2000,
+      "elapsed_seconds": 0.8120422440000254,
+      "verified_reuse": true
+    }
+  ]
+}
