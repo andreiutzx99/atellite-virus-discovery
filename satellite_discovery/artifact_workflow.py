@@ -57,15 +57,17 @@ def dispatch(kind,inputs,output):
     raise ValueError('Unsupported workflow stage')
 
 def validate(spec):
+    if not isinstance(spec,dict):raise ValueError('Workflow specification must be an object')
     stages=spec.get('stages',[]);seen=set()
-    if spec.get('schema')!='artifact-workflow-v1' or not stages or len(stages)>30:raise ValueError('Provide schema artifact-workflow-v1 and 1..30 stages')
+    if spec.get('schema')!='artifact-workflow-v1' or not isinstance(stages,list) or not stages or len(stages)>30:raise ValueError('Provide schema artifact-workflow-v1 and 1..30 stages')
     for stage in stages:
+        if not isinstance(stage,dict) or not isinstance(stage.get('inputs'),dict):raise ValueError('Every stage and inputs must be objects')
         sid=stage.get('id','');kind=stage.get('kind')
-        if not re.fullmatch('[A-Za-z][A-Za-z0-9_-]{0,63}',sid) or sid in seen:raise ValueError('Invalid/duplicate stage ID')
-        if kind not in FIELDS or set(stage.get('inputs',{}))!=FIELDS[kind]:raise ValueError('Unknown stage or incorrect input fields')
+        if not isinstance(sid,str) or not re.fullmatch('[A-Za-z][A-Za-z0-9_-]{0,63}',sid) or sid in seen:raise ValueError('Invalid/duplicate stage ID')
+        if not isinstance(kind,str) or kind not in FIELDS or set(stage.get('inputs',{}))!=FIELDS[kind]:raise ValueError('Unknown stage or incorrect input fields')
         for value in stage['inputs'].values():
             if isinstance(value,str) and value:continue
-            if not isinstance(value,dict) or set(value)!={'stage','artifact'} or value['stage'] not in seen or not re.fullmatch('[A-Za-z0-9_.-]+',value['artifact']) or value['artifact'] in {'.','..','manifest.json'}:raise ValueError('Use an existing file or an earlier stage output artifact')
+            if not isinstance(value,dict) or set(value)!={'stage','artifact'} or not isinstance(value['stage'],str) or value['stage'] not in seen or not isinstance(value['artifact'],str) or not re.fullmatch('[A-Za-z0-9_.-]+',value['artifact']) or value['artifact'] in {'.','..','manifest.json'}:raise ValueError('Use an existing file or an earlier stage output artifact')
         seen.add(sid)
     return stages
 

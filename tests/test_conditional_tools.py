@@ -204,3 +204,14 @@ class PairFlagTests(unittest.TestCase):
             self.assertEqual(counts['accepted_primary_records'],1)
             self.assertEqual(counts['proper_pair_flag_records'],1)
             self.assertEqual(counts['second_mate_flag_records'],0)
+
+class SpecificationShapeTests(unittest.TestCase):
+    def test_workflow_rejects_wrong_json_types(self):
+        for value in [[],None,{'schema':'artifact-workflow-v1','stages':{}},{'schema':'artifact-workflow-v1','stages':[[]]},{'schema':'artifact-workflow-v1','stages':[{'id':5,'kind':'inventory','inputs':{'fasta':'a'}}]}]:
+            with self.subTest(value=value),self.assertRaises(ValueError):artifact_workflow.validate(value)
+    def test_snapshot_rejects_wrong_json_types(self):
+        with scratch_directory() as root:
+            root=Path(root)
+            for index,spec in enumerate([[],{'files':{}},{'files':[[]]},{'files':[{'name':5}]}]):
+                path=root/'spec.json';path.write_text(json.dumps(spec))
+                with self.subTest(spec=spec),self.assertRaises(ValueError):reference_snapshot.snapshot(path,root/str(index))

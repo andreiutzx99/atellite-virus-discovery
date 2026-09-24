@@ -25,3 +25,9 @@ All 22 previously partial/dependency-limited entries have individual [A/B/C deci
 ## What you need to do
 
 No rerun of completed QC is needed. To try the new dependency-free workflow, double-click `Run-artifact-workflow.cmd`, select `examples/artifact-workflow/workflow.json`, and choose a new output folder. The included data are artificial. Exact optional-tool and input instructions are in [CONDITIONAL_TOOLS.md](CONDITIONAL_TOOLS.md).
+
+## Verification
+
+The optional Linux job successfully installed the documented dependencies and passed real pysam/samtools BAM/CRAM equivalence, BLAST and matplotlib-export tests on artificial data. Windows and Ubuntu offline jobs also passed. [First complete optional-tool CI run](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/36013987940).
+
+The final suite contains 144 tests. Dependency-free jobs intentionally skip the three real-tool tests; the optional-tools job executes them. Windows BLAST comparison/reuse and pinned portable-installation verification also passed locally. SRA conversion remains process-fixture tested, not live-runtime validated.

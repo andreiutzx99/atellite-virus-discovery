@@ -13,18 +13,21 @@ MAX_TOTAL=100_000_000
 def snapshot(manifest,output,offline=False):
     if Path(manifest).stat().st_size>1_000_000:raise ValueError('Snapshot specification exceeds 1 MB')
     spec=json.loads(Path(manifest).read_text(encoding='utf-8'))
+    if not isinstance(spec,dict):raise ValueError('Snapshot specification must be an object')
     entries=spec.get('files',[])
-    if not entries or len(entries)>100:raise ValueError('Provide 1..100 reference files')
+    if not isinstance(entries,list) or not entries or len(entries)>100:raise ValueError('Provide 1..100 reference files')
     inputs={'specification':manifest};seen=set();total=0
     for i,row in enumerate(entries):
+        if not isinstance(row,dict):raise ValueError('Snapshot file entries must be objects')
         name=row.get('name','')
-        if not re.fullmatch(r'[A-Za-z0-9_-]+\.(fa|fasta|fna|csv|tsv|json)',name) or name in seen or name in {'summary.json','manifest.json','references.csv'}:raise ValueError('Unsafe or duplicate snapshot filename')
+        if not isinstance(name,str) or not re.fullmatch(r'[A-Za-z0-9_-]+\.(fa|fasta|fna|csv|tsv|json)',name) or name in seen or name in {'summary.json','manifest.json','references.csv'}:raise ValueError('Unsafe or duplicate snapshot filename')
         seen.add(name)
-        if not re.fullmatch(r'[0-9a-f]{64}',row.get('sha256','')) or type(row.get('bytes')) is not int or row['bytes']<0:raise ValueError('Each file needs an exact SHA256 and byte size')
+        if not isinstance(row.get('sha256'),str) or not re.fullmatch(r'[0-9a-f]{64}',row.get('sha256','')) or type(row.get('bytes')) is not int or row['bytes']<0:raise ValueError('Each file needs an exact SHA256 and byte size')
         total+=row['bytes']
         if total>MAX_TOTAL:raise ValueError('Reference snapshot exceeds 100 MB')
-        if not row.get('source') or not row.get('version') or not row.get('role'):raise ValueError('Source, version and role are required')
+        if any(not isinstance(row.get(key),str) or not row[key].strip() or len(row[key])>2000 for key in ('source','version','role')):raise ValueError('Source, version and role are required')
         if ('path' in row)==('url' in row):raise ValueError('Specify exactly one local path or HTTPS URL')
+        if not isinstance(row.get('path',row.get('url')),str):raise ValueError('Reference path or URL must be text')
         if 'path' in row:
             inputs['file_'+str(i)]=(Path(manifest).resolve().parent/row['path']).resolve()
         else:
