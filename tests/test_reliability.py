@@ -122,7 +122,7 @@ class DependencyInventoryTests(unittest.TestCase):
                 row = next(r for r in dependency_review.inspect_tools(root) if r['tool'] == 'fasterq-dump')
                 self.assertEqual(row['status'], 'version_check_passed')
                 self.assertEqual(row['sha256'], checksum(tool))
-                self.assertEqual(run.call_args.args[0], [str(tool), '--version'])
+                self.assertIn([str(tool), '--version'], [call.args[0] for call in run.call_args_list])
             with patch.object(dependency_review.shutil, 'which', return_value=None):
                 row = next(r for r in dependency_review.inspect_tools(root) if r['tool'] == 'fasterq-dump')
                 self.assertEqual(row['status'], 'not_found')

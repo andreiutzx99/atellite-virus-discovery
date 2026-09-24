@@ -15,6 +15,8 @@ jobs:
       - run: python -m pip install .
       - run: satellite-reviews --help
       - run: python -I scripts/check_installed.py
+      - if: runner.os == 'Linux'
+        run: sh Run-reviews.sh --help
       - run: python -m unittest discover -s tests -v
 
   optional-tools:

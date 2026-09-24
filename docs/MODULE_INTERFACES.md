@@ -4,7 +4,7 @@ These boundaries preserve modularity. They are not implementations of the origin
 
 | Interface | Expected input | Expected output | Released implementation / remaining boundary |
 |---|---|---|---|
-| Acquisition/QC/integrity | Archive metadata or existing QC folder | Verified FASTQ, metrics, source/output digests | Implemented; SRA Toolkit conversion unavailable |
+| Acquisition/QC/integrity | Archive metadata or existing QC folder | Verified FASTQ, metrics, source/output digests | Implemented; local SRA conversion conditional on fasterq-dump, with real paired yeast validation |
 | Library review | datasets.json | RNA/DNA/mixed/unknown and conflict CSV/JSON/HTML | Implemented; does not select tools automatically |
 | Mapping | Verified read manifest plus independently supplied versioned reference manifest | SAM/BAM, command/version/log and conservation counts | Historical local prototype not released; automated helper-discovery mapping unsupported here |
 | Read partition | Existing alignments plus source-read IDs | Mapped/unmapped/partial partitions and exhaustive count manifest | Not released; no discovery read extraction is performed |
