@@ -29,3 +29,7 @@ For all placeholder interfaces, absence of an implementation is a hard stop, not
 ## Conditional implementation update (2026-09-24)
 
 The table above retains the original boundaries. These specific generic adapters are now implemented: `alignment_adapter` (optional pysam/samtools to the existing coverage contract), `local_comparison` (supplied query/reference FASTA and roles to BLAST database/hits and provenance), `reference_snapshot` (explicit source/hash specification to immutable local files), `sra_conversion` (local archive to verified gzip FASTQ when fasterq-dump is available), `context_review` (supplied context/quantitative tables to descriptive reports), and `artifact_workflow` (allowlisted stage specification to verified resumable outputs). See [exact current contracts and limits](CONDITIONAL_TOOLS.md). No mapping, extraction, novel-element assembly, functional annotation or approximate-family discovery interface is activated by these additions.
+
+## Supplied-artifact validation follow-up
+
+See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.

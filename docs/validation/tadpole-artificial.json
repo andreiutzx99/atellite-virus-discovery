@@ -1,0 +1,96 @@
+[
+  {
+    "status": "passed",
+    "kind": "synthetic_runtime_test",
+    "backend": "BBTools Tadpole 40.01",
+    "biological_validation": false,
+    "application_discovery_integration": false,
+    "identity": {
+      "script_sha256": "03eed9c9076f196f9201bb09218d0a59e94e9fa6559d3df12ac98faf01f310a4",
+      "paired": false,
+      "archive_sha256": "36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725",
+      "runner_sha256": "339f4b633f88167fdfd18f857dbc6955092d3656a445479e6452461b802ee758"
+    },
+    "java_version": "openjdk version \"17.0.6\" 2023-01-17 LTS\nOpenJDK Runtime Environment Microsoft-7209853 (build 17.0.6+10-LTS)\nOpenJDK 64-Bit Server VM Microsoft-7209853 (build 17.0.6+10-LTS, mixed mode, sharing)",
+    "archive_sha256": "36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725",
+    "verified_runtime_files": 3528,
+    "command": [
+      "C:\\Program Files\\Microsoft\\bin\\java.EXE",
+      "-ea",
+      "-Xmx512m",
+      "-cp",
+      "<checkout>\\.tools\\bbtools-40.01\\BBTools-7afa43b1bb3ad07493ac93a67ada4a5ec779f0c0\\current",
+      "assemble.Tadpole",
+      "in=<diagnostic-output>\\reads.fastq",
+      "out=<diagnostic-output>\\contigs.fasta",
+      "threads=2",
+      "overwrite=f"
+    ],
+    "limits": {
+      "timeout_seconds": 180,
+      "stage_bytes": 400000000,
+      "java_heap_mb": 512,
+      "threads": 2
+    },
+    "input_reads": 724,
+    "contig_count": 1,
+    "contig_length": 1000,
+    "exact_match_allowing_reverse_complement": true,
+    "sha256": {
+      "reads.fastq": "6120bed69b9a66b6aada5bc6c4757e6d1d108fa813ec3380b156f1a0a4d28e36",
+      "truth.fasta": "65d56c0ccb45fb0f9b9e8e6eda13026cce3a009cfe4ee23bb552188e03f0dae1",
+      "contigs.fasta": "8351ecd6ef9e66aa6fb9160720d5d773f0a11a86112a3bc995eda326998da7f1",
+      "assembly.log": "fce5e13fdf8a36a996e5cb58b60831196a37b0119bf7f252d436c12b9658d0eb"
+    },
+    "elapsed_seconds": 9.14000000001397,
+    "verified_reuse": true
+  },
+  {
+    "status": "passed",
+    "kind": "synthetic_runtime_test",
+    "backend": "BBTools Tadpole 40.01",
+    "biological_validation": false,
+    "application_discovery_integration": false,
+    "identity": {
+      "script_sha256": "03eed9c9076f196f9201bb09218d0a59e94e9fa6559d3df12ac98faf01f310a4",
+      "paired": true,
+      "archive_sha256": "36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725",
+      "runner_sha256": "339f4b633f88167fdfd18f857dbc6955092d3656a445479e6452461b802ee758"
+    },
+    "java_version": "openjdk version \"17.0.6\" 2023-01-17 LTS\nOpenJDK Runtime Environment Microsoft-7209853 (build 17.0.6+10-LTS)\nOpenJDK 64-Bit Server VM Microsoft-7209853 (build 17.0.6+10-LTS, mixed mode, sharing)",
+    "archive_sha256": "36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725",
+    "verified_runtime_files": 3528,
+    "command": [
+      "C:\\Program Files\\Microsoft\\bin\\java.EXE",
+      "-ea",
+      "-Xmx512m",
+      "-cp",
+      "<checkout>\\.tools\\bbtools-40.01\\BBTools-7afa43b1bb3ad07493ac93a67ada4a5ec779f0c0\\current",
+      "assemble.Tadpole",
+      "in=<diagnostic-output>\\reads.fastq",
+      "out=<diagnostic-output>\\contigs.fasta",
+      "threads=2",
+      "overwrite=f",
+      "in2=<diagnostic-output>\\mate.fastq"
+    ],
+    "limits": {
+      "timeout_seconds": 180,
+      "stage_bytes": 400000000,
+      "java_heap_mb": 512,
+      "threads": 2
+    },
+    "input_reads": 1288,
+    "contig_count": 1,
+    "contig_length": 1000,
+    "exact_match_allowing_reverse_complement": true,
+    "sha256": {
+      "reads.fastq": "e88ec69acdb376297dd3caa32982b24dcc0fbd0b5a6d774158d5dfed59ebaa7d",
+      "truth.fasta": "65d56c0ccb45fb0f9b9e8e6eda13026cce3a009cfe4ee23bb552188e03f0dae1",
+      "contigs.fasta": "f3e421b0fe535b6a597a040bac28c0ed699a958eb81d8f546dc8b79efa92078b",
+      "assembly.log": "ca0dadda0080f4ea8285ee1664957331af874c2e78c4b58f8bc7db49d1deab5f",
+      "mate.fastq": "c3dc1554d453e70fedbc8aa366b9f419401fb9d27778f320eda383f143f9add1"
+    },
+    "elapsed_seconds": 16.0,
+    "verified_reuse": true
+  }
+]

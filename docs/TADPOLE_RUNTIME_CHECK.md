@@ -19,3 +19,7 @@ Source: [BBTools](https://github.com/bbushnell/BBTools), commit `7afa43b1bb3ad07
 Archive SHA256: `36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725`.
 
 The tools directory is ignored by Git. Committing this launcher does not install BBTools on another computer.
+
+## Current diagnostic extension
+
+The historical local installation path above is not a portable installation guarantee. From a current checkout with Python/Java and the pinned runtime, run `python scripts/test_tadpole_runtime.py --output NEW_FOLDER --paired` for the fixed paired fixture, or omit `--paired` for single-end. Successful unchanged outputs can now be checksum-verified and reused. Failed/interrupted attempts still require new folders. The runner records a 180-second/400 MB stage budget and uses a 512 MB Java heap. Linux optional CI downloads the exact pinned archive using `scripts/check_tadpole_ci.py` and runs both layouts. See [current evidence](validation/tadpole-artificial.json).
