@@ -98,7 +98,9 @@ def run(manifest,output):
                     path=(base/artifact).resolve(strict=True)
                     if not path.is_relative_to(base) or checksum(path)!=digests[artifact]:raise ValueError('Workflow artifact failed integrity check')
                 inputs[key]=path
-            dispatch(stage['kind'],inputs,output/stage['id'])
+            stage_output=(output/stage['id']).resolve()
+            if not stage_output.is_relative_to(output):raise ValueError('Stage output redirects outside the workflow folder')
+            dispatch(stage['kind'],inputs,stage_output)
             result['stages'].append({'id':stage['id'],'kind':stage['kind'],'status':'complete'})
             write_json(marker,result)
         if checksum(manifest)!=digest:raise ValueError('Workflow specification changed during execution')

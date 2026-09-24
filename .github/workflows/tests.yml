@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --only-binary=:all: pysam==0.24.1 matplotlib==3.10.1
+      - run: "python -m pip install --only-binary=:all: pysam==0.24.1 matplotlib==3.10.1"
       - run: sudo apt-get update && sudo apt-get install -y samtools ncbi-blast+
       - run: python -m unittest discover -s tests -v
         env:
