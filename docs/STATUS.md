@@ -11,3 +11,7 @@ The conditional-tools follow-up is described in [PROGRESS_REPORT.md](PROGRESS_RE
 ## Supplied-artifact validation follow-up
 
 See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.
+
+## Process reliability follow-up
+
+See [PROCESS_RELIABILITY_REPORT.md](PROCESS_RELIABILITY_REPORT.md) for the subprocess tree cleanup, budget scanning, lock-owner diagnostics, validation and remaining scope. This is a partial infrastructure delivery; no ViReMa/DVG integration is included.

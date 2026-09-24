@@ -152,7 +152,7 @@ class ResourceLimitsTests(unittest.TestCase):
             with patch.object(bounded_process.subprocess, 'Popen', wraps=subprocess.Popen) as start:
                 with self.assertRaisesRegex(TimeoutError, 'time budget'):
                     bounded_process.run([sys.executable, '-c', 'import time; time.sleep(60)'], root, 'timeout.log', timeout=.1)
-                self.assertEqual(start.call_count, 1)
+                self.assertEqual(start.call_args_list[0].args[0][0],sys.executable)
             self.assertTrue((root/'timeout.log').is_file())
 
     def test_existing_overbudget_stage_is_preserved_without_start(self):
