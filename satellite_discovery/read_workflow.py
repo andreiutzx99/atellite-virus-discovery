@@ -11,6 +11,7 @@ from . import __version__
 from .quality_control import QCConfig, run_qc
 from .sequence_downloader import check_disk, checksum, download_file, make_plan, write_json
 from .model_scope import enforce, POLICY_SHA256
+from .acquisition_fallback import diagnostic
 
 
 def prepare_reads(directory, max_runs=1, max_bytes=1_000_000_000, offline=False, qc_config=None):
@@ -80,8 +81,10 @@ def _prepare(source, rows, stage, max_runs, max_bytes, offline, qc_config):
                              "qc_report": run["accession"] + "/qc/qc.json"})
                 log(f"{run['accession']}: QC complete; {qc['after']['reads']:,}/{qc['before']['reads']:,} reads retained")
             except Exception as exc:
+                item['failed_stage'] = item['status']
                 item["status"] = "failed"
-                manifest["errors"].append({"accession": run["accession"], "message": str(exc)})
+                item['failure'] = diagnostic(exc)
+                manifest["errors"].append({"accession": run["accession"], "message": str(exc), **item['failure']})
                 log("Run failed: " + str(exc))
             write_json(stage / "manifest.json", manifest)
         successes = sum(r["status"] == "complete" for r in manifest["runs"])

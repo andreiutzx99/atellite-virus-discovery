@@ -1,6 +1,7 @@
 """Read-only version checks for optional tools; never install or run analyses."""
 import hashlib
 import importlib.util
+from importlib import metadata
 import platform
 from pathlib import Path
 import shutil
@@ -17,18 +18,23 @@ TOOLS = {
     'java': ('java', '-version', None),
     'samtools': ('samtools', '--version', None),
     'fasterq-dump': ('fasterq-dump', '--version', None),
+    'prefetch': ('prefetch', '--version', None),
+    'vdb-validate': ('vdb-validate', '--version', None),
     'spades': ('spades.py', '--version', None),
+    'tadpole': ('tadpole.sh', '--version', None),
 }
 
 def inspect_tools(project):
     project=Path(project).resolve()
     rows=[]
     for name,(command,flag,pattern) in TOOLS.items():
+        if pattern and sys.platform!='win32':pattern=pattern.removesuffix('.exe')
         path=shutil.which(command)
+        if not path and name=='spades':path=shutil.which('spades')
         candidates=sorted(project.glob(pattern)) if pattern else []
         if not path and len(candidates)==1:
             path=str(candidates[0].resolve())
-        row={'tool':name,'path':path or '', 'status':'not_found', 'version_output':'', 'sha256':''}
+        row={'tool':name,'path':str(Path(path).resolve()) if path else '', 'status':'not_found', 'version_output':'', 'sha256':'', 'capability_test':'not_performed'}
         if not path and len(candidates)>1:
             row['status']='ambiguous_portable_versions'
         if path:
@@ -41,7 +47,18 @@ def inspect_tools(project):
             except (OSError,subprocess.TimeoutExpired) as error:
                 row.update(status='version_check_failed',version_output=str(error)[:4000])
         rows.append(row)
-    rows.append({'tool':'pysam','path':'','status':'module_present' if importlib.util.find_spec('pysam') else 'not_found','version_output':'Presence only; import and BAM/CRAM decoding not validated','sha256':''})
+    for name in ('pysam','matplotlib'):
+        row={'tool':name,'path':'','status':'not_found','version_output':'','sha256':'','capability_test':'not_performed'}
+        try:
+            if importlib.util.find_spec(name):
+                try:row['version_output']=metadata.version(name)
+                except metadata.PackageNotFoundError:row['version_output']='Version metadata unavailable'
+                result=subprocess.run([sys.executable,'-c','import importlib,sys; importlib.import_module(sys.argv[1])',name],capture_output=True,text=True,errors='replace',timeout=15,check=False)
+                row['status']='import_check_passed' if result.returncode==0 else 'import_check_failed'
+                if result.returncode:row['version_output']+='; '+result.stderr[-2000:]
+        except (OSError,ValueError,ImportError,subprocess.TimeoutExpired) as error:
+            row.update(status='import_check_failed',version_output=str(error)[:2000])
+        rows.append(row)
     return rows
 
 def run(project,output):

@@ -38,7 +38,7 @@ Counts: category 1: 38, category 2: 16, category 3: 4, category 4: 27. Total: 85
 | F007 | Cross-laboratory geography and biological-sample selection | 2 | Supplied laboratory/country/lane context import and stratified counts implemented. Archive omissions and true independence cannot be inferred from missing labels. |
 | F008 | Study negative-control selection | 2 | Control labels require an explicit evidence source; control strata retain unknown observations. Authentic negative-control selection still needs study evidence. |
 | F009 | Automatic complete FASTQ downloads | 1 | Budgeted ENA retrieval with paired layout, hashes, retry and resume; real QC run previously completed. |
-| F010 | SRA Toolkit conversion when FASTQ unavailable | 3 | Conditional local fasterq-dump conversion adapter, deterministic gzip, syntax/count checks and resume implemented. Requires SRA Toolkit; process-fixture tested only. Remote automatic SRA fallback and real-runtime validation remain open. |
+| F010 | SRA Toolkit conversion when FASTQ unavailable | 3 | Conditional local fasterq-dump conversion adapter, deterministic gzip, syntax/count checks and resume implemented. Requires SRA Toolkit; real Windows 3.4.1 paired yeast conversion and verified reuse passed. Other layouts/failure paths use fixtures. Remote automatic fallback remains unregistered; a tested fallback API and diagnostics are provided. |
 | F011 | Checksums interrupted downloads and paired-read integrity | 1 | Existing download tests and QC audit cover corruption, interruption and pair conservation. |
 | F012 | Raw reads rejected reads and orphans preserved | 1 | QC outputs retain categories; integrity audit tests and historical full audit verify conservation. |
 | F013 | Read quality metrics and baseline filtering | 1 | Existing QC implementation tested; earlier real run completed. Baseline exact-adapter/end-trim algorithm, not fastp. |
@@ -126,4 +126,4 @@ Historical QC and synthetic runtime results remain historical evidence, not a fr
 
 ## Conditional-tools extension
 
-See [CONDITIONAL_TOOLS.md](CONDITIONAL_TOOLS.md) for new interfaces, optional dependency installation and the reproducible artificial workflow example. F033 is complete for local supplied-reference comparison; F045 is complete as a conditional decoder contract, not native Windows dependency availability. SRA conversion is implemented conditionally but has no live-runtime validation here. No category-4 component was activated.
+See [CONDITIONAL_TOOLS.md](CONDITIONAL_TOOLS.md) for new interfaces, optional dependency installation and the reproducible artificial workflow example. F033 is complete for local supplied-reference comparison; F045 is complete as a conditional decoder contract, not native Windows dependency availability. SRA conversion is conditional and now has a real Windows paired yeast conversion/reuse benchmark; see validation/SRA_VALIDATION.md for limits. No category-4 component was activated.

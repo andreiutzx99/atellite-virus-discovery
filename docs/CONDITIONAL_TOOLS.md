@@ -33,6 +33,11 @@ Each step has `id`, `kind` and `inputs`. Input values are paths relative to the 
 | 17 | Pinned reference snapshot | JSON specification with exact file hashes/sizes |
 | 18 | Portable Windows BLAST setup | Uses the project .tools folder; may download the pinned official archive |
 | 19 | Conditional local SRA conversion | Local .sra archive; fasterq-dump on PATH |
+| 20 | Read-only workflow configuration preview | Workflow JSON; reports missing paths without executing |
+| 21 | Open existing report | Local HTML file; prints path on headless systems |
+| 22 | Reference snapshot comparison | Two completed snapshots and a new comparison output folder |
+
+See [deployment and reproducibility instructions](DEPLOYMENT.md). Unknown workflow/stage configuration fields are rejected rather than ignored. Dependency reports include prefetch, vdb-validate, Tadpole PATH presence and isolated pysam/matplotlib import checks. `capability_test: not_performed` is explicit: import/version success is not functional proof. Assembly activation remains outside the supported workflow.
 
 ## BAM/CRAM
 
@@ -68,7 +73,9 @@ Sequence-quality reports add longest identical-symbol run and called-dinucleotid
 
 ## SRA conversion boundary
 
-Menu 19 activates if a compatible NCBI `fasterq-dump` is on PATH. It converts an existing local archive (pilot cap 100 MB), checks plain output layout, writes deterministic gzip copies, validates FASTQ syntax and counts, and checks mate-count agreement. It requires 2 GB free disk space and limits native execution to 300 seconds/1 GB of intermediate output. Full mate-ID checks remain in QC. This adapter is unit-tested with a process fixture; a real SRA Toolkit conversion has not been runtime-validated here. It is not yet an automatic remote-archive fallback in the acquisition wizard.
+Menu 19 activates if a compatible NCBI `fasterq-dump` is on PATH. It converts an existing local archive (pilot cap 100 MB), checks plain output layout, writes deterministic gzip copies, validates FASTQ syntax/counts and paired identifiers/orientation. It requires 2 GB free disk space and limits native execution to 300 seconds/1 GB of intermediate output. Empty conversion outputs fail explicitly. Successful scratch is cleaned; failed outputs are preserved on retry so stale mates cannot be accepted. A real Windows Toolkit 3.4.1 paired yeast conversion and verified reuse passed: [evidence and exact validation limits](validation/SRA_VALIDATION.md). It is not an automatic remote-archive fallback in the acquisition wizard.
+
+Menu 22 verifies every recorded artifact in both snapshots before reporting added/removed/changed/unchanged files. Content hashes, versions and supplied provenance changes are detected; retrieval time alone is not treated as a reference change. The snapshot manifest SHA256 is its recorded identity. No existing snapshot is updated in place, and cached comparisons reject modified source artifacts.
 
 ## Not added
 

@@ -4,9 +4,11 @@ Public sequencing metadata retrieval, verified downloads, baseline QC and descri
 
 ## Start here
 
-Use Python 3.11 or newer. On Windows, double-click **Run-reviews.cmd** and select the numbered review. The menu asks for existing files and a new output folder, then prints the report path. No optional bioinformatics executable is required for these Python review tools.
+Use Python 3.11 or newer. On Windows, double-click **Start.cmd** (or **Run-reviews.cmd**) and select the numbered review. On Linux, use **Run-reviews.sh**. The menu asks for existing files and an output folder, then prints the report path. No optional bioinformatics executable is required for the pure-Python review tools. See [Windows/Linux/WSL/HPC setup and recovery](docs/DEPLOYMENT.md).
 
 For an installed command on Windows or Linux, run `python -m pip install .` in a Python virtual environment, then use `satellite-reviews` to open the same numbered menu. See [portability and recovery instructions](docs/CONDITIONAL_TOOLS.md).
+
+Menu 20 previews configuration, 12 runs or resumes an artifact workflow, 21 opens reports, and 22 compares verified reference snapshots. Every started artifact workflow writes a compact `reproducibility.json`, including on failure.
 
 Available reviews include RNA/DNA metadata, sample/control observations, FASTA inventory, alignment coverage (interval CSV or SAM/gzip-SAM), reference-match evidence, linked catalogues, existing report dashboards, imported nucleotide BLAST tables, existing QC integrity, and optional dependency versions. See [precise input instructions](docs/USER_TEST_GUIDE.md) and [file contracts](docs/REVIEW_INFRASTRUCTURE.md).
 

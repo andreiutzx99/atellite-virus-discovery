@@ -1,0 +1,69 @@
+{
+  "validated_utc": "2026-09-24T15:44:46.033593+00:00",
+  "benchmark_metadata": [
+    {
+      "run_accession": "SRR12086795",
+      "scientific_name": "Saccharomyces cerevisiae",
+      "read_count": "2",
+      "library_layout": "PAIRED",
+      "study_accession": "PRJNA641752",
+      "experiment_title": "NextSeq 500 sequencing: WGS of Saccharomyces cerevisiae brewery yeast"
+    }
+  ],
+  "archive_bytes": 80055,
+  "archive_sha256": "e52b77519ba63a6349bde58fe9b8dde18e8843846e5a1826ee3c2bc3293cdc09",
+  "toolkit_archive_sha256": "815b1494047a2f245182d1792fbbc847165823f5616189874093333c024eacc5",
+  "command": {
+    "command": [
+      "<validation-root>\\sratoolkit.3.4.1-win64\\bin\\fasterq-dump.exe",
+      "<validation-root>\\retrieved\\SRR12086795\\SRR12086795.sra",
+      "--split-3",
+      "--threads",
+      "1",
+      "--outdir",
+      "<validation-root>\\converted-v3",
+      "--temp",
+      "<validation-root>\\converted-v3\\temporary",
+      "--force"
+    ],
+    "tool": {
+      "path": "<validation-root>\\sratoolkit.3.4.1-win64\\bin\\fasterq-dump.exe",
+      "sha256": "bd1193ee92ee451741feec9fadbbc7fa482856ff8e91692475f213705ddf452a",
+      "version": "fasterq-dump 3.4.1 (absolute executable prefix redacted)"
+    },
+    "input_sha256": "e52b77519ba63a6349bde58fe9b8dde18e8843846e5a1826ee3c2bc3293cdc09"
+  },
+  "status": "complete",
+  "verified_reuse_identical": true,
+  "fastq_files": [
+    {
+      "filename": "SRR12086795_1.fastq.gz",
+      "reads": 2,
+      "sha256": "895b024da5ff4d46cfa3691b996a0b6f9637700264d9841836c0728d3cac227f"
+    },
+    {
+      "filename": "SRR12086795_2.fastq.gz",
+      "reads": 2,
+      "sha256": "aa4b2475312797ae2b9f126ead92b406135addbce3fd671c2216847c5e06ec58"
+    }
+  ],
+  "scratch_removed": true,
+  "limits": {
+    "retrieval_seconds": 60,
+    "retrieval_maximum": "50M",
+    "conversion_seconds": 300
+  },
+  "scope": "Software conversion only; no discovery or biological validation",
+  "retrieval_command": [
+    "<validation-root>\\sratoolkit.3.4.1-win64\\bin\\prefetch.exe",
+    "SRR12086795",
+    "--max-size",
+    "50M",
+    "--output-directory",
+    "<validation-root>\\retrieved"
+  ],
+  "retrieval_returncode": 0,
+  "metadata_source": "https://www.ebi.ac.uk/ena/browser/view/SRR12086795",
+  "toolkit_source": "https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit",
+  "adapter_source_lf_sha256": "e4634c9cd4e05d768b517b7c7f85d46432b2cbfd190a7a168b40814b0bdab132"
+}

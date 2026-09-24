@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sqlite3
+import webbrowser
 
 
 def dashboard(root, output):
@@ -45,6 +46,15 @@ def ask(label):
     if not value:
         raise ValueError('A path is required')
     return value
+
+
+def open_report(path):
+    path=Path(path).resolve(strict=True)
+    if not path.is_file() or path.suffix.lower()!='.html':
+        raise ValueError('Choose an existing HTML report file')
+    opened=webbrowser.open(path.as_uri())
+    print(('Opened report: ' if opened else 'No browser available; open this report on your desktop: ')+str(path))
+    return path
 
 
 def launch(choice):
@@ -136,18 +146,31 @@ def launch(choice):
         source = ask('Existing local SRA archive')
         output = ask('New conversion output folder')
         convert(source, output)
+    elif choice == '20':
+        from .artifact_workflow import inspect_configuration
+        result=inspect_configuration(ask('Workflow JSON specification to inspect'))
+        print(json.dumps(result,indent=2))
+        return 'Configuration inspected; no stages executed or output folders created'
+    elif choice == '21':
+        return open_report(ask('Existing HTML report path'))
+    elif choice == '22':
+        from .reference_snapshot import compare_snapshots
+        previous,current=ask('Previous snapshot folder'),ask('Current snapshot folder')
+        output=ask('New snapshot comparison output folder')
+        compare_snapshots(previous,current,output)
     else:
-        raise ValueError('Choose a number from 0 to 19')
+        raise ValueError('Choose a number from 0 to 22')
     return Path(output).resolve() / 'report.html'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--choice', choices=[str(n) for n in range(1,20)])
+    parser.add_argument('--choice', choices=[str(n) for n in range(1,23)])
     args = parser.parse_args()
     while True:
         print('\n1 Library metadata review\n2 Observation comparisons\n3 Sequence inventory\n4 Supplied alignment blocks coverage\n5 Contamination evidence review\n6 Link catalogue imports\n7 Existing report dashboard\n8 Supplied alignment coverage (SAM/BAM/CRAM)\n9 Import existing BLAST table\n10 Audit existing QC integrity\n11 Check optional dependency versions\n12 Run artifact workflow\n13 Local supplied-reference BLAST comparison\n14 Supplied study context\n15 Supplied quantitative associations\n16 Sequence quality descriptors\n17 Pinned reference snapshot\n18 Set up portable Windows BLAST\n19 Convert local SRA archive (optional Toolkit)\n0 Exit')
         try:
+            print('20 Inspect workflow configuration\n21 Open an existing report\n22 Compare reference snapshots\nUse 12 with the same specification/output folder to resume. Outputs remain at the folder you select.')
             choice = args.choice or input('Choose a review: ').strip()
             if choice == '0':
                 return
@@ -155,6 +178,7 @@ def main():
             print('Report: ' + str(path))
         except (OSError, ValueError, KeyError, TypeError, csv.Error, sqlite3.Error, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
             print('Review did not complete: ' + str(exc))
+            print('Check the named input, output-folder permissions, disk space and menu 11 dependencies. For a workflow failure, open report.html in its output folder; failed results are not valid negative results.')
             if args.choice:
                 parser.exit(1)
         except (EOFError, KeyboardInterrupt):

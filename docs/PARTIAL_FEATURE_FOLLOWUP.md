@@ -8,13 +8,13 @@ Date: 2026-09-24. The original feature IDs and all category-4 boundaries are pre
 
 [Machine-readable follow-up](PARTIAL_FEATURE_FOLLOWUP.csv) · [85-feature audit](PERMITTED_ROADMAP.md) · [usage and exact contracts](CONDITIONAL_TOOLS.md)
 
-The subsequent [infrastructure reliability follow-up](INFRASTRUCTURE_STATUS.md) adds portability, diagnostic and provenance checks without changing these scientific feasibility decisions. F031/F076 now export optional supplied accession/database version and snapshot retrieval time; F081 includes an installed cross-platform review-menu entry point. F010 still requires real SRA runtime validation and has no remote automatic fallback.
+The subsequent [infrastructure reliability follow-up](INFRASTRUCTURE_STATUS.md) adds portability, diagnostic and provenance checks without changing these scientific feasibility decisions. F031/F076 now export optional supplied accession/database version and snapshot retrieval time; F081 includes an installed cross-platform review-menu entry point. F010 now has real paired yeast runtime validation; remote automatic fallback remains unregistered.
 
 | ID | Decision | Implemented / available | Remaining work or condition |
 |---|---|---|---|
 | F007 | A | Supplied laboratory/country/lane context import and stratified counts implemented. | Archive omissions and true independence cannot be inferred from missing labels. |
 | F008 | A | Control labels require an explicit evidence source; control strata retain unknown observations. | Authentic negative-control selection still needs study evidence. |
-| F010 | B | Conditional local fasterq-dump conversion adapter, deterministic gzip, syntax/count checks and resume implemented. | Requires SRA Toolkit; process-fixture tested only. Remote automatic SRA fallback and real-runtime validation remain open. |
+| F010 | B | Conditional local fasterq-dump conversion adapter, deterministic gzip, syntax/count checks and resume implemented. | Requires SRA Toolkit; real Windows 3.4.1 paired yeast conversion and verified reuse passed. Other layouts/failure paths use fixtures. Remote automatic fallback remains unregistered; a tested fallback API and diagnostics are provided. |
 | F016 | A | Explicit supplied strand and RNA/DNA/mixed context with validated enums and unknown handling implemented. | No strand/mixed-library inference without evidence. |
 | F022 | B | Existing optional dependency checks discover and version-probe SPAdes when installed. | No local runtime; assembly activation overlaps preserved category-4 reconstruction interfaces and is not added. |
 | F027 | A | Supplied sequence descriptors, optional alignment coverage and pair-flag summaries provide reviewable evidence. | No automatic reliable-assembly verdict or biological benchmark. |
