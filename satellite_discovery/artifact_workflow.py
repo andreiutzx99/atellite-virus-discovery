@@ -8,6 +8,7 @@ import re
 from .sequence_downloader import checksum,write_json
 from .portable_paths import portable_name
 from . import reproducibility
+from . import stage_lock
 
 FIELDS={
  'sra_conversion':{'archive'},'inventory':{'fasta'},'sequence_quality':{'fasta'},'library':{'metadata'},
@@ -129,8 +130,7 @@ def run(manifest,output):
     if manifest.stat().st_size>1_000_000:raise ValueError('Workflow specification exceeds 1 MB')
     digest=checksum(manifest);stages=validate(json.loads(manifest.read_text(encoding='utf-8')))
     output.mkdir(parents=True,exist_ok=True);lock=output/'.workflow.lock'
-    try:lock.open('x').close()
-    except FileExistsError:raise ValueError('Workflow is locked; do not start concurrent writers')
+    lock_token=stage_lock.acquire(lock)
     marker=output/'workflow.json';result=None;active=None
     try:
         runtime=reproducibility.environment()
@@ -188,7 +188,7 @@ def run(manifest,output):
             if active is not None:active.update(failure)
             write_status(output,result)
         raise
-    finally:lock.unlink()
+    finally:stage_lock.release(lock,lock_token)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--manifest',required=True);parser.add_argument('--output',required=True)

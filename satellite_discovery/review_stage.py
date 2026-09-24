@@ -13,6 +13,7 @@ from . import __version__
 from .observation_report import export_csv
 from .sequence_downloader import checksum, write_json
 from .portable_paths import portable_name
+from . import stage_lock
 
 
 def table(path, columns, limit=200_000):
@@ -85,13 +86,11 @@ def execute(kind, inputs, output, engine, produce):
     identity = {'stage': kind, 'inputs': {k: checksum(p) for k, p in paths.items()},
                 'engine_sha256': checksum(engine), 'lifecycle_sha256': checksum(__file__),
                 'portable_paths_sha256': checksum(Path(__file__).with_name('portable_paths.py')),
+                'stage_lock_sha256': checksum(stage_lock.__file__),
                 'csv_exporter_sha256': checksum(Path(__file__).with_name('observation_report.py'))}
     output.mkdir(parents=True, exist_ok=True)
     lock = output / '.review.lock'
-    try:
-        lock.open('x').close()
-    except FileExistsError:
-        raise ValueError('Review folder is locked; do not run concurrent writers')
+    lock_token = stage_lock.acquire(lock)
     manifest = output / 'manifest.json'
     result = None
     try:
@@ -129,4 +128,4 @@ def execute(kind, inputs, output, engine, produce):
             write_json(manifest, result)
         raise
     finally:
-        lock.unlink()
+        stage_lock.release(lock, lock_token)
