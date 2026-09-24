@@ -31,3 +31,5 @@ For menu 10, the existing run folder supplied during development is:
 The audit reads that folder and writes a separate report. Details: [QC_INTEGRITY_AUDIT.md](QC_INTEGRITY_AUDIT.md). The optional [Tadpole diagnostic](TADPOLE_RUNTIME_CHECK.md) requires its separately installed pinned runtime; it is not an assembly option for biological runs.
 
 Version checks distinguish executable presence, successful version output and failed checks. They are not functional validation. Portable local tools can be detected even when absent from PATH. BAM/CRAM needs an additional supported decoder; changing a filename extension will not convert a file.
+
+The later conditional-tools extension adds menu options 12–19 and expands menu 8 to optional BAM/CRAM. See [CONDITIONAL_TOOLS.md](CONDITIONAL_TOOLS.md) for exact schemas, dependency conditions and the artificial workflow example. The prior table describes the foundation options; it is not the complete current menu.

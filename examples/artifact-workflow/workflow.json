@@ -1,0 +1,7 @@
+{
+  "schema": "artifact-workflow-v1",
+  "stages": [
+    {"id": "inventory", "kind": "inventory", "inputs": {"fasta": "input.fasta"}},
+    {"id": "quality", "kind": "sequence_quality", "inputs": {"fasta": {"stage": "inventory", "artifact": "sequences.fasta"}}}
+  ]
+}

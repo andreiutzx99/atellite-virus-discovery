@@ -25,3 +25,7 @@ These boundaries preserve modularity. They are not implementations of the origin
 | UI/reporting/provenance | Implemented-stage artifacts | Linked reports, exports, status and dependency diagnostics | Implemented for supplied artifacts; no autonomous RUN DISCOVERY |
 
 For all placeholder interfaces, absence of an implementation is a hard stop, not an empty successful result. Future independent implementations require record-conservation, invalid-input, interruption, resource-limit, provenance and validation tests before any integration. The released launcher never calls these placeholders. The original biological methods are not prescribed by these interface declarations.
+
+## Conditional implementation update (2026-09-24)
+
+The table above retains the original boundaries. These specific generic adapters are now implemented: `alignment_adapter` (optional pysam/samtools to the existing coverage contract), `local_comparison` (supplied query/reference FASTA and roles to BLAST database/hits and provenance), `reference_snapshot` (explicit source/hash specification to immutable local files), `sra_conversion` (local archive to verified gzip FASTQ when fasterq-dump is available), `context_review` (supplied context/quantitative tables to descriptive reports), and `artifact_workflow` (allowlisted stage specification to verified resumable outputs). See [exact current contracts and limits](CONDITIONAL_TOOLS.md). No mapping, extraction, novel-element assembly, functional annotation or approximate-family discovery interface is activated by these additions.

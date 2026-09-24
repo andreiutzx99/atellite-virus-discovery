@@ -17,3 +17,7 @@ include = ["satellite_discovery*"]
 
 [tool.setuptools.package-data]
 satellite_discovery = ["helpers.json", "model_scope.json"]
+
+[project.optional-dependencies]
+alignment = ["pysam==0.24.1"]
+plots = ["matplotlib>=3.8,<4"]

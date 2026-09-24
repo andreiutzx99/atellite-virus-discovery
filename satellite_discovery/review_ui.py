@@ -5,6 +5,7 @@ import html
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sqlite3
 
 
@@ -80,10 +81,11 @@ def launch(choice):
     elif choice == '7':
         return dashboard(ask('Existing reports root folder'), ask('New dashboard HTML path'))
     elif choice == '8':
-        from .coverage_review import run_sam
-        source = ask('Existing SAM or gzip-compressed SAM path')
+        from .alignment_adapter import run as run_sam
+        source = ask('Existing SAM, gzip-SAM, BAM or CRAM path')
         output = ask('SAM coverage output folder')
-        run_sam(source, output)
+        reference = ask('Local CRAM reference FASTA') if Path(source).suffix.lower() == '.cram' else None
+        run_sam(source, output, reference)
     elif choice == '9':
         from .blast_import import run
         features, references, hits = ask('Feature lengths CSV'), ask('Reference provenance CSV'), ask('Existing BLAST outfmt 6 table')
@@ -97,24 +99,61 @@ def launch(choice):
     elif choice == '11':
         from .dependency_review import run
         return run(Path(__file__).resolve().parents[1], ask('New dependency report folder'))
+    elif choice == '12':
+        from .artifact_workflow import run
+        return run(ask('Workflow JSON specification'), ask('Workflow output folder'))
+    elif choice == '13':
+        from .local_comparison import compare
+        query, reference, roles = ask('Supplied query FASTA'), ask('Supplied reference FASTA'), ask('Reference roles/provenance CSV')
+        output = ask('BLAST comparison output folder')
+        compare(query, reference, roles, output)
+    elif choice == '14':
+        from .context_review import run_context
+        samples, observations = ask('Context samples CSV'), ask('Observations CSV')
+        output = ask('Context report folder')
+        run_context(samples, observations, output)
+    elif choice == '15':
+        from .context_review import run_quantitative
+        source = ask('Paired quantitative measurements CSV')
+        output = ask('Quantitative report folder')
+        run_quantitative(source, output)
+    elif choice == '16':
+        from .sequence_quality import run
+        source = ask('Supplied FASTA')
+        output = ask('Sequence quality descriptor folder')
+        run(source, output)
+    elif choice == '17':
+        from .reference_snapshot import snapshot
+        source = ask('Pinned reference snapshot JSON')
+        output = ask('New reference snapshot folder')
+        snapshot(source, output)
+    elif choice == '18':
+        from .portable_setup import install
+        install(Path(__file__).resolve().parents[1] / '.tools')
+        return 'Portable BLAST installation verified; use menu 11 for a version report'
+    elif choice == '19':
+        from .sra_conversion import convert
+        source = ask('Existing local SRA archive')
+        output = ask('New conversion output folder')
+        convert(source, output)
     else:
-        raise ValueError('Choose a number from 0 to 11')
+        raise ValueError('Choose a number from 0 to 19')
     return Path(output).resolve() / 'report.html'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--choice', choices=[str(n) for n in range(1,12)])
+    parser.add_argument('--choice', choices=[str(n) for n in range(1,20)])
     args = parser.parse_args()
     while True:
-        print('\n1 Library metadata review\n2 Observation comparisons\n3 Sequence inventory\n4 Supplied alignment blocks coverage\n5 Contamination evidence review\n6 Link catalogue imports\n7 Existing report dashboard\n8 Supplied SAM/gzip-SAM coverage\n9 Import existing BLAST table\n10 Audit existing QC integrity\n11 Check optional dependency versions\n0 Exit')
+        print('\n1 Library metadata review\n2 Observation comparisons\n3 Sequence inventory\n4 Supplied alignment blocks coverage\n5 Contamination evidence review\n6 Link catalogue imports\n7 Existing report dashboard\n8 Supplied alignment coverage (SAM/BAM/CRAM)\n9 Import existing BLAST table\n10 Audit existing QC integrity\n11 Check optional dependency versions\n12 Run artifact workflow\n13 Local supplied-reference BLAST comparison\n14 Supplied study context\n15 Supplied quantitative associations\n16 Sequence quality descriptors\n17 Pinned reference snapshot\n18 Set up portable Windows BLAST\n19 Convert local SRA archive (optional Toolkit)\n0 Exit')
         try:
             choice = args.choice or input('Choose a review: ').strip()
             if choice == '0':
                 return
             path = launch(choice)
             print('Report: ' + str(path))
-        except (OSError, ValueError, KeyError, TypeError, csv.Error, sqlite3.Error) as exc:
+        except (OSError, ValueError, KeyError, TypeError, csv.Error, sqlite3.Error, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
             print('Review did not complete: ' + str(exc))
             if args.choice:
                 parser.exit(1)

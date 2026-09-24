@@ -25,3 +25,7 @@ python -m unittest discover -s tests -q
 The public test suite uses artificial fixtures and mocked archive services. It verifies software contracts, not discovery sensitivity. Reports never turn arbitrary scores into probabilities or missing observations into absence. Supplied BLAST hits do not establish novelty; exact duplicate groups are not inferred viral families.
 
 See [module interfaces](docs/MODULE_INTERFACES.md) for unsupported/unavailable stages. Local historical mapping/assembly/BLAST prototypes are preserved in the developer working directory but are not part of the released source or user interface. Public source status is defined by the feature audit, not by untracked local files.
+
+## Conditional tools and workflow extension
+
+The 22 partial/dependency-limited audit entries have now been reconsidered individually: [A/B/C decisions](docs/PARTIAL_FEATURE_FOLLOWUP.md). See the [quick progress report](docs/PROGRESS_REPORT.md) and [conditional-tool instructions](docs/CONDITIONAL_TOOLS.md). `Run-artifact-workflow.cmd` connects permitted existing-artifact stages with verified resume. It does not activate category-4 biological discovery functions.
