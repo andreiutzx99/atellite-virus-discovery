@@ -9,7 +9,16 @@ from satellite_discovery.artificial_spades import run
 root=Path(__file__).resolve().parents[1]/'.tools'
 for paired,name in ((False,'single'),(True,'paired')):
     output=root/('spades-diagnostic-'+name)
-    run(output,paired)
+    try:
+        run(output,paired)
+    except BaseException:
+        for name in ('diagnostic.json','version.log','assembly.log'):
+            path=output/name
+            if path.is_file():
+                with path.open('rb') as source:
+                    source.seek(max(0,path.stat().st_size-8000))
+                    print(name+': '+source.read().decode('utf-8',errors='replace'),flush=True)
+        raise
     before=(output/'manifest.json').read_bytes()
     run(output,paired)
     assert before==(output/'manifest.json').read_bytes()

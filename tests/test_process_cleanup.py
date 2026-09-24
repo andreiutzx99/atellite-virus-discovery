@@ -13,6 +13,20 @@ from satellite_discovery import stage_lock
 
 
 class ProcessCleanupTests(unittest.TestCase):
+    def test_disappearing_scratch_directory_is_tolerated_but_other_scan_errors_fail(self):
+        with scratch_directory() as folder:
+            root=Path(folder)
+            for error,allowed in ((FileNotFoundError(2,'removed',str(root/'scratch')),True),
+                                  (FileNotFoundError(2,'removed',str(root)),False),
+                                  (PermissionError(13,'denied',str(root/'scratch')),False)):
+                def walk(path,followlinks,onerror):
+                    onerror(error)
+                    return []
+                with self.subTest(error=error),patch.object(runner.os,'walk',side_effect=walk):
+                    if allowed:self.assertEqual(runner.stage_bytes(root),0)
+                    else:
+                        with self.assertRaises(type(error)):runner.stage_bytes(root)
+
     def tree_command(self, root, parent_exits=False):
         child = root/'child.py'
         child.write_text("from pathlib import Path\nimport time\np=Path('heartbeat')\nfor n in range(500):\n p.write_text(str(n))\n time.sleep(.02)\n")
