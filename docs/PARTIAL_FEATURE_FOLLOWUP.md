@@ -8,6 +8,8 @@ Date: 2026-09-24. The original feature IDs and all category-4 boundaries are pre
 
 [Machine-readable follow-up](PARTIAL_FEATURE_FOLLOWUP.csv) · [85-feature audit](PERMITTED_ROADMAP.md) · [usage and exact contracts](CONDITIONAL_TOOLS.md)
 
+The subsequent [infrastructure reliability follow-up](INFRASTRUCTURE_STATUS.md) adds portability, diagnostic and provenance checks without changing these scientific feasibility decisions. F031/F076 now export optional supplied accession/database version and snapshot retrieval time; F081 includes an installed cross-platform review-menu entry point. F010 still requires real SRA runtime validation and has no remote automatic fallback.
+
 | ID | Decision | Implemented / available | Remaining work or condition |
 |---|---|---|---|
 | F007 | A | Supplied laboratory/country/lane context import and stratified counts implemented. | Archive omissions and true independence cannot be inferred from missing labels. |

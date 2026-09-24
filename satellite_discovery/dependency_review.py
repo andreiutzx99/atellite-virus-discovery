@@ -16,6 +16,7 @@ TOOLS = {
     'bowtie2': ('bowtie2', '--version', '.tools/bowtie2-*/bowtie2-*/bowtie2-align-s.exe'),
     'java': ('java', '-version', None),
     'samtools': ('samtools', '--version', None),
+    'fasterq-dump': ('fasterq-dump', '--version', None),
     'spades': ('spades.py', '--version', None),
 }
 

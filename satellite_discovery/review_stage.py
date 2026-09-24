@@ -12,6 +12,7 @@ from . import __version__
 
 from .observation_report import export_csv
 from .sequence_downloader import checksum, write_json
+from .portable_paths import portable_name
 
 
 def table(path, columns, limit=200_000):
@@ -83,6 +84,7 @@ def execute(kind, inputs, output, engine, produce):
         raise ValueError('Inputs must be outside the output folder')
     identity = {'stage': kind, 'inputs': {k: checksum(p) for k, p in paths.items()},
                 'engine_sha256': checksum(engine), 'lifecycle_sha256': checksum(__file__),
+                'portable_paths_sha256': checksum(Path(__file__).with_name('portable_paths.py')),
                 'csv_exporter_sha256': checksum(Path(__file__).with_name('observation_report.py'))}
     output.mkdir(parents=True, exist_ok=True)
     lock = output / '.review.lock'
@@ -99,7 +101,7 @@ def execute(kind, inputs, output, engine, produce):
                 raise ValueError('Input, stage or implementation changed; use a new output folder')
             if previous.get('status') == 'complete':
                 digests = previous.get('output_sha256', {})
-                if not digests or any(not re.fullmatch(r'[A-Za-z0-9_.-]+', n) or n in {'.', '..', 'manifest.json'} for n in digests):
+                if not isinstance(digests,dict) or not digests or any(not portable_name(n) or n.casefold() == 'manifest.json' for n in digests) or len({n.casefold() for n in digests}) != len(digests):
                     raise ValueError('Invalid manifest output paths')
                 if any(not (output / n).resolve().is_relative_to(output) or checksum(output / n) != digest for n, digest in digests.items()):
                     raise ValueError('Output integrity failure; existing result preserved')
@@ -111,8 +113,10 @@ def execute(kind, inputs, output, engine, produce):
                   'started_utc': datetime.now(timezone.utc).isoformat()}
         write_json(manifest, result)
         names = produce(paths, output)
-        if len(names) != len(set(names)) or not names or any(not re.fullmatch(r'[A-Za-z0-9_.-]+', n) or n in {'.', '..', 'manifest.json'} for n in names):
+        if not names or any(not portable_name(n) or n.casefold() == 'manifest.json' for n in names) or len({n.casefold() for n in names}) != len(names):
             raise ValueError('Invalid producer output paths')
+        if any(not (output / n).resolve().is_relative_to(output) for n in names):
+            raise ValueError('Producer output redirects outside the review folder')
         if any(checksum(paths[k]) != digest for k, digest in identity['inputs'].items()):
             raise ValueError('Input changed during review')
         result.update(status='complete', finished_utc=datetime.now(timezone.utc).isoformat(),

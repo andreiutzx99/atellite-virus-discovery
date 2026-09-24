@@ -12,6 +12,12 @@ Equivalent command from the repository root:
 python -m satellite_discovery.artifact_workflow --manifest examples/artifact-workflow/workflow.json --output runs/artifact-demo
 ```
 
+On Linux, WSL2, or a compatible HPC login environment, install into a user-owned Python 3.11+ virtual environment with `python -m pip install .`, then start the numbered menu with `satellite-reviews`. The same entry point is installed on Windows. Optional executables must be available on that environment's PATH (including scheduler jobs); a Windows installation does not supply Linux executables to WSL. No administrator access is needed for the base Python package. HPC scheduler submission and site-specific module configuration are not provided or validated.
+
+The workflow writes `report.html` and `workflow.json` while running and on failure. Each stage records pending/running/complete/failed/interrupted status, timestamps, and any exception type/message. A missing input is attributed to its stage; later stages stay pending. Completed-stage links are relative so the HTML remains usable when the whole output folder is copied. A graceful interrupt releases the workflow lock; forced process termination still requires the manual lock check above. Resume verifies completed stage outputs through their existing stage contracts. New lifecycle/engine versions intentionally require a new output folder; historical QC is not rerun or modified.
+
+Stage IDs and snapshot filenames must be portable: case-only duplicates and Windows device names such as `CON`, `NUL`, and `COM1` are rejected on every platform before work starts. Snapshot names cannot collide with report/manifest names, including by case.
+
 Each step has `id`, `kind` and `inputs`. Input values are paths relative to the workflow JSON, or `{"stage":"earlier_id","artifact":"filename.ext"}`. Only earlier, completed, hash-verified artifacts can be referenced. No arbitrary commands, plugins, forward references, discovery steps or shell scripts are accepted. The `FIELDS` registry in `artifact_workflow.py` is the exact list of supported inputs. The workflow reports linked results and records failures; it does not treat a blocked dependency as success.
 
 ## New menu options
@@ -47,6 +53,10 @@ A workflow can pass BLAST `features.csv` and `matches.csv` into the existing `co
 Menu 18 installs only the pinned NCBI Windows BLAST+ 2.17.0 archive. SHA256 verification, path/type checks, extraction limits, a lock and existing-file verification prevent silent replacement of changed tools. It uses no admin access. Other platforms can supply their package-manager BLAST installation on PATH. Runtime availability is distinct from scientific reference coverage. [NCBI command-line documentation](https://www.ncbi.nlm.nih.gov/sites/books/NBK569856/).
 
 Reference snapshot JSON has a `files` list. Every entry requires `name`, `sha256`, `bytes`, `source`, `version`, `role`, and exactly one of `path` (relative to the specification) or `url` (credential-free HTTPS). Up to 100 files and 100 MB total are supported. Files are copied/downloaded and verified, never silently updated; a new snapshot needs a new specification/output folder. This manages explicit references, not automatic taxonomic selection or comprehensive database curation.
+
+Optional `accession` and `database_version` fields preserve supplied provenance. Omitted fields are reported as `unknown`. The references table also records `retrieved_utc`, meaning when this local snapshot was populated, not the source publication date. Verified reuse retains that timestamp. Local file sizes are checked against the declaration before copying. Version output in menu 11 now includes `fasterq-dump`; this is an availability diagnostic, not a functional conversion test.
+
+The common external-process runner rejects invalid time/byte budgets before launch, runs in its owned stage directory, and checks retained files against its stage byte budget. Timeout stops and waits for the direct child and preserves the log. These are polling limits, not OS quotas: a tool can overshoot between checks, and detached grandchildren are not process-tree supervised. Existing over-budget intermediates are preserved and reported rather than silently removed.
 
 ## Context, quantitative data and sequence descriptors
 
