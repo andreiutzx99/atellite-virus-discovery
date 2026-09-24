@@ -30,4 +30,10 @@ No rerun of completed QC is needed. To try the new dependency-free workflow, dou
 
 The optional Linux job successfully installed the documented dependencies and passed real pysam/samtools BAM/CRAM equivalence, BLAST and matplotlib-export tests on artificial data. Windows and Ubuntu offline jobs also passed. [First complete optional-tool CI run](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/36013987940).
 
-The final suite contains 144 tests. Dependency-free jobs intentionally skip the three real-tool tests; the optional-tools job executes them. Windows BLAST comparison/reuse and pinned portable-installation verification also passed locally. SRA conversion remains process-fixture tested, not live-runtime validated.
+The preceding milestone contained 144 tests. Dependency-free jobs intentionally skip the three real-tool tests; the optional-tools job executes them. Windows BLAST comparison/reuse and pinned portable-installation verification passed in that milestone. SRA conversion remains process-fixture tested, not live-runtime validated.
+
+## Infrastructure reliability follow-up
+
+Inspected baseline `c3188f9` and reproduced its 144-test result on Windows/Python 3.12.5 (three optional runtime tests skipped). The follow-up suite has 161 tests, passing locally with the same three skips. It adds portable-name regression tests, stage-specific failure/interruption reports, recovery checks, snapshot provenance and pre-copy size checks, subprocess working-directory/budget tests, and a fast-decoder log-limit regression. CI now covers Python 3.11 and 3.12 on Windows and Ubuntu, installed-package checks, and the existing Linux optional-tool job. CI outcomes must be read from the corresponding PR checks; configuration alone is not a runtime result.
+
+No completed user QC dataset was opened or rerun. Changes to lifecycle identities intentionally require new review output folders; old artifacts remain untouched. The [current component status table](INFRASTRUCTURE_STATUS.md) separates completed software contracts from dependency, external-validation, and scope limits.

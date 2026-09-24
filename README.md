@@ -6,6 +6,8 @@ Public sequencing metadata retrieval, verified downloads, baseline QC and descri
 
 Use Python 3.11 or newer. On Windows, double-click **Run-reviews.cmd** and select the numbered review. The menu asks for existing files and a new output folder, then prints the report path. No optional bioinformatics executable is required for these Python review tools.
 
+For an installed command on Windows or Linux, run `python -m pip install .` in a Python virtual environment, then use `satellite-reviews` to open the same numbered menu. See [portability and recovery instructions](docs/CONDITIONAL_TOOLS.md).
+
 Available reviews include RNA/DNA metadata, sample/control observations, FASTA inventory, alignment coverage (interval CSV or SAM/gzip-SAM), reference-match evidence, linked catalogues, existing report dashboards, imported nucleotide BLAST tables, existing QC integrity, and optional dependency versions. See [precise input instructions](docs/USER_TEST_GUIDE.md) and [file contracts](docs/REVIEW_INFRASTRUCTURE.md).
 
 `Audit-existing-run.cmd` audits completed QC without repeating it. `Test-Tadpole.cmd` is a separate artificial-fixture diagnostic for a pinned local BBTools installation; it does not process biological runs. Optional executables, databases and `.tools` are not bundled or installed by a source checkout.

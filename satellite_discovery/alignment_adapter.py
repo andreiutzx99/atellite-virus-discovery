@@ -60,6 +60,8 @@ def decode(source,destination,tool,reference=None):
                 raise ValueError('Alignment decoder failed; see decoded.log')
             if destination.stat().st_size > LIMIT:
                 raise ValueError('Decoded SAM exceeds 256 MB')
+            if log.stat().st_size > 2_000_000:
+                raise ValueError('Decoder log exceeds review limit')
         finally:
             if process.poll() is None: process.kill()
             process.wait()
