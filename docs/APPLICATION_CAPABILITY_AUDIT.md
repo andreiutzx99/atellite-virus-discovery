@@ -30,7 +30,7 @@ Metadata / selected public reads
   -> verified retained files and QC reports
 
 Independently supplied existing artifacts
-  -> fixed allowlisted review workflow
+  -> trusted registry-based review workflow
   -> comparison / catalogue / control reports (where the supplied inputs fit)
   -> reproducibility bundle
 
@@ -74,4 +74,4 @@ An absent implementation, unassessed input, missing dependency or failed executi
 
 Updated the current capability summary for the trusted registry, adapter contract, external-module placeholder and workflow states. The adapter-specific implementation contract is in `EXTERNAL_TOOL_ADAPTERS.md`. Historical architecture documents remain proposals and are not evidence of installed or validated scientific modules.
 
-Milestone test totals and the final PR/CI result are recorded in `DEVELOPMENT_HANDOFF.md` after the full suite and GitHub CI complete. No existing user QC/results were rerun or modified.
+The local full suite collected 246 tests: 243 passed, 0 failed and 3 optional-tool tests skipped because optional tools are not installed in this environment. PR #12 runs the full GitHub matrix, including those optional tests; the handoff links to its live checks. No existing user QC/results were rerun or modified.
