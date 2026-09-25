@@ -36,6 +36,7 @@ Each step has `id`, `kind` and `inputs`. Input values are paths relative to the 
 | 20 | Read-only workflow configuration preview | Workflow JSON; reports missing paths without executing |
 | 21 | Open existing report | Local HTML file; prints path on headless systems |
 | 22 | Reference snapshot comparison | Two completed snapshots and a new comparison output folder |
+| 23 | Supplied artifact-digest/control evaluation | Dataset status, expected digest and observed artifact CSVs |
 
 See [deployment and reproducibility instructions](DEPLOYMENT.md). Unknown workflow/stage configuration fields are rejected rather than ignored. Dependency reports include prefetch, vdb-validate, Tadpole PATH presence and isolated pysam/matplotlib import checks. `capability_test: not_performed` is explicit: import/version success is not functional proof. Assembly activation remains outside the supported workflow.
 
@@ -61,7 +62,7 @@ Reference snapshot JSON has a `files` list. Every entry requires `name`, `sha256
 
 Optional `accession` and `database_version` fields preserve supplied provenance. Omitted fields are reported as `unknown`. The references table also records `retrieved_utc`, meaning when this local snapshot was populated, not the source publication date. Verified reuse retains that timestamp. Local file sizes are checked against the declaration before copying. Version output in menu 11 now includes `fasterq-dump`; this is an availability diagnostic, not a functional conversion test.
 
-The common external-process runner rejects invalid time/byte budgets before launch, runs in its owned stage directory, and checks retained files against its stage byte budget. Timeout stops and waits for the direct child and preserves the log. These are polling limits, not OS quotas: a tool can overshoot between checks, and detached grandchildren are not process-tree supervised. Existing over-budget intermediates are preserved and reported rather than silently removed.
+The common external-process runner rejects invalid time/byte budgets before launch, runs in its owned stage directory, and checks retained files against its stage byte budget. The runner uses POSIX process-group cleanup or Windows PID-specific tree cleanup and preserves logs. These are polling limits, not OS quotas: tools can overshoot between checks. Windows cleanup requires a live parent and POSIX descendants that leave their group are not contained. See PROCESS_RELIABILITY_REPORT.md for the precise limits. Existing over-budget intermediates are preserved and reported rather than silently removed.
 
 ## Context, quantitative data and sequence descriptors
 
