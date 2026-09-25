@@ -1,12 +1,12 @@
 # Development handoff
 
-Prepared 2026-09-25 from main after PR #10 (`dbc85920e643376384029935da6642e9d1b0b539`). GitHub repository: [andreiutzx99/atellite-virus-discovery](https://github.com/andreiutzx99/atellite-virus-discovery). Distribution: `satellite-discovery`, version `0.3.0`, Python 3.11 or newer.
+Prepared 2026-09-25 from the verified main baseline `c5b5eb15d737601b48009a090faef7717c92d54a`. GitHub repository: [andreiutzx99/atellite-virus-discovery](https://github.com/andreiutzx99/atellite-virus-discovery). Distribution: `satellite-discovery`, version `0.3.0`, Python 3.11 or newer. Milestone 1 changes are developed on `feature/external-tool-adapter-foundation`; the merged PR and resulting main commit are recorded in the final handoff receipt.
 
 ## Read this first
 
 This is a working metadata/download/QC application with descriptive reviews of independently supplied artifacts, an allowlisted review workflow, and isolated artificial runtime diagnostics. It is **not** a complete or scientifically validated discovery application. Acquisition/QC, artifact review and artificial assembly diagnostics are separate entry points. Installing optional tools does not connect them into an end-to-end discovery chain.
 
-This final pass adds a read-only Git handoff verifier and its regression tests, this consolidated report, README navigation, and clarification of historical architecture/resource-control documentation. It does **not** add the requested plugin registry, new workflow states, per-record reference importer, production alternative acquisition provider or arbitrary-input assembler. Those priorities remain unimplemented. No user QC was rerun or changed, and no exploratory biological analysis was performed.
+This milestone adds a trusted stage registry, a generic bounded external-tool adapter contract, eight explicit stage states, an external-module placeholder, one harmless runtime-tested text adapter, regression tests and adapter documentation. Existing built-in stages remain registered and compatible with `artifact-workflow-v1`. No ViReMa, DVG analysis, satellite-virus discovery, ranking or biological interpretation is implemented. No user QC/results were changed.
 
 The distinction between a source transfer and a complete application is essential: a GitHub handoff can be ready while the requested broader application remains incomplete. A test count is not a requirement-completion percentage.
 
@@ -30,10 +30,11 @@ The distinction between a source transfer and a complete application is essentia
 | Catalogue links | `catalogue_linker.py` | Link existing sequence inventories/occurrences by exact identity; no approximate family assignment. |
 | Reference snapshots | `reference_snapshot.py` | Immutable supplied-file snapshots, hashes/sizes, supplied source/category/accession/version/provenance and snapshot comparison. One metadata record describes a file, not every sequence in it. No curated collection is included. |
 | Supplied digest evaluator | `artifact_benchmark.py` | Exact supplied SHA256/control tables, produced/classified/unclassified counts and recurrence, including explicit zero-output completed datasets. Does not independently verify the underlying files or upstream withholding; not a biological recovery benchmark. |
-| Stage lifecycle | `review_stage.py`, `stage_lock.py`, `portable_paths.py` | Shared output manifests/digests, lifecycle reports, portable names, exclusive locks with owner information and ownership-token cleanup. No automatic stale-lock deletion. |
-| Bounded native processes | `bounded_process.py` | Argument-list execution, stage-local working directory, time/output monitoring, retained logs and process cleanup. POSIX groups and Windows PID-specific tree cleanup have documented limits; no hard CPU/RAM/filesystem quota or hostile-process sandbox. |
-| Review orchestration | `artifact_workflow.py` | Fixed allowlist of 15 kinds; ordered execution and compatible earlier-stage artifact references, validation, failure/interruption reports, checksum-based reuse. No plugin registration API, arbitrary commands or dynamic imports from configuration. |
-| Provenance | `reproducibility.py` | Workflow configuration, source hashes, Git when available, Python/OS, selected installed optional-package versions, input/output identities, stage state and available command records. Not a complete dependency lock or scientific certification. |
+| Stage lifecycle | `review_stage.py`, `stage_lock.py`, `portable_paths.py`, `workflow_states.py` | Shared output manifests/digests, owner-aware locks and explicit state-transition rules for pending, running, complete, skipped, dependency-missing, external-module-required, failed and interrupted stages. No automatic stale-lock deletion. |
+| Bounded native processes | `bounded_process.py` | Argument-list execution, separate stdout/stderr capture for external adapters, stage-local working directory, time/output monitoring, retained logs and process cleanup. POSIX groups and Windows PID-specific tree cleanup have documented limits; no hard CPU/RAM/filesystem quota or hostile-process sandbox. |
+| Stage registry and review orchestration | `artifact_workflow.py`, `stage_registry.py` | Deterministic trusted-code registry keeps all 15 existing built-ins, adds a harmless external adapter and a declarative external-module placeholder. Workflow JSON cannot import modules or provide commands. Ordered execution and verified earlier-stage artifacts remain supported. |
+| External-tool adapter | `external_tool.py`, `example_transform_adapter.py`, `example_transform_tool.py` | Required/optional input declarations, executable/version/hash checks, safe argv execution, timeout and output limits, separate logs, checksummed output inventory, provenance, failure states and verified reuse. The example performs only an artificial text transform. |
+| Provenance | `reproducibility.py` | Workflow configuration, registry snapshot, source hashes, Git when available, Python/OS, selected optional-package versions, input/output identities, stage states and external-tool manifests. Not a complete dependency lock or scientific certification. |
 | User interface | `review_ui.py`, `report_generator.py`, launchers | Numbered terminal menu, HTML/CSV/JSON reports, existing-report dashboard, read-only workflow preview and report opening. No general plugin manager or unified discovery UI. |
 | Environment checks/setup | `dependency_review.py`, `portable_setup.py` | Version/import/PATH diagnostics and existing pinned portable BLAST setup. Discovery/version success is not functional validation. Some probes refer to tools without implemented analysis adapters. |
 | Artificial assembler diagnostics | `scripts/test_tadpole_runtime.py`, `scripts/check_tadpole_ci.py`, `artificial_spades.py`, `scripts/check_spades_ci.py` | Fixed generated artificial fixtures, single/paired execution and verified reuse. Tadpole validated on Windows/Linux; SPAdes on Linux. No arbitrary-input assembly or workflow assembly stage. |
@@ -47,9 +48,9 @@ Metadata / selected reads
   -> retained files and QC reports
 
 Independently supplied artifacts and references
-  -> fixed allowlisted artifact-review workflow
+  -> trusted registry of built-in and external-tool review stages
   -> descriptive reports / catalogues / control summaries
-  -> workflow status and reproducibility files
+  -> explicit workflow states and reproducibility files
 
 Fixed generated artificial fixtures
   -> standalone Tadpole or SPAdes diagnostic
@@ -68,21 +69,21 @@ Reports over supplied artifacts can be useful independently. Their existence doe
 
 ## Workflow architecture and state
 
-The released schema is `artifact-workflow-v1`. It accepts 1–30 ordered stages. Each stage has an ID, an allowlisted kind and exactly the required input fields. File paths resolve relative to the specification. References to outputs of earlier stages are accepted only after checking their completed manifest and artifact digest. There is no automatic conversion between incompatible stage formats.
+The schema remains `artifact-workflow-v1` and accepts 1–30 ordered stages. Existing files without new `config` or `skip` fields remain valid. Stages select a registered kind and supply its required inputs; trusted adapters may also declare optional inputs. File paths resolve relative to the specification. References to earlier-stage outputs are accepted only after checking a completed manifest and artifact digest.
 
-The 15 existing kinds are `sra_conversion`, `inventory`, `sequence_quality`, `library`, `observations`, `context`, `quantitative`, `alignment`, `cram`, `blast_import`, `blast_compare`, `contamination`, `catalogue_links`, `reference_snapshot`, and `artifact_benchmark`.
+The 15 existing kinds remain registered: `sra_conversion`, `inventory`, `sequence_quality`, `library`, `observations`, `context`, `quantitative`, `alignment`, `cram`, `blast_import`, `blast_compare`, `contamination`, `catalogue_links`, `reference_snapshot`, and `artifact_benchmark`. The registry also contains `example_text_transform` and the generic `external_module` requirement stage.
 
-Actual state progression is `pending -> running -> complete`, or `running -> failed/interrupted`. Execution stops on failure; later stages remain pending. Completed-stage reuse verifies identities and saved artifacts. Changed input/configuration/implementation may require a fresh output folder. Some external diagnostics require a new folder after failure; there is no universal tool checkpoint/resume protocol.
+The eight stage states are `pending`, `running`, `complete`, `skipped`, `dependency_missing`, `external_module_required`, `failed` and `interrupted`. Valid transitions are defined centrally. A stage can be explicitly skipped with `"skip": true`; skipped work is not complete. Missing executables and unregistered modules are distinct infrastructure statuses, not analytical outcomes. Ordinary failures still stop execution and leave later stages pending. A mixture of complete and skipped stages is summarized as `partial`.
 
-`skipped`, `dependency_missing` and `external_module_required` are **not operational workflow states**. Missing dependencies are currently failures/errors. Unknown kinds fail validation. No missing implementation or unassessed sample should be interpreted as a successful negative analytical result. Historical placeholder status names in other documents are not implemented APIs.
+The `external_module` stage uses a safe module identifier and supplied input/configuration data. It resolves only through trusted code registrations; it never imports a module named in JSON. If unavailable, the workflow records `external_module_required` and what is missing without changing earlier outputs. If an external executable is absent, it records `dependency_missing` before invoking the adapter. Neither infrastructure status, nor `skipped`, is a successful analysis, zero observations or absence of evidence. Unknown stage kinds and fields fail validation.
 
-Each started artifact workflow normally writes `workflow.json`, `report.html` and `reproducibility.json`, including recorded failure/interruption. Validation or inaccessible-output failures can occur before those files can be created. Reports link to actual stage outputs. A forcibly killed process may leave a lock; independently verify the owner has stopped before removing it. Existing user run directories must be preserved.
+Each started artifact workflow writes `workflow.json`, `report.html` and `reproducibility.json`, including failure, interruption and infrastructure states. Reports show readable state labels and reasons. External stage manifests capture adapter/tool identity, executable hashes/version output, input hashes, configuration, safe argv, environment, timestamps, duration, exit status, logs and output hashes. Reuse requires matching identities and a verified complete output inventory, never folder existence alone. Changed/failed external stages require a new stage output folder. A forcibly killed process may leave a lock; verify its owner before manual recovery. Existing user run directories must be preserved.
 
 ## Plugin architecture: current answer
 
-There is no operational general plugin registry or stable external-adapter SDK. `FIELDS` and `dispatch` in `artifact_workflow.py` remain fixed application code. Installing an independent package does not register it. User configuration cannot specify arbitrary shell commands or Python imports. No example external adapter, new execution manifest format or detailed future biological-adapter contract was added in this pass.
+The operational `WorkflowStageRegistry` is populated only by trusted application code. Existing built-ins and the example adapter use the same registry. New trusted adapters can register a stable stage kind, module name, input contract, configuration validator and handler without adding another branch to the workflow dispatcher. The registry is deterministic and inspectable.
 
-Consequently, another developer cannot use a documented drop-in registration API today. Existing dedicated adapters and the shared bounded runner should not be described as such an API. Any future interface would require its own design, review, compatibility tests and scope assessment. This handoff records the absence; it does not give an operational implementation plan for the unimplemented scientific chain.
+Workflow files are data-only: they cannot provide shell commands, Python expressions, imports or executable paths. The adapter contract and harmless reference implementation are documented in [EXTERNAL_TOOL_ADAPTERS.md](EXTERNAL_TOOL_ADAPTERS.md). Adapters are trusted code; process limits are not a sandbox for hostile programs. No scientific external adapter is included, and engineering support does not validate domain interpretation.
 
 ## Launchers and reports
 
@@ -96,7 +97,7 @@ Windows: `Start.cmd` or `Run-reviews.cmd`. Linux: `sh Run-reviews.sh`. Installed
 | 17–19 | File-level reference snapshot; portable BLAST setup; explicit local archive conversion |
 | 20–23 | Read-only workflow preview; open existing HTML report; snapshot comparison; supplied-digest/control evaluation |
 
-Not all standalone diagnostic modules are exposed in the menu. The dashboard reads reported states and does not independently verify every linked artifact. WSL and HPC usage guidance exists, but no real WSL/HPC deployment has been demonstrated; Ubuntu CI does not establish that.
+Not all standalone diagnostic modules are exposed in the menu. The dashboard reads reported states and does not independently verify every linked artifact. The workflow HTML report distinguishes complete, running, skipped, dependency missing, external module required, failed and interrupted stages. WSL and HPC usage guidance exists, but no real WSL/HPC deployment has been demonstrated; Ubuntu CI does not establish that.
 
 ## Dependencies and packaging
 
@@ -108,7 +109,7 @@ Not all standalone diagnostic modules are exposed in the menu. The dashboard rea
 | NCBI BLAST+ | Existing supplied-reference comparison | Real artificial Linux tests and prior Windows evidence. |
 | matplotlib | Optional figure export | Optional extra accepts >=3.8,<4; CI installs 3.10.1. |
 | SRA Toolkit | Explicit archive conversion | Prior tiny benign yeast Windows validation with 3.4.1; not a production automatic fallback service. |
-| Java and BBTools | Fixed artificial Tadpole diagnostic | Prior Java 17 / BBTools 40.01 evidence; pinned archive verified by diagnostic setup. |
+| Java and BBTools | Fixed artificial Tadpole diagnostic | Prior Java 17 / BBTools 40.01 evidence; pinned archive verified by diagnostic setup. They are not required for the new text-transform adapter. |
 | Compatible SPAdes | Fixed artificial SPAdes diagnostic | Linux 3.15.5 evidence; no native Windows SPAdes support claim. |
 
 Optional native tools/databases, `.tools`, virtual environments and user data are not bundled. CI uses Ubuntu apt packages for several tools; the dependency closure and runner images are not fully pinned. A wrapper executable hash does not fingerprint all libraries or core executables. Read-only version/import probes deliberately do not claim capability validation.
@@ -126,9 +127,9 @@ python -I scripts/check_installed.py
 python -m unittest discover -s tests -v
 ```
 
-`check_installed.py` tests installed package resources/entry points and fixed artificial review/reuse/provenance operations. It does not use completed user QC runs. The source suite before this pass contained 217 tests. This pass adds 12 handoff-verifier tests, yielding 229 collected tests. Dependency-free runs intentionally skip the three optional-runtime tests; the Linux optional-tools job is the source of the no-skip full-suite count. Runtime outcomes must be read from the actual final CI, not inferred from this count.
+`check_installed.py` tests installed package resources/entry points and fixed artificial review/reuse/provenance operations. It does not use completed user QC runs. The source baseline before this milestone was 229 tests. Milestone 1 adds 17 adapter/registry/state tests; the current suite has 246 collected tests. Three existing optional-runtime tests are skipped in dependency-free runs. The Linux optional-tools CI job is expected to run them; record the actual final CI result below rather than inferring it from the count.
 
-The new tests use temporary local Git repositories and a local bare remote: clean matching source, merged and unmerged branches, untracked/modified files, unpublished main, live-remote disagreement despite stale tracking refs, stash detection, missing committed handoff files, expected-commit mismatch, detached HEAD, remote failure, timeout/malformed commit, and shallow-clone rejection. They perform no biological operations or internet access. Git absence skips these fixture tests, so a no-Git local result is not full verification.
+The existing handoff-checker tests use temporary local Git repositories and a local bare remote: clean matching source, merged and unmerged branches, untracked/modified files, unpublished main, live-remote disagreement despite stale tracking refs, stash detection, missing committed handoff files, expected-commit mismatch, detached HEAD, remote failure, timeout/malformed commit, and shallow-clone rejection. They perform no biological operations or internet access. Git absence skips these fixture tests, so a no-Git local result is not full verification.
 
 Existing `.github/workflows/tests.yml` has five jobs:
 
@@ -169,11 +170,12 @@ The following are merged milestones; counts are historical suite sizes, not addi
 | PR #8, `40804a6` | Process tree cleanup and output scanning, owner-aware locks and diagnostics; 208 tests. |
 | PR #9, `e1c4791` | Fixed artificial SPAdes diagnostic, real Linux single/paired/reuse evidence, scratch-directory race fix and historical licence audit; 217 tests. |
 | PR #10, `dbc8592` | Documentation-only capability audit and correction of stale runtime/API claims; no new functionality. |
-| Current handoff pass | Read-only source publication verifier, 12 regression tests, consolidated handoff and documentation navigation/clarification. No new scientific or workflow/plugin integration. |
+| Prior handoff pass | Read-only source publication verifier and 12 regression tests; brought the baseline to 229 tests. No scientific integration. |
+| Milestone 1 / PR #12 | Trusted stage registry, generic external-tool adapter, eight stage states, module requirement placeholder, harmless runtime-tested text adapter, adapter documentation and 17 regression tests. Local result: 243 passed, 0 failed, 3 optional-tool skips. [PR checks](https://github.com/andreiutzx99/atellite-virus-discovery/pull/12) are the commit-specific CI receipt; merge is withheld until every job passes. No biological adapter or Milestone 2 work. |
 
 ## Remaining engineering and scientific gaps
 
-Engineering gaps still present include a general plugin registry/adapter interface, richer workflow states and policies, a provenance-rich per-record reference importer, a registered production acquisition alternative, arbitrary-input assembly integration, a unified acquisition-to-review workflow, full dependency pinning/fingerprinting, stronger OS resource containment, broader platform deployment validation and permanent comprehensive runtime-evidence retention. These are not promised or implemented by this handoff. Some would extend the unsupported discovery chain in this project; labeling them generic does not make them delivered or independently in scope.
+Engineering gaps still present include a provenance-rich per-record reference importer, a registered production acquisition alternative, arbitrary-input assembly integration, a unified acquisition-to-review workflow, full dependency pinning/fingerprinting, stronger OS resource containment, broader platform deployment validation and permanent comprehensive runtime-evidence retention. The registry foundation does not supply any biological adapter. These gaps are not promised as part of Milestone 1.
 
 Ordinary maintenance can continue independently: preserve backward compatibility, fix reproducible defects in existing supported reviews, improve install/packaging diagnostics, and validate release integrity. User QC/results must remain untouched unless a separately authorized task requires otherwise.
 
@@ -181,25 +183,26 @@ External/unimplemented scientific functions include autonomous residual/unknown-
 
 Scientific-validation gaps are separate: appropriate independently curated truth/control data, justified interpretations and calibrated performance, provenance/label accuracy, reference completeness and independent withholding verification. Completing software interfaces would not resolve these. Missing evidence is unknown, not a negative result; passing artificial reconstruction is not evidence of biological discovery capability.
 
-## Eight requested answers
+## Milestone 1 acceptance status
 
-1. **Generic plugin registry operational?** No; fixed allowlist remains.
-2. **Drop-in independent external adapter without engine changes?** No supported API exists; current dedicated adapters are not a registry.
-3. **New workflow states operational?** No; only pending/running/complete/failed/interrupted are implemented.
-4. **Per-record reference import operational?** No; file snapshots and sequence inventories are distinct existing features.
-5. **Acquisition fallback infrastructure operational?** Partially: tested trusted-callable retries/history/verification exist. Production automatic fallback and forcibly bounded provider orchestration do not.
-6. **Arbitrary-input generic assembly operational?** No; fixed artificial diagnostics only.
-7. **Engineering remaining?** The gaps listed above remain. This pass adds source-transfer verification, not the proposed infrastructure integrations.
-8. **Ready for another environment?** Ready to import the published source once final CI/merge/source-equality checks pass. Not ready as a complete end-to-end application. Use the final PR's receipt for the concrete source/CI handoff status.
+1. **Is the registry operational?** Yes. It deterministically registers existing built-ins and trusted adapters and rejects duplicate/unknown names.
+2. **Can trusted adapters be added without redesigning the dispatcher?** Yes. Registration and the adapter contract are documented in [EXTERNAL_TOOL_ADAPTERS.md](EXTERNAL_TOOL_ADAPTERS.md).
+3. **Can workflow JSON execute arbitrary shell/Python code?** No. It can select registered identifiers and provide validated data only.
+4. **Are all eight stage states operational?** Yes. States and transitions are centralized and reported separately.
+5. **Does `external_module_required` work?** Yes. An unregistered module requirement is recorded without dynamic import or modification of completed earlier outputs.
+6. **Does `dependency_missing` work?** Yes. A missing executable is reported before adapter execution.
+7. **Is the example adapter runtime tested?** Yes. It runs a harmless text transform through the bounded process runner.
+8. **Is external provenance and verified reuse recorded?** Yes. Adapter/tool identity, executable, inputs, configuration, argv, environment, duration, status, logs and output hashes are captured; changed identities or output hashes prevent reuse.
+9. **What remains before another milestone?** Review this implementation and decide separately whether to authorize further work. Milestone 2 was not started; no biological analysis or interpretation is included.
 
 ## Repository state and authoritative receipt
 
-Baseline before this pass: `dbc85920e643376384029935da6642e9d1b0b539`; [baseline passing CI](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/36112904158). That run had five passing jobs and 217 tests in the optional-tools job. It is historical evidence, not the final run for this pass.
+Verified development baseline before Milestone 1: `c5b5eb15d737601b48009a090faef7717c92d54a`; baseline reproduction was 229 passing tests with no skips. Milestone 1 is PR #12; its live, commit-specific workflow results are shown in the [PR checks](https://github.com/andreiutzx99/atellite-virus-discovery/pull/12). Merge only after all five jobs pass. The final main commit SHA is included in the completion receipt because a commit cannot embed its own SHA.
 
-The final merge SHA cannot be embedded literally in the file contained by that same commit: changing the file changes its commit identity. Resolve the exact imported version with `git rev-parse HEAD` and its source tree with `git rev-parse HEAD^{tree}`. The final handoff PR's merged commit and passing **main push** CI URL are recorded in the PR receipt and final response after merge. The [Actions tests history](https://github.com/andreiutzx99/atellite-virus-discovery/actions/workflows/tests.yml) provides commit-specific run status. A green older run must not be substituted for the imported commit.
+The final merge SHA cannot be embedded literally in the file contained by that same commit: changing the file changes its commit identity. Resolve the exact imported version with `git rev-parse HEAD` and its source tree with `git rev-parse HEAD^{tree}`. Verify the Replit checkout against GitHub main after merge. The [Actions tests history](https://github.com/andreiutzx99/atellite-virus-discovery/actions/workflows/tests.yml) provides commit-specific run status. A green older run must not be substituted for the imported commit.
 
-Authoritative source is GitHub main, including this document, source, tests and workflow configuration. Local environments, ignored data/tools, expiring Actions artifacts and historical prototypes are not part of the released source. No general plugin infrastructure is present; the existing workflow and new release checker are the latest implemented infrastructure. Do not claim otherwise.
+Authoritative source is GitHub main, including this document, adapter documentation, source, tests and workflow configuration. Local environments, ignored data/tools, expiring Actions artifacts and historical prototypes are not part of the released source. The registry is an infrastructure extension point only; it does not establish end-to-end scientific functionality.
 
 ## Transfer brief for another platform
 
-> Import `andreiutzx99/atellite-virus-discovery` from GitHub main, using the exact commit in the final handoff receipt. Read `docs/DEVELOPMENT_HANDOFF.md` and `docs/APPLICATION_CAPABILITY_AUDIT.md` before changing code. Historical architecture documents describe unimplemented aspirations, not release capabilities. The application is Python >=3.11, package 0.3.0, with metadata/download/baseline QC, descriptive supplied-artifact reviews, an allowlisted resumable artifact workflow and fixed artificial runtime diagnostics. The final pass adds only a read-only Git source-handoff verifier and its tests plus documentation. There is no general plugin registry, new unavailable/skip workflow-state model, per-record reference importer, production automatic acquisition fallback or arbitrary-input assembly. Verify the exact source, run the software tests and inspect optional-tool CI. Preserve existing user data and completed QC. Distinguish software behavior, dependencies, missing engineering and scientific validation in all reports; do not treat missing modules as negative results. Continue only independently scoped, supported software maintenance. No unsupported scientific integration is authorized or specified by this handoff.
+> Import `andreiutzx99/atellite-virus-discovery` from GitHub main at the exact commit in the final handoff receipt. Read `docs/DEVELOPMENT_HANDOFF.md`, `docs/EXTERNAL_TOOL_ADAPTERS.md` and `docs/APPLICATION_CAPABILITY_AUDIT.md`. The application is Python >=3.11, package 0.3.0, with metadata/download/baseline QC and descriptive supplied-artifact reviews. Milestone 1 adds a trusted stage registry, a safe external-tool adapter contract, explicit workflow states and a harmless text fixture adapter. Workflow configuration cannot supply commands or imports. No biological adapter, DVG analysis, satellite-virus discovery, ranking or interpretation is implemented. Preserve existing user data and completed QC. Distinguish software behavior, dependencies, missing engineering and scientific validation; do not interpret skipped or unavailable work as negative evidence. Milestone 2 requires separate review and authorization.
