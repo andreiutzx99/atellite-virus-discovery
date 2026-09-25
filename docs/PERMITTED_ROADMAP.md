@@ -1,5 +1,9 @@
 # Permitted roadmap and original-specification audit
 
+> Historical feature audit. This document preserves earlier A/B/C decisions
+> and feature counts; use the [current M1–M16 roadmap](ROADMAP.md) for
+> milestone status after M6.
+
 Original audit: 2026-09-21; conditional-tools follow-up: 2026-09-24. See [all 22 A/B/C decisions](PARTIAL_FEATURE_FOLLOWUP.md). PR #2 was reviewed with passing CI and merged as `e2407899dedec528dce03f7fe7107c3b14640511`. This table replaces earlier roadmap completion claims and covers the original requested features, including features that remain unavailable. It is also available as [CSV](FEATURE_AUDIT.csv).
 
 ## Status definitions

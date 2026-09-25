@@ -1,6 +1,6 @@
 # Complete target architecture
 
-**Historical design, not the released architecture.** The module/tool choices and downstream diagram below include unimplemented proposals. Use [DEVELOPMENT_HANDOFF.md](DEVELOPMENT_HANDOFF.md) for the current implementation and [APPLICATION_CAPABILITY_AUDIT.md](APPLICATION_CAPABILITY_AUDIT.md) for its limits. Do not use this design as evidence of installed tools, executable modules or validated scientific functionality.
+**Historical design, not the released architecture.** The module/tool choices and downstream diagram below include unimplemented proposals. For current implementation and evidence boundaries, use the [README](../README.md), [M1–M16 roadmap](ROADMAP.md), and [M1–M6 scientific audit](M1_M6_SCIENTIFIC_AUDIT.md); the development handoff and capability audit below are historical snapshots. Do not use this design as evidence of installed tools, executable modules or validated scientific functionality.
 
 ## Boundaries and present scope
 

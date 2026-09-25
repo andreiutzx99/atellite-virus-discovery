@@ -160,14 +160,14 @@ claim for all dependencies or vendor NumPy.
 
 ## Interpretation and future aggregation
 
-ViReMa/DVG evidence is **supporting or exclusionary evidence**, not a final
-biological classifier. A detected junction can support a DVG/recombination
+ViReMa produces **caller-specific junction evidence**, not a final biological
+classifier. A detected junction can support a DVG/recombination
 interpretation. **No DVG evidence detected by the configured caller** means
 only that this run reported no supported junctions under its settings; it
 does not establish that the sequence is not a DVG. An unavailable, failed,
 interrupted or invalid run draws no biological conclusion. M5 neither
 validates satellite-virus discovery nor classifies any sequence as a
-satellite virus.
+satellite virus. See the [current M5 milestone description](M5_DVG_EVIDENCE.md).
 
 A future aggregator consumes caller-neutral evaluation summaries and event
 references, preserving each caller's status and raw provenance. It can report

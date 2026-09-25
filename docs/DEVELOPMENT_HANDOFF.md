@@ -1,5 +1,12 @@
 # Development handoff
 
+> **Historical M4 handoff (2026-09-25).** Its statements that ViReMa/DVG,
+> residual screening, or later milestones were not implemented describe that
+> earlier snapshot. For current capabilities and boundaries, use the
+> [README](../README.md), [M1–M6 roadmap](ROADMAP.md),
+> [M5 description](M5_DVG_EVIDENCE.md), and
+> [M6 description](M6_RESIDUAL_ASSEMBLY_SUPPORT.md).
+
 Prepared 2026-09-25 for Milestone 4 review from the merged Milestone 3 GitHub `main` baseline `dd2f8629bd26121c9b8dd8c29420dfdea6b02e6b`. GitHub repository: [andreiutzx99/atellite-virus-discovery](https://github.com/andreiutzx99/atellite-virus-discovery). Distribution: `satellite-discovery`, version `0.3.0`, Python 3.11 or newer. Milestone 1 is merged as PR #12; Milestone 2 as PR #14; Milestone 3 as PR #15. Milestone 4 verification is recorded below; its GitHub pull request and Actions run are authoritative for publication, CI and merge status.
 
 ## Read this first

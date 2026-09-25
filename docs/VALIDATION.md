@@ -1,6 +1,11 @@
 # Validation plan — biological gate not yet passed
 
-The current tests validate software metadata behavior only. No sensitivity, false-positive rate, ranking performance or satellite rediscovery has been measured. No novel sequence screen has started.
+M1–M6 software stages are implemented and have contract, fixture, and technical
+runtime tests. Those tests do not measure sensitivity, false-positive rate,
+ranking performance, or satellite rediscovery. M6 residual screening is
+reference-relative technical triage, not a validated biological novelty
+screen. This document describes the future biological-validation gate; see
+the [current milestone register](ROADMAP.md) and [scientific audit](M1_M6_SCIENTIFIC_AUDIT.md).
 
 ## Smallest biological proof-of-concept (future phases 3–10)
 

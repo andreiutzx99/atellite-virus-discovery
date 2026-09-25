@@ -199,8 +199,11 @@ existing user QC/results as adapter test inputs.
 ## Current limitations
 
 The adapter framework is software infrastructure, not scientific validation.
-No ViReMa, DVG analysis, satellite-virus discovery, candidate ranking or
-biological interpretation is registered here. The process runner does not
-provide hard CPU/RAM quotas or a sandbox for malicious executables. Some
+The M1 example adapter did not include ViReMa or DVG analysis; the later
+optional M5 ViReMa integration is documented in
+[M5 DVG evidence](M5_DVG_EVIDENCE.md). The complete project still does not
+provide validated satellite-virus discovery, candidate ranking, or biological
+interpretation. The process runner does not provide hard CPU/RAM quotas or a
+sandbox for malicious executables. Some
 operating-system process-tree cleanup remains best-effort. A failed adapter
 stage is preserved and requires a new output folder for a fresh run.

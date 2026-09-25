@@ -53,4 +53,9 @@ After a forced process termination, a lock may remain. Confirm no report process
 
 ## Unimplemented component contract
 
-The observational stage accepts pre-existing validated observation tables. It does not create them from the unfinished sequence-analysis modules. See [module interfaces](MODULE_INTERFACES.md) for explicit status and boundaries. A missing stage must be reported as `not_implemented`, not as an empty successful result.
+The observational stage accepts pre-existing validated observation tables. It
+does not infer observations directly from reads or automatically generate
+these tables from the M1–M6 technical stages. See the [current roadmap](ROADMAP.md)
+and [module interfaces](MODULE_INTERFACES.md) for implemented scope and
+boundaries. A missing required stage must be reported as `not_implemented`,
+not as an empty successful result.
