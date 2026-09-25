@@ -30,10 +30,31 @@ def write_reports(directory, rows):
             return html.escape(str(value))
         stage_content = '<h2>Download and QC: ' + esc(manifest['status']) + '</h2>'
         stage_content += '<p>This is read preparation, not satellite detection or known-positive biological validation. Mapping, assembly and candidate analysis have not run.</p>'
-        stage_content += '<table><tr><th>Run</th><th>Status</th><th>Input reads</th><th>Retained reads</th><th>Warnings</th></tr>'
+        stage_content += '<table><tr><th>Run</th><th>Status</th><th>Provider</th><th>Input reads</th><th>Retained reads</th><th>Warnings</th></tr>'
         for item in manifest['runs']:
-            stage_content += '<tr>' + ''.join('<td>' + esc(item.get(key, 'not measured')) + '</td>' for key in ['accession', 'status', 'input_reads', 'retained_reads', 'warnings']) + '</tr>'
+            stage_content += '<tr>' + ''.join(
+                '<td>' + esc(item.get(key, 'not measured')) + '</td>'
+                for key in ['accession', 'status', 'provider', 'input_reads', 'retained_reads', 'warnings']
+            ) + '</tr>'
         stage_content += '</table>'
+        providers = manifest.get('provider_registry', [])
+        if providers:
+            stage_content += '<h3>Registered acquisition providers</h3><ul>'
+            for provider in providers:
+                stage_content += (
+                    '<li><strong>' + esc(provider.get('name', 'unknown')) + '</strong>: '
+                    + esc(provider.get('mechanism', '')) + ' — '
+                    + '<a href="' + html.escape(str(provider.get('documentation', '')), quote=True)
+                    + '">documentation</a></li>'
+                )
+            stage_content += '</ul>'
+        for item in manifest['runs']:
+            attempts = item.get('acquisition_attempts', [])
+            if attempts:
+                stage_content += (
+                    '<details><summary>Acquisition attempts for ' + esc(item.get('accession', 'unknown'))
+                    + '</summary><pre>' + esc(json.dumps(attempts, indent=2)) + '</pre></details>'
+                )
         for item in manifest['runs']:
             accession = item.get('accession', '')
             # Reports are generated only for validated archive accessions.
@@ -57,11 +78,15 @@ def write_reports(directory, rows):
         plan_path = directory / 'phase3' / 'download_plan.json'
         if plan_path.exists():
             plan = json.loads(plan_path.read_text(encoding='utf-8'))
-            stage_content += '<h3>Download selection</h3><p>Only complete runs with ENA checksums and supported layouts are selected. The default pilot budget is one run and 1,000 MB compressed; smaller runs are preferred within study diversity.</p>'
-            stage_content += '<p>Planned input: ' + esc(round(plan['planned_bytes'] / 1_000_000, 1)) + ' MB. Budget: ' + esc(round(plan['max_bytes'] / 1_000_000, 1)) + ' MB.</p>'
+            stage_content += '<h3>Download selection</h3><p>Eligible runs are selected whole, without splitting read pairs. ENA FASTQ checksums are preferred; eligible SRR runs can use the documented NCBI SRA Toolkit fallback when its tools are installed. The default pilot budget is one run and 1,000 MB.</p>'
+            stage_content += '<p>Planned input reservation: ' + esc(round(plan['planned_bytes'] / 1_000_000, 1)) + ' MB. Budget: ' + esc(round(plan['max_bytes'] / 1_000_000, 1)) + ' MB.</p>'
+            if plan.get('unknown_size_accessions'):
+                stage_content += '<p>Size is not listed by the primary provider for: ' + esc(', '.join(plan['unknown_size_accessions'])) + '. Each selected run reserves the full remaining byte budget; this is a cap, not an estimated download size.</p>'
             stage_content += '<details><summary>Why other runs were skipped</summary><ul>' + ''.join('<li>' + esc(r['accession']) + ': ' + esc(r['reason']) + '</li>' for r in plan['skipped']) + '</ul></details>'
         if manifest['status'] == 'no_suitable_downloads':
-            stage_content += '<p><strong>No files were downloaded.</strong> Review the skipped-run reasons. If all runs exceed the budget, choose a larger budget in a new output folder. If FASTQ links are absent, increase the experiment search limit or search an older study. SRA Toolkit fallback is not available in this version.</p>'
+            stage_content += '<p><strong>No files were downloaded.</strong> Review the skipped-run reasons. If all runs exceed the budget, choose a larger budget in a new output folder. NCBI fallback is limited to eligible SRR runs and requires the SRA Toolkit.</p>'
+        if manifest['status'] == 'dependency_missing':
+            stage_content += '<p><strong>Acquisition stopped because a registered provider dependency is missing.</strong> The failed provider and required tools are listed in the attempt details.</p>'
         stage_content += '<p>QC uses an explicit portable baseline: exact common Illumina adapter matching, end-quality trimming and read filtering. This is not fastp. Original, rejected and orphan reads are preserved. Detailed metrics and checksums are in <code>phase3/&lt;accession&gt;/qc/qc.json</code>.</p>'
     (directory / "report.html").write_text(
         '<!doctype html><html lang="en"><meta charset="utf-8"><title>Dataset discovery report</title>'

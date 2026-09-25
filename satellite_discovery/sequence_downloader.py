@@ -5,10 +5,17 @@ import json
 import re
 import shutil
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
+
+from .acquisition_fallback import (
+    FileUnavailableError, RemoteRejectedError,
+    RemoteUnavailableError, VerificationError,
+    classify as classify_acquisition_error,
+)
 
 
 def checksum(path, algorithm="sha256"):
@@ -66,15 +73,40 @@ def make_plan(rows, max_runs, max_bytes):
                 raise ValueError("Excluded by dataset suitability filters")
             if row.get("platform") != "ILLUMINA":
                 raise ValueError("Current QC supports Illumina Phred+33 archive FASTQ only")
-            if row.get("library_strategy", "").upper() not in {"RNA-SEQ", "WGS"}:
+            if (row.get("library_strategy") or "").upper() not in {"RNA-SEQ", "WGS"}:
                 raise ValueError("Library strategy needs manual method review")
             if row.get("total_spots") is None:
                 raise ValueError("Sequencing depth unknown; not automatically selected")
             files = files_for_run(row)
             possible.append({"accession": row["run_accession"], "study": row.get("study_accession"),
-                             "layout": row["layout"], "files": files, "bytes": sum(f["bytes"] for f in files)})
+                             "layout": row["layout"], "files": files, "bytes": sum(f["bytes"] for f in files),
+                             "budget_reservation": sum(f["bytes"] for f in files),
+                             "size_known": True,
+                             "providers": ["ena_fastq"] + (
+                                 ["ncbi_sra_toolkit"]
+                                 if re.fullmatch(r"SRR\d+", row["run_accession"]) else []
+                             )})
         except ValueError as exc:
-            skipped.append({"accession": row["run_accession"], "reason": str(exc)})
+            accession = row.get("run_accession", "")
+            fallback_candidate = (
+                isinstance(accession, str) and re.fullmatch(r"SRR\d+", accession)
+                and row.get("selection") != "excluded"
+                and row.get("platform") == "ILLUMINA"
+                and (row.get("library_strategy") or "").upper() in {"RNA-SEQ", "WGS"}
+                and row.get("layout") in {"SINGLE", "PAIRED"}
+                and row.get("total_spots") is not None
+            )
+            if fallback_candidate:
+                possible.append({
+                    "accession": accession, "study": row.get("study_accession"),
+                    "layout": row["layout"], "files": [], "bytes": max_bytes,
+                    "budget_reservation": max_bytes, "size_known": False,
+                    "providers": ["ena_fastq", "ncbi_sra_toolkit"],
+                    "primary_resolution_note": str(exc),
+                })
+            else:
+                skipped.append({"accession": row.get("run_accession", "unknown"),
+                                "reason": str(exc)})
     selected, used, studies = [], 0, set()
     # Prefer affordable runs from different studies. This is a compute pilot,
     # not a representative cohort or evidence of biological independence.
@@ -91,29 +123,74 @@ def make_plan(rows, max_runs, max_bytes):
             used += item["bytes"]
             studies.add(item["study"])
     return {"selected": selected, "skipped": skipped, "planned_bytes": used,
-            "max_runs": max_runs, "max_bytes": max_bytes, "selection_policy": "study_diversity_then_smallest_complete_run"}
+            "max_runs": max_runs, "max_bytes": max_bytes,
+            "selection_policy": "study_diversity_then_smallest_complete_run",
+            "unknown_size_accessions": [item["accession"] for item in selected if not item["size_known"]],
+            "budget_is_reserved_not_estimated": True}
 
 
-def download_file(spec, directory, offline=False, progress=print):
+def download_file(spec, directory, offline=False, progress=print, *,
+                  attempt_history=None, attempt_recorder=None):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / spec["name"]
     partial = path.with_suffix(path.suffix + ".part")
+
+    def begin(item):
+        if attempt_history is not None:
+            attempt_history.append(item)
+        if attempt_recorder is not None:
+            attempt_recorder(item)
+
+    def changed(item):
+        if attempt_recorder is not None:
+            attempt_recorder(item)
+
     if path.exists():
         if path.stat().st_size != spec["bytes"] or checksum(path, "md5") != spec["md5"]:
-            raise ValueError("Existing FASTQ failed integrity check: " + path.name)
+            item = {"provider": "ena_fastq", "file": path.name, "attempt": 0,
+                    "status": "failed", "failure_class": "integrity_failure",
+                    "message": "Existing FASTQ failed integrity check"}
+            begin(item)
+            raise VerificationError("Existing FASTQ failed integrity check: " + path.name)
+        item = {"provider": "ena_fastq", "file": path.name, "attempt": 0,
+                "status": "complete", "reused": True, "expected_bytes": spec["bytes"],
+                "observed_bytes": path.stat().st_size, "expected_md5": spec["md5"],
+                "observed_md5": checksum(path, "md5"),
+                "finished_utc": datetime.now(timezone.utc).isoformat()}
+        begin(item)
         progress("Reusing verified " + path.name)
         return path
     if offline:
-        raise RuntimeError("Offline FASTQ unavailable: " + path.name)
+        item = {"provider": "ena_fastq", "file": path.name, "attempt": 0,
+                "status": "failed", "failure_class": "remote_unavailable",
+                "message": "Offline FASTQ unavailable"}
+        begin(item)
+        raise RemoteUnavailableError("Offline FASTQ unavailable: " + path.name)
     for attempt in range(3):
+        item = {"provider": "ena_fastq", "file": path.name, "attempt": attempt + 1,
+                "status": "running", "started_utc": datetime.now(timezone.utc).isoformat()}
+        begin(item)
         offset = partial.stat().st_size if partial.exists() else 0
         if offset > spec["bytes"]:
-            raise ValueError("Partial file exceeds expected size: " + path.name)
+            item.update(status="failed", failure_class="integrity_failure",
+                        message="Partial file exceeds expected size",
+                        finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
+            raise VerificationError("Partial file exceeds expected size: " + path.name)
         if offset == spec["bytes"]:
             if checksum(partial, "md5") != spec["md5"]:
-                raise ValueError("Downloaded file MD5 mismatch; partial retained: " + path.name)
+                item.update(status="failed", failure_class="integrity_failure",
+                            message="Downloaded file MD5 mismatch; partial retained",
+                            finished_utc=datetime.now(timezone.utc).isoformat())
+                changed(item)
+                raise VerificationError("Downloaded file MD5 mismatch; partial retained: " + path.name)
             partial.replace(path)
+            item.update(status="complete", resumed=True, expected_bytes=spec["bytes"],
+                        observed_bytes=path.stat().st_size, expected_md5=spec["md5"],
+                        observed_md5=checksum(path, "md5"),
+                        finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
             return path
         try:
             headers = {"User-Agent": "satellite-discovery/0.2.0", "Accept-Encoding": "identity"}
@@ -124,11 +201,11 @@ def download_file(spec, directory, offline=False, progress=print):
                 if status == 206:
                     expected = f"bytes {offset}-{spec['bytes'] - 1}/{spec['bytes']}"
                     if response.headers.get("Content-Range") != expected:
-                        raise ValueError("Invalid Content-Range; refusing corrupt resume")
+                        raise VerificationError("Invalid Content-Range; refusing corrupt resume")
                 elif status == 200:
                     offset = 0  # Server ignored Range: safely restart, never append.
                 else:
-                    raise ValueError("Unexpected download HTTP status: " + str(status))
+                    raise RemoteRejectedError("Unexpected download HTTP status: " + str(status))
                 last = time.monotonic()
                 with partial.open("ab" if offset else "wb") as output:
                     total = offset
@@ -146,18 +223,64 @@ def download_file(spec, directory, offline=False, progress=print):
                 if total != spec["bytes"]:
                     raise URLError("Incomplete transfer")
             if checksum(partial, "md5") != spec["md5"]:
-                raise ValueError("Downloaded file MD5 mismatch; partial retained: " + path.name)
+                raise VerificationError("Downloaded file MD5 mismatch; partial retained: " + path.name)
             partial.replace(path)
+            item.update(status="complete", resumed=bool(offset), expected_bytes=spec["bytes"],
+                        observed_bytes=path.stat().st_size, expected_md5=spec["md5"],
+                        observed_md5=checksum(path, "md5"),
+                        finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
             progress("Verified " + path.name)
             return path
+        except VerificationError as exc:
+            item.update(status="failed", failure_class="integrity_failure",
+                        message=str(exc), finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
+            raise
+        except ValueError as exc:
+            failure_class = ("download_budget_exceeded"
+                             if "byte budget" in str(exc).lower()
+                             else "integrity_failure")
+            item.update(status="failed", failure_class=failure_class,
+                        message=str(exc), finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
+            raise
         except HTTPError as exc:
+            failure_class = ("remote_unavailable" if exc.code in {408, 429} or exc.code >= 500
+                             else "file_unavailable" if exc.code == 404 else "remote_rejected")
+            item.update(status="retrying" if failure_class == "remote_unavailable" and attempt < 2
+                        else "failed", failure_class=failure_class,
+                        http_status=exc.code, finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
             if exc.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
-                raise RuntimeError(f"FASTQ transfer failed with HTTP {exc.code}") from None
+                if exc.code == 404:
+                    raise FileUnavailableError("FASTQ file is unavailable from ENA") from None
+                if failure_class == "remote_unavailable":
+                    raise RemoteUnavailableError(
+                        f"FASTQ transfer failed with HTTP {exc.code} after retries"
+                    ) from None
+                raise RemoteRejectedError(f"ENA rejected FASTQ transfer with HTTP {exc.code}") from None
             time.sleep(2 ** attempt)
         except (URLError, TimeoutError, ConnectionError, http.client.IncompleteRead):
+            item.update(status="retrying" if attempt < 2 else "failed",
+                        failure_class="remote_unavailable",
+                        finished_utc=datetime.now(timezone.utc).isoformat())
+            changed(item)
             if attempt == 2:
-                raise RuntimeError("FASTQ connection failed; partial download retained for resume") from None
+                raise RemoteUnavailableError(
+                    "FASTQ connection failed; partial download retained for resume"
+                ) from None
             time.sleep(2 ** attempt)
+        except BaseException as exc:
+            failure_class = classify_acquisition_error(exc)
+            item.update(
+                status="interrupted" if failure_class == "interrupted" else "failed",
+                failure_class=failure_class, error_type=type(exc).__name__,
+                message=str(exc) or type(exc).__name__,
+                finished_utc=datetime.now(timezone.utc).isoformat(),
+            )
+            changed(item)
+            raise
 
 
 def check_disk(directory, compressed_bytes):
