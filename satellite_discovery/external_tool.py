@@ -189,6 +189,10 @@ class ExternalToolAdapter:
         """Return the argument list. Subclasses must not invoke a shell."""
         raise NotImplementedError
 
+    def prepare_execution(self, output, inputs, config, manifest):
+        """Stage owned input copies after recording provenance, before launch."""
+        return None
+
     def finalize_outputs(self, output, config, process_result, manifest):
         """Create any canonical artifacts after a successful tool exit."""
         return None
@@ -333,7 +337,10 @@ class ExternalToolAdapter:
                 'identity': identity,
                 'adapter': adapter_identity,
                 'tool': tool_identity,
-                'inputs': identity['inputs'],
+                'inputs': {
+                    name: {'path': str(path), **identity['inputs'][name]}
+                    for name, path in sorted(paths.items())
+                },
                 'configuration': config,
                 'safe_command': safe_command,
                 'environment': environment,
@@ -343,6 +350,7 @@ class ExternalToolAdapter:
             }
             write_json(marker, manifest)
             started = time.monotonic()
+            self.prepare_execution(output, paths, config, manifest)
             process_result = bounded_process.run_captured(
                 list(command), output, self.stdout_name, self.stderr_name,
                 timeout=self.timeout, max_bytes=self.max_bytes,
