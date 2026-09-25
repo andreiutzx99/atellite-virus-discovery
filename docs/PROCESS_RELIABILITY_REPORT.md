@@ -1,5 +1,7 @@
 # Process reliability follow-up after PR #7
 
+Historical PR #7 report. Its assembly statements describe that change only; the later generic SPAdes/Tadpole stage is documented in the current [assembly guide](ASSEMBLY.md).
+
 This pass implements independent subprocess and lock reliability fixes from the requested follow-up. It is a partial delivery of that request. ViReMa/DVG integration and extensions to the viral/helper-dependent reconstruction or blinded-discovery chain are not implemented. Existing user QC and exploratory virus screens were not run.
 
 | Component | Implementation | Tested | Scientific validation | Dependency | Remaining limitation |

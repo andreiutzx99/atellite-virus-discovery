@@ -12,6 +12,7 @@ from . import reproducibility
 from . import stage_lock
 from .external_tool import DependencyMissingError, ExternalToolExecution
 from .example_transform_adapter import ExampleTextTransformAdapter
+from .assembly_adapters import AssemblyWorkflowAdapter
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
     STAGE_TRANSITIONS, WORKFLOW_TRANSITIONS, aggregate_stage_status, transition,
@@ -62,6 +63,7 @@ def build_default_registry():
         description='Declarative requirement resolved only from trusted registrations.',
     )
     registry.register_external_adapter(ExampleTextTransformAdapter())
+    registry.register_external_adapter(AssemblyWorkflowAdapter())
     return registry
 
 
@@ -197,6 +199,27 @@ def write_status(output, result):
             body += '<p>Required trusted module: ' + html.escape(stage['required_module']) + '</p>'
         if stage.get('reason'):
             body += '<p>' + html.escape(stage['reason']) + '</p>'
+        if stage.get('kind') == 'assembly':
+            assembly = stage.get('assembly', {})
+            assembler = stage.get('assembler') or assembly.get('assembler')
+            if assembler:
+                body += '<p>Assembler: ' + html.escape(str(assembler)) + '</p>'
+            if stage.get('status') == 'dependency_missing':
+                body += '<p>DEPENDENCY MISSING</p>'
+            if assembly:
+                for label_text, key in (
+                    ('Version', 'tool_version'),
+                    ('Input layout', 'input_layout'),
+                    ('Runtime (seconds)', 'runtime_seconds'),
+                    ('Contig count', 'contig_count'),
+                    ('Canonical contigs', 'contig_path'),
+                    ('Dependency status', 'dependency_status'),
+                    ('Reuse status', 'reuse_status'),
+                ):
+                    if assembly.get(key) is not None:
+                        body += '<p>' + html.escape(label_text + ': ' + str(assembly[key])) + '</p>'
+                for warning in assembly.get('warnings', []):
+                    body += '<p>Warning: ' + html.escape(str(warning)) + '</p>'
         if stage.get('status')=='pending':
             body += '<p>Not started because an earlier stage did not finish.</p>'
         if stage.get('dependency_report'):
@@ -278,6 +301,8 @@ def run(manifest,output,registry=None):
             transition(active,'running',STAGE_TRANSITIONS,
                        started_utc=datetime.now(timezone.utc).isoformat())
             if module_name:active['registered_module']=module_name
+            if stage['kind'] == 'assembly':
+                active['assembler'] = config['assembler']
             write_status(output,result)
             inputs={}
             for key,value in stage['inputs'].items():
@@ -296,7 +321,12 @@ def run(manifest,output,registry=None):
             if not stage_output.is_relative_to(output):raise ValueError('Stage output redirects outside the workflow folder')
 
             if definition.external_tool:
-                dependency=definition.handler.inspect_dependency()
+                configured_inspector=getattr(definition.handler,'inspect_dependency_for_config',None)
+                dependency=(
+                    configured_inspector(config)
+                    if callable(configured_inspector)
+                    else definition.handler.inspect_dependency()
+                )
                 active['dependency_report']=dependency
                 if dependency['status']!='available':
                     reason='One or more required external executables are unavailable.'
@@ -312,7 +342,12 @@ def run(manifest,output,registry=None):
             before=checksum(stage_marker) if stage_marker.is_file() else None
             try:
                 if definition.external_tool:
-                    outcome=definition.handler.execute(inputs,stage_output,config)
+                    if stage['kind'] == 'assembly':
+                        outcome=definition.handler.execute(
+                            inputs,stage_output,config,context={'stage_id':stage['id']}
+                        )
+                    else:
+                        outcome=definition.handler.execute(inputs,stage_output,config)
                 else:
                     outcome=definition.handler(inputs,stage_output,config)
             except DependencyMissingError as error:
@@ -335,6 +370,19 @@ def run(manifest,output,registry=None):
                     output_inventory=outcome.output_inventory,
                     external_manifest_sha256=outcome.manifest_sha256,
                 )
+                if stage['kind'] == 'assembly':
+                    assembly_record = json.loads((stage_output/'assembly_manifest.json').read_text(encoding='utf-8'))
+                    active['assembly'] = {
+                        'assembler': assembly_record['assembler'],
+                        'tool_version': assembly_record['external_tool_version'],
+                        'input_layout': assembly_record['input_layout'],
+                        'runtime_seconds': assembly_record['duration_seconds'],
+                        'contig_count': assembly_record['contig_count'],
+                        'contig_path': assembly_record['contig_output'],
+                        'dependency_status': 'available',
+                        'reuse_status': outcome.execution,
+                        'warnings': assembly_record.get('warnings', []),
+                    }
             else:
                 active['execution']='verified_reuse' if before is not None and stage_marker.is_file() and checksum(stage_marker)==before else 'executed'
             if stage['kind']=='reference_snapshot':
