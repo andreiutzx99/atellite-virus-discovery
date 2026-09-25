@@ -4,6 +4,7 @@ Contracts describe file formats and provenance only. They do not imply
 biological identity, function, absence, novelty, or reference completeness.
 """
 import csv
+from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -96,7 +97,7 @@ def _csv_rows(path, required):
 
 def _validate_catalogue_database(path):
     uri = path.as_uri() + '?mode=ro'
-    with sqlite3.connect(uri, uri=True) as db:
+    with closing(sqlite3.connect(uri, uri=True)) as db:
         db.execute('PRAGMA query_only=ON')
         db.execute('PRAGMA trusted_schema=OFF')
         records = db.execute(
@@ -214,7 +215,7 @@ def validate_artifact(path, artifact_type):
         records = read_fasta(path)
         details['record_count'] = len(records)
     elif artifact_type == 'reference_record_database':
-        with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
             db.execute('PRAGMA query_only=ON')
             names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             if not {'records', 'sequences'} <= names:
