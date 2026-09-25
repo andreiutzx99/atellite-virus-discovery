@@ -53,7 +53,7 @@ def _assembly_config(config):
     return {'assembler': assembler, 'layout': layout, 'threads': threads, 'memory_mb': memory_mb}
 
 
-def _read_fastq(path):
+def _read_fastq(path, *, allow_empty=False):
     """Stream and structurally validate FASTQ without loading a file at once."""
     path = Path(path)
     compressed = path.name.lower().endswith(('.fastq.gz', '.fq.gz'))
@@ -82,7 +82,7 @@ def _read_fastq(path):
             if plus[1:] and plus[1:].split()[0] != header[1:].split()[0]:
                 raise ValueError(f'FASTQ separator identifier mismatch at record {count} in {path.name}')
             yield header, sequence.upper(), quality
-    if count == 0:
+    if count == 0 and not allow_empty:
         raise ValueError(f'FASTQ contains no records: {path.name}')
 
 

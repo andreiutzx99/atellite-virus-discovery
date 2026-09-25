@@ -10,7 +10,7 @@ import shutil
 import sqlite3
 from contextlib import closing
 
-from . import assembly_adapters, observation_report
+from . import assembly_adapters, observation_report, quality_control
 from .review_stage import execute, table, unique
 from .sequence_downloader import checksum, write_json
 
@@ -24,6 +24,59 @@ def validate_fastq_config(config):
     if config['layout'] not in {'single-end', 'paired-end'}:
         raise ValueError('FASTQ layout must be declared as single-end or paired-end')
     return {'layout': config['layout']}
+
+
+def validate_qc_config(config):
+    """Validate a bounded declarative configuration for the existing QC engine."""
+    if not isinstance(config, dict):
+        raise ValueError('FASTQ QC config must be an object')
+    allowed = {
+        'min_length', 'end_quality', 'min_mean_quality', 'max_n_fraction',
+        'adapters', 'min_adapter_overlap',
+    }
+    if set(config) - allowed:
+        raise ValueError('FASTQ QC config contains unsupported fields')
+    values = dict(config)
+    if 'adapters' in values:
+        if (not isinstance(values['adapters'], (list, tuple))
+                or any(not isinstance(item, str) for item in values['adapters'])):
+            raise ValueError('QC adapters must be a list of literal sequence strings')
+        values['adapters'] = tuple(values['adapters'])
+    qc_config = quality_control.QCConfig(**values)
+    qc_config.validate()
+    return {
+        'min_length': qc_config.min_length,
+        'end_quality': qc_config.end_quality,
+        'min_mean_quality': qc_config.min_mean_quality,
+        'max_n_fraction': qc_config.max_n_fraction,
+        'adapters': list(qc_config.adapters),
+        'min_adapter_overlap': qc_config.min_adapter_overlap,
+    }
+
+
+def quality_control_fastq(inputs, output, config):
+    """Run the existing QC engine as a typed stage and retain its full outputs."""
+    config = validate_qc_config(config)
+    if set(inputs) not in ({'read1'}, {'read1', 'read2'}):
+        raise ValueError('FASTQ QC requires read1 and optionally read2')
+
+    def produce(paths, directory):
+        qc_inputs = ({'single': paths['read1']} if 'read2' not in paths else
+                     {'R1': paths['read1'], 'R2': paths['read2']})
+        qc_config = quality_control.QCConfig(
+            min_length=config['min_length'],
+            end_quality=config['end_quality'],
+            min_mean_quality=config['min_mean_quality'],
+            max_n_fraction=config['max_n_fraction'],
+            adapters=tuple(config['adapters']),
+            min_adapter_overlap=config['min_adapter_overlap'],
+        )
+        result = quality_control.run_qc(
+            qc_inputs, directory, qc_config, progress=lambda _message: None,
+        )
+        return sorted(result['output_sha256']) + ['qc.json']
+
+    return execute('typed-fastq-qc-v1', inputs, output, __file__, produce)
 
 
 def validate_observation_config(config):
@@ -300,6 +353,11 @@ def workflow_report(inputs, output, config):
                 record['summary'] = value
                 if value.get('schema') in {'dvg-summary-v1', 'dvg-evidence-v1'}:
                     record['schema'] = value['schema']
+                if value.get('schema') in {
+                    'm6-residual-manifest-v1', 'm6-read-support-v1',
+                    'm6-reconstruction-evidence-v1',
+                }:
+                    record['schema'] = value['schema']
                 tables = value.get('tables', {})
                 if isinstance(tables, dict) and 'matches' in tables and not tables['matches']:
                     record['comparison_status'] = 'no match found under the configured comparison'
@@ -382,6 +440,49 @@ def workflow_report(inputs, output, config):
                     html.escape(record['sha256']) + '</code>; declared path: <code>' +
                     html.escape(record['path']) + '</code>.</p>'
                 )
+            elif record.get('schema') == 'm6-residual-manifest-v1':
+                summary = record['summary']
+                counts = summary.get('counts', {})
+                fields = (
+                    ('Configured comparison status', summary.get('comparison', {}).get('status')),
+                    ('Input fragments', counts.get('input_fragments')),
+                    ('Residual fragments', counts.get('residual_fragments')),
+                    ('Eligible for assembly', counts.get('eligible_fragments')),
+                    ('Retained unassembled', counts.get('retained_unassembled_fragments')),
+                )
+                sections.append('<p>Residual means unexplained by the completed configured comparison; it does not mean novel.</p><dl>' +
+                                ''.join('<dt>' + html.escape(label) + '</dt><dd>' +
+                                        html.escape(str(value if value is not None else 'Not reported')) +
+                                        '</dd>' for label, value in fields) + '</dl>')
+            elif record.get('schema') in {'m6-read-support-v1', 'm6-reconstruction-evidence-v1'}:
+                summary = record['summary']
+                contigs = summary.get('contigs', [])
+                supported = sum(
+                    1 for item in contigs
+                    if item.get('status') == 'READ_SUPPORTED_ASSEMBLY'
+                )
+                unsupported = sum(
+                    1 for item in contigs
+                    if item.get('status') in {
+                        'LOW_SUPPORT_ASSEMBLY', 'AMBIGUOUS_ASSEMBLY',
+                        'UNSUPPORTED_ASSEMBLY',
+                    }
+                )
+                status = summary.get('status', 'Not reported')
+                sections.append(
+                    '<p>Outcome: <strong>' + html.escape(str(status)) +
+                    '</strong>; assembler contigs recorded: ' + str(len(contigs)) +
+                    '; contigs meeting configured read-support criteria: ' + str(supported) +
+                    '; unsupported or ambiguous reconstructions retained: ' + str(unsupported) +
+                    '.</p><p>Assembly is reconstruction hypothesis generation. Original sequencing reads provide the underlying evidence.</p>'
+                )
+                if status == 'NO_SUPPORTED_ASSEMBLY':
+                    sections.append('<p>No supported assembly was obtained. Residual reads remain available for review.</p>')
+                dvg = summary.get('dvg_evidence', {})
+                if isinstance(dvg, dict):
+                    sections.append('<p>DVG evidence status: ' +
+                                    html.escape(str(dvg.get('status', 'NOT_EVALUATED'))) +
+                                    '; this is a separate evidence dimension.</p>')
             elif 'summary' in record:
                 sections.append('<pre>' + html.escape(json.dumps(record['summary'], indent=2, sort_keys=True)) + '</pre>')
             else:

@@ -287,7 +287,7 @@ class ExternalToolAdapter:
         config = self.validate_config(config)
         output = Path(output).resolve()
         paths = self.validate_configured_inputs(inputs, output, config)
-        dependency = self.inspect_dependency()
+        dependency = self.inspect_dependency_for_config(config)
         if dependency['status'] != 'available':
             raise DependencyMissingError(
                 f'Required external executable for {self.adapter_name} is unavailable',
