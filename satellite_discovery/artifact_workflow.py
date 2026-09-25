@@ -18,7 +18,10 @@ from .example_transform_adapter import ExampleTextTransformAdapter
 from .assembly_adapters import AssemblyWorkflowAdapter
 from .virema_adapter import ViReMaDVGAdapter
 from .residual_evidence_adapter import ResidualEvidenceAdapter
-from . import artifact_contracts, artifact_stage_handlers, dvg_evidence, local_comparison
+from . import (
+    artifact_contracts, artifact_stage_handlers, dvg_evidence,
+    independent_recurrence, local_comparison,
+)
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
     STAGE_TRANSITIONS, WORKFLOW_TRANSITIONS, aggregate_stage_status, transition,
@@ -172,6 +175,19 @@ def build_default_registry():
         description='Maps explicitly supplied reference categories to comparison roles.',
     )
     registry.register(
+        'independent_recurrence', None, independent_recurrence.run_stage,
+        version=independent_recurrence.STAGE_VERSION, dynamic_inputs=True,
+        config_validator=independent_recurrence.validate_config,
+        input_contracts={
+            '*': tuple(sorted(set(independent_recurrence.INPUT_TYPES.values()))),
+        },
+        output_contracts=independent_recurrence.OUTPUT_CONTRACTS,
+        description=(
+            'Compares exact sequences from independently supported M6 observations; '
+            'does not pool reads or perform biological classification.'
+        ),
+    )
+    registry.register(
         'workflow_report', None, artifact_stage_handlers.workflow_report,
         version='1', dynamic_inputs=True,
         config_validator=artifact_stage_handlers.validate_workflow_report_config,
@@ -183,7 +199,9 @@ def build_default_registry():
             'dvg_evidence', 'dvg_evidence_summary', 'dvg_parameters',
             'qc_manifest', 'residual_read_manifest', 'read_triage_table',
             'read_support_evidence', 'read_support_table',
-            'reconstruction_evidence',
+            'reconstruction_evidence', 'm7_observation_table',
+            'm7_exact_recurrence_table', 'm7_independence_summary',
+            'm7_validation_report', 'm7_provenance_manifest',
         )},
         output_contracts={'report.json': 'workflow_report_json', 'report.html': 'report'},
         description='Consolidates declared structured stage artifacts without interpretation.',
@@ -284,6 +302,7 @@ def validate(spec,registry=None):
     for stage in stages:
         if not isinstance(stage,dict) or not isinstance(stage.get('inputs'),dict):raise ValueError('Every stage and inputs must be objects')
         sid=stage.get('id','');kind=stage.get('kind')
+        m7_input_types=None
         if not portable_name(sid) or not re.fullmatch('[A-Za-z][A-Za-z0-9_-]{0,63}',sid) or sid.casefold() in portable_seen:raise ValueError('Invalid/duplicate portable stage ID')
         if not isinstance(kind,str):
             raise ValueError('Unknown workflow stage')
@@ -325,11 +344,39 @@ def validate(spec,registry=None):
             normalized_config=registry.validate_config(kind,stage.get('config',{}))
             if kind=='catalogue_observations' and set(stage['inputs'])!=set(normalized_config['samples']):
                 raise ValueError('Catalogue inputs and declared sample metadata keys must match exactly')
+            if kind=='independent_recurrence':
+                m7_input_types=independent_recurrence.expected_input_types(normalized_config)
+                if set(stage['inputs'])!=set(m7_input_types):
+                    raise ValueError(
+                        'M7 workflow inputs must match the declared M6 artifact roles exactly'
+                    )
             if kind=='workflow_report' and not stage['inputs']:
                 raise ValueError('Consolidated report requires at least one declared upstream artifact')
         contracts=contract_definition.input_contracts or {}
         for input_name,value in stage['inputs'].items():
             expected=contracts.get(input_name,contracts.get('*',()))
+            if m7_input_types is not None:
+                role_type=m7_input_types[input_name]
+                if isinstance(value,str):
+                    raise ValueError(
+                        'M7 direct file inputs must declare their exact artifact_type'
+                    )
+                if (isinstance(value,dict) and set(value)=={'path','artifact_type'}
+                        and value['artifact_type']!=role_type):
+                    raise ValueError(
+                        f'M7 input {input_name!r} must declare artifact_type {role_type!r}'
+                    )
+                if isinstance(value,dict) and set(value)=={'stage','artifact'}:
+                    producer=seen_stages[value['stage']]
+                    producer_definition=registry.get(producer['kind'])
+                    if producer['kind']=='external_module':
+                        producer_definition=registry.get_module(producer['module']) or producer_definition
+                    produced=_output_contract(producer_definition,value['artifact'])
+                    if role_type not in produced:
+                        raise ValueError(
+                            f'M7 input {input_name!r} requires {role_type!r}, '
+                            f'not {list(produced)}'
+                        )
             if isinstance(value,dict) and set(value)=={'path','artifact_type'}:
                 if expected and value['artifact_type'] not in expected:
                     raise ValueError(

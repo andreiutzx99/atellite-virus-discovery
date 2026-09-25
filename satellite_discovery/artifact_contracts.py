@@ -65,6 +65,11 @@ _CONTRACTS = {
     'read_support_evidence': 'Caller-neutral read-back support evidence for assembled contigs.',
     'read_support_table': 'Per-read alignment support rows linked to stable read and contig identifiers.',
     'reconstruction_evidence': 'Neutral assembly and read-support outcome; not a biological classification.',
+    'm7_observation_table': 'Declared M6 observations and supported sequence records with provenance.',
+    'm7_exact_recurrence_table': 'Exact sequence recurrence groups with retained observation identities.',
+    'm7_independence_summary': 'Descriptive recurrence and metadata-based independence summaries.',
+    'm7_validation_report': 'Validation and completeness state for an M7 recurrence evaluation.',
+    'm7_provenance_manifest': 'M7 input, configuration, implementation and output provenance.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -495,6 +500,136 @@ def validate_artifact(path, artifact_type):
         value = _read_json(path)
         details['record_count'] = value.get('feature_count', value.get('record_count'))
         details['schema'] = value.get('schema')
+    elif artifact_type == 'm7_observation_table':
+        value = _read_json(path)
+        observations = value.get('observations')
+        sequence_rows = value.get('sequence_observations')
+        if (value.get('schema') != 'm7-observations-v1'
+                or not isinstance(observations, list)
+                or not isinstance(sequence_rows, list)
+                or value.get('record_count') != len(observations)
+                or value.get('sequence_observation_count') != len(sequence_rows)):
+            raise ValueError('M7 observation table is malformed')
+        observation_ids = set()
+        for row in observations:
+            if (not isinstance(row, dict)
+                    or not isinstance(row.get('observation_id'), str)
+                    or row['observation_id'] in observation_ids
+                    or row.get('m6_state') not in {'available', 'unavailable', 'failed'}
+                    or not isinstance(row.get('contigs'), list)
+                    or not isinstance(row.get('metadata_missing'), list)
+                    or not isinstance(row.get('source_artifacts'), dict)):
+                raise ValueError('M7 observation record is malformed')
+            observation_ids.add(row['observation_id'])
+            fingerprint = row.get('source_dataset_fingerprint')
+            if fingerprint is not None and (
+                    not isinstance(fingerprint, str) or not _HASH.fullmatch(fingerprint)):
+                raise ValueError('M7 observation has an invalid source-dataset fingerprint')
+        for row in sequence_rows:
+            if (not isinstance(row, dict)
+                    or row.get('observation_id') not in observation_ids
+                    or not isinstance(row.get('sequence_id'), str)
+                    or not isinstance(row.get('sequence_length'), int)
+                    or isinstance(row.get('sequence_length'), bool)
+                    or row['sequence_length'] < 1
+                    or not isinstance(row.get('sequence_sha256'), str)
+                    or not _HASH.fullmatch(row['sequence_sha256'])
+                    or not isinstance(row.get('match_sha256'), str)
+                    or not _HASH.fullmatch(row['match_sha256'])):
+                raise ValueError('M7 sequence observation is malformed')
+        details.update(schema=value['schema'], record_count=len(observations),
+                       sequence_observation_count=len(sequence_rows))
+    elif artifact_type == 'm7_exact_recurrence_table':
+        value = _read_json(path)
+        groups = value.get('groups')
+        if (value.get('schema') != 'm7-exact-recurrence-v1'
+                or value.get('orientation_policy') not in {
+                    'forward_only', 'reverse_complement_invariant',
+                }
+                or not isinstance(groups, list)
+                or value.get('record_count') != len(groups)):
+            raise ValueError('M7 exact recurrence table is malformed')
+        for group in groups:
+            if (not isinstance(group, dict)
+                    or not isinstance(group.get('match_sha256'), str)
+                    or not _HASH.fullmatch(group['match_sha256'])
+                    or group.get('group_id') != 'exact-' + group['match_sha256']
+                    or not isinstance(group.get('sequence_length'), int)
+                    or isinstance(group.get('sequence_length'), bool)
+                    or group['sequence_length'] < 1
+                    or not isinstance(group.get('members'), list)
+                    or not isinstance(group.get('recurrence_categories'), list)
+                    or not isinstance(group.get('independence'), dict)):
+                raise ValueError('M7 exact recurrence group is malformed')
+            for member in group['members']:
+                if (not isinstance(member, dict)
+                        or not isinstance(member.get('observation_id'), str)
+                        or not isinstance(member.get('sequence_id'), str)
+                        or not isinstance(member.get('sequence_sha256'), str)
+                        or not _HASH.fullmatch(member['sequence_sha256'])):
+                    raise ValueError('M7 exact recurrence member is malformed')
+        details.update(schema=value['schema'], record_count=len(groups))
+    elif artifact_type == 'm7_independence_summary':
+        value = _read_json(path)
+        count_fields = (
+            'observation_count', 'supported_sequence_observation_count',
+            'exact_group_count', 'recurrent_group_count',
+        )
+        if (value.get('schema') != 'm7-independence-summary-v1'
+                or value.get('analysis_completeness') not in {'COMPLETE', 'PARTIAL'}
+                or value.get('result_status') not in {
+                    'RECURRENCE_DETECTED_WITHIN_EVALUATED_OBSERVATIONS',
+                    'NO_RECURRENCE_DETECTED_WITHIN_EVALUATED_OBSERVATIONS',
+                    'NO_ELIGIBLE_SUPPORTED_SEQUENCES',
+                    'UPSTREAM_UNAVAILABLE_OR_FAILED',
+                }
+                or any(not isinstance(value.get(key), int)
+                       or isinstance(value.get(key), bool) or value[key] < 0
+                       for key in count_fields)
+                or not isinstance(value.get('limitations'), list)
+                or not isinstance(value.get('m6_evidence_class_counts'), dict)):
+            raise ValueError('M7 independence summary is malformed')
+        details.update(schema=value['schema'],
+                       record_count=value['exact_group_count'])
+    elif artifact_type == 'm7_validation_report':
+        value = _read_json(path)
+        count_fields = (
+            'observation_count', 'available_m6_count', 'unavailable_count',
+            'failed_count', 'unsupported_count', 'unresolved_count',
+            'supported_sequence_observation_count',
+        )
+        if (value.get('schema') != 'm7-validation-report-v1'
+                or value.get('status') not in {'complete', 'partial'}
+                or any(not isinstance(value.get(key), int)
+                       or isinstance(value.get(key), bool) or value[key] < 0
+                       for key in count_fields)
+                or not isinstance(value.get('warnings'), list)):
+            raise ValueError('M7 validation report is malformed')
+        details.update(schema=value['schema'],
+                       record_count=value['observation_count'])
+    elif artifact_type == 'm7_provenance_manifest':
+        value = _read_json(path)
+        input_artifacts = value.get('input_artifacts')
+        output_hashes = value.get('output_sha256')
+        implementation = value.get('implementation')
+        if (value.get('schema') != 'm7-recurrence-provenance-v1'
+                or value.get('status') != 'complete'
+                or not isinstance(value.get('configuration'), dict)
+                or not isinstance(value.get('configuration_sha256'), str)
+                or not _HASH.fullmatch(value['configuration_sha256'])
+                or not isinstance(input_artifacts, dict)
+                or not isinstance(output_hashes, dict)
+                or not isinstance(implementation, dict)
+                or not isinstance(value.get('observation_source_datasets'), list)
+                or any(not isinstance(row, dict)
+                       or not isinstance(row.get('sha256'), str)
+                       or not _HASH.fullmatch(row['sha256'])
+                       for row in input_artifacts.values())
+                or any(not isinstance(digest, str) or not _HASH.fullmatch(digest)
+                       for digest in output_hashes.values())):
+            raise ValueError('M7 provenance manifest is malformed')
+        details.update(schema=value['schema'],
+                       record_count=len(value['observation_source_datasets']))
     elif artifact_type == 'dvg_raw_output':
         from .dvg_evidence import _MAX_NATIVE_BYTES
         if path.name != 'Virus_Recombination_Results.txt':

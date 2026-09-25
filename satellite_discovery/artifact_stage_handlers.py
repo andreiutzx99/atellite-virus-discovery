@@ -356,6 +356,9 @@ def workflow_report(inputs, output, config):
                 if value.get('schema') in {
                     'm6-residual-manifest-v1', 'm6-read-support-v1',
                     'm6-reconstruction-evidence-v1',
+                    'm7-observations-v1', 'm7-exact-recurrence-v1',
+                    'm7-independence-summary-v1', 'm7-validation-report-v1',
+                    'm7-recurrence-provenance-v1',
                 }:
                     record['schema'] = value['schema']
                 tables = value.get('tables', {})
@@ -483,6 +486,63 @@ def workflow_report(inputs, output, config):
                     sections.append('<p>DVG evidence status: ' +
                                     html.escape(str(dvg.get('status', 'NOT_EVALUATED'))) +
                                     '; this is a separate evidence dimension.</p>')
+            elif record.get('schema') == 'm7-independence-summary-v1':
+                summary = record['summary']
+                fields = (
+                    ('Result', summary.get('result_status')),
+                    ('Completeness', summary.get('analysis_completeness')),
+                    ('Supported sequence observations',
+                     summary.get('supported_sequence_observation_count')),
+                    ('Exact sequence groups', summary.get('exact_group_count')),
+                    ('Recurrent source-dataset groups',
+                     summary.get('recurrent_group_count')),
+                    ('Orientation policy', summary.get('orientation_policy')),
+                )
+                sections.append(
+                    '<p>M7 reports exact recurrence only among individually supported '
+                    'M6 contigs; it does not classify biological identity or function.</p><dl>' +
+                    ''.join('<dt>' + html.escape(label) + '</dt><dd>' +
+                            html.escape(str(value if value is not None else 'Not reported')) +
+                            '</dd>' for label, value in fields) + '</dl>'
+                )
+            elif record.get('schema') == 'm7-observations-v1':
+                summary = record['summary']
+                sections.append(
+                    '<p>Declared observations: ' +
+                    str(summary.get('record_count', 'Not reported')) +
+                    '; supported sequence observations: ' +
+                    str(summary.get('sequence_observation_count', 'Not reported')) +
+                    '. Missing metadata remains explicit.</p>'
+                )
+            elif record.get('schema') == 'm7-exact-recurrence-v1':
+                summary = record['summary']
+                sections.append(
+                    '<p>Exact sequence groups: ' +
+                    str(summary.get('record_count', 'Not reported')) +
+                    '; orientation policy: ' +
+                    html.escape(str(summary.get('orientation_policy', 'Not reported'))) +
+                    '.</p>'
+                )
+            elif record.get('schema') == 'm7-validation-report-v1':
+                summary = record['summary']
+                sections.append(
+                    '<p>Validation status: ' +
+                    html.escape(str(summary.get('status', 'Not reported'))) +
+                    '; observations: ' +
+                    str(summary.get('observation_count', 'Not reported')) +
+                    '; unavailable: ' +
+                    str(summary.get('unavailable_count', 'Not reported')) +
+                    '; failed: ' +
+                    str(summary.get('failed_count', 'Not reported')) + '.</p>'
+                )
+            elif record.get('schema') == 'm7-recurrence-provenance-v1':
+                summary = record['summary']
+                sections.append(
+                    '<p>Configuration SHA256: <code>' +
+                    html.escape(str(summary.get('configuration_sha256', 'Not reported'))) +
+                    '</code>; declared input artifacts: ' +
+                    str(len(summary.get('input_artifacts', {}))) + '.</p>'
+                )
             elif 'summary' in record:
                 sections.append('<pre>' + html.escape(json.dumps(record['summary'], indent=2, sort_keys=True)) + '</pre>')
             else:
