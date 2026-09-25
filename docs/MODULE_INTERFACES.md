@@ -1,6 +1,6 @@
 # Module contracts and incomplete stages
 
-These boundaries preserve modularity. They are not implementations of the original discovery methods. Every external adapter must receive a schema version, input paths and SHA256 hashes, method/version and parameters. It must return `complete`, `failed`, `blocked_dependency`, or `not_implemented`, plus output hashes and logs. Unimplemented stages emit **no findings** and block dependent execution. Missing evidence is never a negative observation. No arbitrary score is a calibrated probability.
+These boundaries preserve modularity. They are not implementations of the original discovery methods. The following describes historical requirements, not an implemented plug-in API. Every proposed external adapter would receive a schema version, input paths and SHA256 hashes, method/version and parameters. It must return `complete`, `failed`, `blocked_dependency`, or `not_implemented`, plus output hashes and logs. Unimplemented stages emit **no findings** and block dependent execution. Missing evidence is never a negative observation. No arbitrary score is a calibrated probability.
 
 | Interface | Expected input | Expected output | Released implementation / remaining boundary |
 |---|---|---|---|
@@ -8,9 +8,9 @@ These boundaries preserve modularity. They are not implementations of the origin
 | Library review | datasets.json | RNA/DNA/mixed/unknown and conflict CSV/JSON/HTML | Implemented; does not select tools automatically |
 | Mapping | Verified read manifest plus independently supplied versioned reference manifest | SAM/BAM, command/version/log and conservation counts | Historical local prototype not released; automated helper-discovery mapping unsupported here |
 | Read partition | Existing alignments plus source-read IDs | Mapped/unmapped/partial partitions and exhaustive count manifest | Not released; no discovery read extraction is performed |
-| Assembly | Verified read manifest, external assembler method/version/parameters | FASTA, logs, graph if available and hashes | SPAdes runtime unavailable; Tadpole artificial-fixture diagnostic only; no automatic novel-element reconstruction |
-| BAM/CRAM decoder | Existing BAM/CRAM and reference manifest where required | Validated alignment-block stream with coordinate convention and exclusions | Dependency gap; SAM/gzip-SAM/interval alternative implemented |
-| Database search | Supplied sequences and independently curated reference manifest | Standard nucleotide BLAST table, database versions, command and logs | Execution adapter not released; no auto-curated biological panel |
+| Assembly | Verified read manifest, external assembler method/version/parameters | FASTA, logs, graph if available and hashes | SPAdes and Tadpole fixed artificial diagnostics runtime-validated on Linux; Tadpole also on Windows. No arbitrary-input assembly adapter or automatic novel-element reconstruction |
+| BAM/CRAM decoder | Existing BAM/CRAM and reference manifest where required | Validated alignment-block stream with coordinate convention and exclusions | Implemented conditional decoder using pysam or samtools; real artificial BAM/CRAM tests in Linux CI. SAM/gzip-SAM/interval handling remains available without those dependencies |
+| Database search | Supplied sequences and independently curated reference manifest | Standard nucleotide BLAST table, database versions, command and logs | Supplied-reference BLAST execution adapter implemented and runtime-tested; external BLAST required, no auto-curated biological panel |
 | BLAST evidence import | Existing 12-column nucleotide outfmt 6 and feature/reference manifests | Normalized matches, orientation, reported-hit status, provenance | Implemented; no inference from no-hit status |
 | Contamination review | Feature lengths, supplied matches and explicit technical-control calls | Per-role union coverage, evidence flags and uncertainty | Implemented; no validated automatic rejection or contamination probabilities |
 | Sequence inventory | Supplied nucleotide FASTA | Length, GC, ambiguity, single-symbol entropy, exact duplicates, SQLite/FASTA | Implemented; no biological low-complexity rejection threshold |
@@ -33,3 +33,7 @@ The table above retains the original boundaries. These specific generic adapters
 ## Supplied-artifact validation follow-up
 
 See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.
+
+## Current implementation audit
+
+[APPLICATION_CAPABILITY_AUDIT.md](APPLICATION_CAPABILITY_AUDIT.md) distinguishes current runtime behavior from historical contracts. The workflow has a fixed allowlist; the placeholder statuses above are not implemented workflow status values or evidence of a callable external-module registry.

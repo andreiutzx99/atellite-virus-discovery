@@ -19,3 +19,7 @@ See [PROCESS_RELIABILITY_REPORT.md](PROCESS_RELIABILITY_REPORT.md) for the subpr
 ## Artificial SPAdes diagnostic and licence audit
 
 See [SPADES_AND_LICENSE_REPORT.md](SPADES_AND_LICENSE_REPORT.md) for the fixed-fixture diagnostic, external runtime requirements, ViReMa licence audit and explicit remaining work. No ViReMa adapter or discovery integration is added.
+
+## Current capability audit (2026-09-25)
+
+See [APPLICATION_CAPABILITY_AUDIT.md](APPLICATION_CAPABILITY_AUDIT.md) for the code-checked status, orchestration/UI gaps and distinction between engineering completion and scientific validation. This documentation update adds no executable analysis or external-module integration.
