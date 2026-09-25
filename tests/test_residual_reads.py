@@ -107,6 +107,96 @@ class ResidualReadTests(unittest.TestCase):
             with gzip.open(root / "out" / "residual_read2.fastq.gz", "rb") as handle:
                 self.assertEqual(handle.read(), b"")
 
+    def test_paired_neither_one_or_both_mapped_excludes_whole_fragment(self):
+        left_record = b"@pair/1\nACGTACGT\n+\nIIIIIIII\n"
+        right_record = b"@pair/2\nTGCATGCA\n+\nIIIIIIII\n"
+        mapping_cases = {
+            "neither": (
+                "m6r000000000001\t77\t*\t0\t0\t*\t*\t0\t0\tACGTACGT\tIIIIIIII\n"
+                "m6r000000000001\t141\t*\t0\t0\t*\t*\t0\t0\tTGCATGCA\tIIIIIIII\n",
+                True,
+            ),
+            "one": (
+                "m6r000000000001\t65\tref\t1\t60\t8M\t*\t0\t0\tACGTACGT\tIIIIIIII\tNM:i:0\n"
+                "m6r000000000001\t141\t*\t0\t0\t*\t*\t0\t0\tTGCATGCA\tIIIIIIII\n",
+                False,
+            ),
+            "both": (
+                "m6r000000000001\t65\tref\t1\t60\t8M\t*\t0\t0\tACGTACGT\tIIIIIIII\tNM:i:0\n"
+                "m6r000000000001\t129\tref\t9\t60\t8M\t*\t0\t0\tTGCATGCA\tIIIIIIII\tNM:i:0\n",
+                False,
+            ),
+        }
+
+        for label, (sam_records, is_residual) in mapping_cases.items():
+            with self.subTest(mapping=label), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                read1, read2 = root / "r1.fastq", root / "r2.fastq"
+                read1.write_bytes(left_record)
+                read2.write_bytes(right_record)
+                sam = root / "screen.sam"
+                sam.write_text("@SQ\tSN:ref\tLN:32\n" + sam_records, encoding="ascii")
+                result = screen_and_triage(
+                    read1, read2, sam, root / "out",
+                    config={"min_read_length": 1, "max_ambiguous_fraction": 1,
+                            "min_entropy_bits": 0, "min_mean_phred": 0},
+                    paired=True,
+                )
+                expected_count = 1 if is_residual else 0
+                self.assertEqual(result["counts"]["residual_fragments"], expected_count)
+                self.assertEqual(result["counts"]["eligible_fragments"], expected_count)
+                expected_left = left_record if is_residual else b""
+                expected_right = right_record if is_residual else b""
+                with gzip.open(root / "out" / "residual_read1.fastq.gz", "rb") as handle:
+                    self.assertEqual(handle.read(), expected_left)
+                with gzip.open(root / "out" / "residual_read2.fastq.gz", "rb") as handle:
+                    self.assertEqual(handle.read(), expected_right)
+
+    def test_minimum_length_boundary_49_50_51_bases(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / "reads.fastq"
+            sequences = {
+                length: ("ACGT" * ((length + 3) // 4))[:length]
+                for length in (49, 50, 51)
+            }
+            source.write_text(
+                "".join(
+                    f"@read{length}\n{sequence}\n+\n{'I' * length}\n"
+                    for length, sequence in sequences.items()
+                ),
+                encoding="ascii",
+            )
+            sam = root / "screen.sam"
+            sam.write_text(
+                "@HD\tVN:1.6\n"
+                + "".join(
+                    f"m6r00000000000{index}\t4\t*\t0\t0\t*\t*\t0\t0\t{sequence}\t{'I' * length}\n"
+                    for index, (length, sequence) in enumerate(sequences.items(), 1)
+                ),
+                encoding="ascii",
+            )
+            result = screen_and_triage(
+                source, None, sam, root / "out",
+                config={"min_read_length": 50, "max_ambiguous_fraction": .05,
+                        "min_entropy_bits": 1.2, "min_mean_phred": 20},
+                paired=False,
+            )
+            self.assertEqual(result["counts"]["residual_fragments"], 3)
+            self.assertEqual(result["counts"]["eligible_fragments"], 2)
+            self.assertEqual(result["counts"]["retained_unassembled_fragments"], 1)
+            self.assertEqual(result["eligible_fragment_ids"], [
+                "m6r000000000002", "m6r000000000003",
+            ])
+            self.assertEqual(result["retained_unassembled_fragment_ids"], [
+                "m6r000000000001",
+            ])
+            self.assertEqual(
+                [result["read_metadata"][(f"m6r00000000000{i}", 0)]["query_length"]
+                 for i in range(1, 4)],
+                [49, 50, 51],
+            )
+
     def test_changed_input_during_triage_leaves_no_final_residual(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

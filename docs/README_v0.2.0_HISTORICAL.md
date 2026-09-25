@@ -1,12 +1,14 @@
-> Historical version 0.2.0 documentation. Commands and scope below are not current.
+> Historical version 0.2.0 documentation. Commands and scope below describe
+> that earlier release, not current capabilities. See the [current README](../README.md),
+> [M1–M6 roadmap](ROADMAP.md), and [M6 scientific audit](M6_AUDIT.md).
 
 # Satellite Discovery — version 0.2.0
 
-Reproducible public sequencing **metadata discovery, bounded FASTQ download and baseline QC**. Implements phases 1–3. Helper mapping, assembly, DVG discrimination, candidate scoring and biological satellite validation are not yet implemented.
+Reproducible public sequencing **metadata discovery, bounded FASTQ download and baseline QC**. Implements phases 1–3 in version 0.2.0. Statements below that helper mapping, assembly, or DVG analysis were not implemented apply to that historical version only.
 
 ## Start here
 
-**[Step-by-step test guide](docs/USER_TEST_GUIDE.md)**: exact files to open, responses to enter, expected output and troubleshooting.
+**[Step-by-step test guide](USER_TEST_GUIDE_v0.2.0_HISTORICAL.md)**: exact files to open, responses to enter, expected output and troubleshooting.
 
 Requires Python 3.11 or newer. Uses the Python standard library; no extra package installation is needed.
 
@@ -66,7 +68,7 @@ Exit code 0: requested stages completed; 1: fatal error; 2: partial result or no
 
 Stages record software/Python versions, commands, parameters, timestamps, accession identifiers, input/output hashes and errors. Archive snapshots have retrieval times and response hashes rather than invented release versions. Raw reads and run directories are excluded from GitHub.
 
-Metadata mentions are not infection calls. Same-study samples are not automatically controls, and runs are not independent biological samples. Missing evidence remains unknown. Shortlisted datasets are **eligible for review**. Spots are archive units, not mapped coverage. Candidate discovery requires the blinded validation gate in [VALIDATION.md](docs/VALIDATION.md). See [architecture](docs/ARCHITECTURE.md) and [status](docs/STATUS.md).
+Metadata mentions are not infection calls. Same-study samples are not automatically controls, and runs are not independent biological samples. Missing evidence remains unknown. Shortlisted datasets are **eligible for review**. Spots are archive units, not mapped coverage. Candidate discovery requires the planned blinded validation gate in [VALIDATION.md](VALIDATION.md). See the current [architecture overview](../README.md#pipeline-architecture) and [release status](STATUS.md).
 
 ## Tests and sources
 

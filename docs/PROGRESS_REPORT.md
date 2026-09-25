@@ -1,5 +1,10 @@
 # Software progress report
 
+> Historical progress report containing milestone-specific snapshots. For the
+> current status and implemented M1–M6 capabilities, see the [README](../README.md)
+> and [roadmap](ROADMAP.md). Statements below about absent M5/M6 features apply
+> to their original report baselines.
+
 The project is an operational public-data preparation and descriptive artifact-review toolkit. It is not a completed or biologically validated satellite-discovery system.
 
 ## Working software

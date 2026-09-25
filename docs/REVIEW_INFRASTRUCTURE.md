@@ -64,7 +64,7 @@ An exclusive `.review.lock` prevents concurrent writers. After a forced terminat
 
 ## Remaining unsupported work
 
-BAM/CRAM or compressed-SAM import, automatic reference searches, approximate clustering, ORF reporting and functional inference are not implemented by these review tools. The existing assembly/mapping runtime prototypes remain separate. The new infrastructure operates on supplied evidence, not an end-to-end biological discovery workflow.
+BAM/CRAM and compressed-SAM handling, automatic reference searches, approximate clustering, ORF reporting, and functional inference have separate capabilities or limits described elsewhere; this document covers the numbered review tools, not the complete milestone set. The project separately implements registered assembly, supplied-reference BLAST, optional ViReMa evidence, and the M6 declared-reference residual stage; see the [current README](../README.md) and [roadmap](ROADMAP.md). These modules do not form a validated biological discovery workflow.
 
 ## BLAST table import (menu 9)
 

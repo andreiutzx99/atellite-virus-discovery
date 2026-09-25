@@ -1,6 +1,6 @@
 # Application capability audit — 2026-09-25, Milestone 1
 
-Historical Milestone 1 snapshot. Later milestones added per-record reference imports, acquisition-provider infrastructure and the generic SPAdes/Tadpole assembly stage. For current capabilities and limits, see the [development handoff](DEVELOPMENT_HANDOFF.md) and [assembly guide](ASSEMBLY.md); the table below remains a record of the earlier audit.
+Historical Milestone 1 snapshot. Later milestones added per-record reference imports, acquisition-provider infrastructure, generic SPAdes/Tadpole assembly, M4 artifact workflows, M5 caller-specific DVG evidence, and M6 residual-read support. For current capabilities and limits, see the [README](../README.md), [roadmap](ROADMAP.md), [M1–M6 scientific audit](M1_M6_SCIENTIFIC_AUDIT.md), [M5 description](M5_DVG_EVIDENCE.md), and [M6 description](M6_RESIDUAL_ASSEMBLY_SUPPORT.md); the table below remains a record of the earlier audit.
 
 Audited source: Milestone 1 development branch based on verified main commit `c5b5eb15d737601b48009a090faef7717c92d54a`. The prior main baseline had 229 passing tests. This milestone adds registry/adapter/state infrastructure only; it does not add acquisition, reference-import, assembly or biological analysis functionality. No user QC/results were changed.
 

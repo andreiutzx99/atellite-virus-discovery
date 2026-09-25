@@ -1,4 +1,6 @@
 > Historical version 0.2.0 instructions; not current development commands.
+> For current capabilities and supported commands, see the [README](../README.md)
+> and [milestone roadmap](ROADMAP.md).
 
 # How to test version 0.2.0
 

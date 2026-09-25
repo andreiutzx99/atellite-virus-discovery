@@ -1,5 +1,10 @@
 # Milestone 5 — 30-point local acceptance audit
 
+> Historical local acceptance record. M5 is present in the current source
+> baseline. This table records the checks and publication-gate state at the
+> time of the M5 audit; see the [current M5 description](M5_DVG_EVIDENCE.md),
+> [current roadmap](ROADMAP.md), and [M1–M6 scientific audit](M1_M6_SCIENTIFIC_AUDIT.md).
+
 This is a software and integration audit, not a biological validation. The
 audited baseline is `58a02e054dde75fb9943d0b076ba74863cc76f39` on `main`;
 the implementation branch is `feature/milestone-5-dvg-evidence`. The checks

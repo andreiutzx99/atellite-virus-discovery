@@ -1,25 +1,28 @@
-# Release status
+# Current project status
 
-PR #1 and PR #2 are merged. The final-audit update promotes the tested QC audit and revised metadata gates, adds compressed-SAM input, BLAST-table import and optional dependency checks, and improves observation-summary scaling.
+The current milestone register is [ROADMAP.md](ROADMAP.md): **M1–M6 are
+implemented** as scoped software capabilities, while **M7–M16 remain
+planned**. This post-M6 consolidation updates documentation and adds M6
+boundary regression tests; it does not change M6 production behavior or
+thresholds.
 
-The authoritative component-by-component status is [PERMITTED_ROADMAP.md](PERMITTED_ROADMAP.md). Historical architecture documents describe an original ambition, not a validated implementation. Existing QC runs and local prototypes remain preserved. The source release does not include the historical mapping, assembly or BLAST execution adapters.
+For the current overview, operating instructions, and scientific limitations,
+see the [README](../README.md), [M1–M6 milestone documents](M1_FOUNDATION.md),
+[M1–M6 scientific audit](M1_M6_SCIENTIFIC_AUDIT.md), and
+[M6 workflow audit](M6_AUDIT.md). Passing software tests do not establish
+biological identity, novelty, helper dependence, sensitivity, specificity, or
+discovery performance.
 
-Scientific validation remains distinct from passing software tests. No end-to-end known-positive satellite benchmark, discovery sensitivity, false-positive rate, DVG probability or helper-dependency result is claimed.
+## Historical reports
 
-The conditional-tools follow-up is described in [PROGRESS_REPORT.md](PROGRESS_REPORT.md), with every former partial/dependency entry evaluated in [PARTIAL_FEATURE_FOLLOWUP.md](PARTIAL_FEATURE_FOLLOWUP.md). It adds executable supplied-reference BLAST, optional BAM/CRAM decoding, reference snapshots, context/quantitative reporting and a resumable artifact workflow. Existing category-4 boundaries remain unchanged.
+The following reports preserve findings and status at their own earlier
+baselines. Statements in them that M5/M6 or later assembly/workflow features
+were absent are historical, not the current capability register.
 
-## Supplied-artifact validation follow-up
-
-See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implementation, test evidence and explicit remaining limitations. This adds bounded fallback retries/history, file-level reference metadata, digest/control evaluation (menu23 and workflow stage), and a paired artificial Tadpole diagnostic. It does not deliver a biological discovery chain.
-
-## Process reliability follow-up
-
-See [PROCESS_RELIABILITY_REPORT.md](PROCESS_RELIABILITY_REPORT.md) for the subprocess tree cleanup, budget scanning, lock-owner diagnostics, validation and remaining scope. This is a partial infrastructure delivery; no ViReMa/DVG integration is included.
-
-## Artificial SPAdes diagnostic and licence audit
-
-See [SPADES_AND_LICENSE_REPORT.md](SPADES_AND_LICENSE_REPORT.md) for the fixed-fixture diagnostic, external runtime requirements, ViReMa licence audit and explicit remaining work. No ViReMa adapter or discovery integration is added.
-
-## Current capability audit (2026-09-25)
-
-See [APPLICATION_CAPABILITY_AUDIT.md](APPLICATION_CAPABILITY_AUDIT.md) for the code-checked status, orchestration/UI gaps and distinction between engineering completion and scientific validation. This documentation update adds no executable analysis or external-module integration.
+- [Earlier feature and original-specification audit](PERMITTED_ROADMAP.md)
+- [Earlier software progress report](PROGRESS_REPORT.md)
+- [Earlier infrastructure status](INFRASTRUCTURE_STATUS.md)
+- [Earlier artifact validation report](ARTIFACT_VALIDATION_REPORT.md)
+- [Earlier process reliability report](PROCESS_RELIABILITY_REPORT.md)
+- [Earlier SPAdes and licence report](SPADES_AND_LICENSE_REPORT.md)
+- [Historical M1 capability audit](APPLICATION_CAPABILITY_AUDIT.md)

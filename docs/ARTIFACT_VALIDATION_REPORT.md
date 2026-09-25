@@ -2,6 +2,10 @@
 
 Historical report: its component-availability statements describe the project at that report's baseline and are superseded for assembly by the current [registered assembly stage guide](ASSEMBLY.md). Its earlier test and runtime evidence remains a record of that milestone.
 
+M5 and M6 were added after this report's baseline. For current capabilities,
+see the [roadmap](ROADMAP.md), [M5 description](M5_DVG_EVIDENCE.md), and
+[M6 description](M6_RESIDUAL_ASSEMBLY_SUPPORT.md).
+
 Baseline: `99e997c`, 182 tests. This change adds general software validation and supplied-artifact accounting. It preserves prior QC and does not run any requested virus screen. Artificial assembly is a standalone diagnostic and is not connected to discovery processing.
 
 | Component | Implementation status | Tested? | Scientific validation? | Remaining limitation |

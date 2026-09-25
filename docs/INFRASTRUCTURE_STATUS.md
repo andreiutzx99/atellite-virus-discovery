@@ -1,5 +1,10 @@
 # Engineering foundation audit, 2026-09-24
 
+> Historical infrastructure snapshot predating M5/M6. Its results remain
+> evidence for that baseline, not the current capability register. See the
+> [README](../README.md), [roadmap](ROADMAP.md), and
+> [M1–M6 scientific audit](M1_M6_SCIENTIFIC_AUDIT.md).
+
 Baseline: PR #5, `cb36446`, 161 tests and five successful CI jobs. Source, tests, CI, README, progress/feature tables, conditional-tool documentation and TODO/FIXME/reserved-interface searches were reviewed. No completed user QC was reopened or rerun. New public-data use was limited to a tiny brewing-yeast software benchmark, separate from biological acquisition.
 
 ## Audit decisions

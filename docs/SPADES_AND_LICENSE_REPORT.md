@@ -4,6 +4,9 @@ Baseline: merged PR #8, `40804a62`, 208 tests. This is a partial delivery of the
 
 Historical PR #8 diagnostic report. Statements below that no arbitrary-input adapter existed, or that ViReMa was not integrated, describe that baseline; the current registered SPAdes/Tadpole stage is documented in the [assembly guide](ASSEMBLY.md), and the later ViReMa adapter/runtime evidence is documented in [DVG evidence](DVG_EVIDENCE.md). The licence findings remain specific to the audited sources.
 
+For current M1–M6 capabilities and limits, see the [roadmap](ROADMAP.md) and
+[scientific audit](M1_M6_SCIENTIFIC_AUDIT.md).
+
 | Component | Implemented | Runtime tested | Dependency | Remaining limitation |
 |---|---|---|---|---|
 | SPAdes fixed artificial diagnostic | Yes: single/paired fixtures, detection/version, input validation, bounded execution, raw output preservation, provenance, failure reports and verified reuse | Actual Linux SPAdes 3.15.5 passed both layouts and reuse; software fixtures locally | Externally installed `spades.py` or `spades`; CI obtains the distribution package | No native Windows installation here; only fixed generated data, no arbitrary-read adapter, no equivalence to Tadpole |
