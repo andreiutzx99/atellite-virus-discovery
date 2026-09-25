@@ -64,6 +64,7 @@ def save(output, result):
     bundle = {'schema': 'artifact-reproducibility-v1', 'generated_utc': datetime.now(timezone.utc).isoformat(),
               'status': result['status'], 'environment': result['environment'],
               'configuration': result['configuration'], 'identity': result['identity'],
+              'registry': result.get('registry', []),
               'started_utc': result['started_utc'], 'finished_utc': result.get('finished_utc'),
               'output_directory': str(output), 'stages': stages,
               'notes': ['Contains paths, hashes and recorded commands, not input sequence data.',

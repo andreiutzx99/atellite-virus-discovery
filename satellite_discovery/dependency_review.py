@@ -24,28 +24,40 @@ TOOLS = {
     'tadpole': ('tadpole.sh', '--version', None),
 }
 
+
+def inspect_executable(name, command, version_args=('--version',), candidates=(), timeout=15):
+    """Inspect one executable using the same checks as the dependency report."""
+    path=shutil.which(command)
+    candidates=sorted(str(candidate) for candidate in candidates)
+    if not path and len(candidates)==1:
+        path=str(Path(candidates[0]).resolve())
+    row={'tool':name,'path':str(Path(path).resolve()) if path else '',
+         'status':'not_found','version_output':'','sha256':'',
+         'capability_test':'not_performed'}
+    if not path and len(candidates)>1:
+        row['status']='ambiguous_portable_versions'
+    if path:
+        try:
+            with open(path,'rb') as source:
+                row['sha256']=hashlib.file_digest(source,'sha256').hexdigest()
+            result=subprocess.run([path,*version_args],capture_output=True,text=True,
+                                  errors='replace',timeout=timeout,check=False)
+            row['status']='version_check_passed' if result.returncode==0 else 'version_check_failed'
+            row['version_output']=(result.stdout+'\n'+result.stderr).strip()[:4000]
+        except (OSError,subprocess.SubprocessError) as error:
+            row.update(status='version_check_failed',version_output=str(error)[:4000])
+    return row
+
+
 def inspect_tools(project):
     project=Path(project).resolve()
     rows=[]
     for name,(command,flag,pattern) in TOOLS.items():
         if pattern and sys.platform!='win32':pattern=pattern.removesuffix('.exe')
-        path=shutil.which(command)
-        if not path and name=='spades':path=shutil.which('spades')
         candidates=sorted(project.glob(pattern)) if pattern else []
-        if not path and len(candidates)==1:
-            path=str(candidates[0].resolve())
-        row={'tool':name,'path':str(Path(path).resolve()) if path else '', 'status':'not_found', 'version_output':'', 'sha256':'', 'capability_test':'not_performed'}
-        if not path and len(candidates)>1:
-            row['status']='ambiguous_portable_versions'
-        if path:
-            try:
-                with open(path,'rb') as source:
-                    row['sha256']=hashlib.file_digest(source,'sha256').hexdigest()
-                result=subprocess.run([path,flag],capture_output=True,text=True,errors='replace',timeout=15,check=False)
-                row['status']='version_check_passed' if result.returncode==0 else 'version_check_failed'
-                row['version_output']=(result.stdout+'\n'+result.stderr).strip()[:4000]
-            except (OSError,subprocess.TimeoutExpired) as error:
-                row.update(status='version_check_failed',version_output=str(error)[:4000])
+        row=inspect_executable(name,command,(flag,),candidates)
+        if not row['path'] and name=='spades':
+            row=inspect_executable(name,'spades',(flag,),candidates)
         rows.append(row)
     for name in ('pysam','matplotlib'):
         row={'tool':name,'path':'','status':'not_found','version_output':'','sha256':'','capability_test':'not_performed'}

@@ -1,6 +1,6 @@
-# Application capability audit — 2026-09-25
+# Application capability audit — 2026-09-25, Milestone 1
 
-Audited source: main after PR #9 (`e1c4791567d8bcfa88ef9e89a59b60f7c7c60af3`). Validated baseline: 217 tests and five passing CI jobs. This change corrects documentation and records gaps; it implements none of the requested acquisition/reference/assembly/plugin extensions. No user QC was changed or rerun. No new biological analysis, runtime installation or licence audit was performed.
+Audited source: Milestone 1 development branch based on verified main commit `c5b5eb15d737601b48009a090faef7717c92d54a`. The prior main baseline had 229 passing tests. This milestone adds registry/adapter/state infrastructure only; it does not add acquisition, reference-import, assembly or biological analysis functionality. No user QC/results were changed.
 
 A = implemented and software-tested within its stated scope; B = scientific interpretation/performance remains unvalidated; C = external runtime/data dependency; D = missing engineering; E = unsupported/external scientific functionality. A component can have several labels; a passing software test does not remove B or C.
 
@@ -16,8 +16,8 @@ A = implemented and software-tested within its stated scope; B = scientific inte
 | Assembly infrastructure | A/C for diagnostics; arbitrary-input adapter D/E | Fixed artificial Tadpole and SPAdes execution/reuse tested | No arbitrary-read assembler adapter and no assembly stage in the artifact workflow. |
 | Artifact/sequence catalogues | A/B | Supplied FASTA inventory, exact duplicates/groups, SQLite/CSV/FASTA and linked occurrences | Exact identity is not a biological family assignment or approximate clustering. |
 | Recurrence/control analysis | A/B | Supplied observation/control tables, strata, denominators and exact-digest recurrence | Does not detect events in reads, validate control labels or establish causal dependence. |
-| External-tool interfaces | A/C for existing adapters; general plugin API D/E | Specific supplied-artifact adapters, dependency probes, bounded process utility | No dynamic caller registry, configurable arbitrary commands or drop-in ViReMa adapter API. |
-| Reporting/UI | A; requested unified status UI D | Numbered review menu, linked HTML/CSV/JSON reports, preflight and report opening | Not every diagnostic is exposed in the menu; dependency errors do not have the requested dedicated workflow state. |
+| External-tool interfaces | A/C; scientific adapter D/E | Deterministic trusted stage registry, generic bounded adapter contract, dependency/version/hash inspection, separate logs, provenance, output inventory and verified reuse | Only a harmless text fixture is added. No ViReMa or other scientific adapter; process runner is not a hostile-code sandbox. |
+| Reporting/UI | A with explicit workflow states | Numbered review menu, linked HTML/CSV/JSON reports, preflight, report opening and readable states/reasons | Not every diagnostic is exposed in the menu; there is no universal plugin installer or arbitrary-input assembler launcher. |
 | Reproducibility | A with D limits | Artifact-workflow environment, code hashes, configuration, paths/digests, timestamps and available stage command records | Git revision may be unknown outside a checkout; not every installed runtime/library is fingerprinted; no independent reference-withholding proof. |
 
 ## Actual application map
@@ -47,31 +47,31 @@ The diagram does not imply that existing review stages consume every preceding o
 
 ## Workflow, status and UI findings
 
-`artifact_workflow.FIELDS` and `dispatch` are a hard-coded allowlist. Unknown kinds/configuration fields fail validation. No runtime plugin import, registry registration or arbitrary shell step exists. Acquisition/QC and arbitrary-input assembly are not registered stages. Historical module-contract documentation is not an executable extension API.
+`WorkflowStageRegistry` replaces hard-coded branching as the workflow's dispatch mechanism while retaining the existing built-in kinds. Trusted application code registers stage handlers and external adapters. Workflow JSON can choose only registered stage/module identifiers and validated data; it cannot supply executable commands, Python imports or expressions. The generic placeholder records an unavailable module instead of importing it dynamically.
 
-Artifact-workflow stages are recorded as `pending`, `running`, `complete`, `failed` or `interrupted`. Execution stops on failure; later steps remain pending. The requested `skipped`, `external_module_required` and `dependency_missing` workflow states are not implemented. Dependency failures can be visible as errors, but that is not equivalent to those distinct states. Unsupported kinds fail preflight rather than appearing as skipped stages.
+The eight stage states are `pending`, `running`, `complete`, `skipped`, `dependency_missing`, `external_module_required`, `failed` and `interrupted`. Valid transitions are defined centrally. Missing executables and missing trusted modules have distinct infrastructure states and stop the workflow without changing completed earlier outputs. Explicitly skipped stages are not complete. Ordinary failures still stop execution, leaving later stages pending.
 
-Completed stages verify their saved artifacts on reuse. A rerun can reuse completed work and retry later work under unchanged identities, but individual adapters can require a fresh folder after failure; the SPAdes diagnostic deliberately does so. Forced termination can leave locks requiring operator verification. There is no general checkpoint-resume capability for every external tool.
+Completed stages verify their saved artifacts on reuse. External adapter reuse checks inputs, configuration, adapter source/version, executable identity, relevant environment and every inventoried output hash. A failed or changed external stage requires a fresh stage output folder. Forced termination can leave locks requiring operator verification. There is no general checkpoint-resume capability for every external tool.
 
-The review menu provides implemented reviews and dependency checks, workflow preflight/run, report opening, snapshot comparison and supplied-digest evaluation. It does not provide a universal external-module installer, plug-in manager or arbitrary-input assembler launcher. No additional UI states or execution paths were added by this audit.
+The review menu provides implemented reviews and dependency checks, workflow preflight/run, report opening, snapshot comparison and supplied-digest evaluation. It does not provide a universal external-module installer, plugin manager or arbitrary-input assembler launcher.
 
 ## Provenance assessment
 
-The artifact-workflow bundle records software/Python/platform details, source hashes, Git revision when available, configuration, stage timestamps and input hashes. It collects supported stage manifests and command records, and preserves supplied reference metadata where that stage records it. This is evidence of what the software recorded, not independent certification of the supplied data or reference completeness.
+The artifact-workflow bundle records software/Python/platform details, source hashes, Git revision when available, configuration, the registry snapshot, stage timestamps and input hashes. External tool manifests additionally capture adapter/tool identities, executable paths/hashes/version output, safe argv, stdout/stderr, exit status and checksummed outputs. This records what the software ran; it does not independently certify supplied data or scientific conclusions.
 
 An absent implementation, unassessed input, missing dependency or failed execution must not be described as a negative finding. No ViReMa-derived evidence or `confirmed_non_DVG` determination exists in the released application. The more specific proposed external-evidence status model has not been implemented or validated.
 
-## Six requested answers
+## Milestone 1 answers
 
-1. **Percentage/portion implemented:** no defensible percentage for the full requested application. Each of the 13 broad areas above has some supporting code, but counting that as 100% completion would be misleading. The repository has tested acquisition/QC and supplied-artifact review capabilities, plus isolated diagnostics; the requested end-to-end chain is incomplete. Tests count checks, not completed requirements.
-2. **External modules still required:** existing optional operations require their documented external executables/libraries. The requested autonomous biological analysis capabilities are absent, not merely missing installations. Installing an assembler or ViReMa alone would not connect them to this application.
-3. **Future ViReMa contract:** no detailed operational adapter contract is supplied in this context. The earlier broad provenance principles do not constitute a supported parser/execution schema or integration specification.
-4. **Drop-in independently developed ViReMa adapter:** no. The current fixed dispatch engine does not expose such a plug-in API, and compatibility or scientific validity cannot be asserted for an unimplemented adapter.
-5. **Other end-to-end gaps:** per-record reference provenance, registered production fallback, arbitrary-input assembly, independent withholding verification, unified dependency/skip states, general plug-in orchestration and broader dependency pinning remain absent. This audit does not implement them or represent them as complete.
-6. **Engineering versus scientific gaps:** engineering includes missing registration, import/provenance features, UI/state handling and runtime packaging. Scientific gaps include curated truth/control sets, justified biological interpretation and independently assessed performance. Implementing engineering alone would not establish scientific validity. The requested discovery-enabling integrations remain outside the work provided here.
+1. **Registry operational?** Yes. Built-ins and trusted adapters are registered deterministically; duplicate and unknown names fail safely.
+2. **Can workflow config execute arbitrary shell/Python?** No. Config selects registered identifiers and validated data only.
+3. **Are all eight workflow states operational?** Yes, with centralized transitions and report labels.
+4. **Do missing module/dependency states work?** Yes. Both are distinct infrastructure states and neither represents an analytical negative.
+5. **Is external execution tested and provenance recorded?** Yes. The artificial text adapter executes at runtime; logs, tool/adapter/input/configuration/environment details, output checksums and reuse are covered by tests.
+6. **Is a biological adapter included?** No. ViReMa, DVG analysis, satellite-virus discovery, ranking and interpretation remain unimplemented and were not started.
 
 ## Documentation corrections and validation
 
-Corrected stale module-table claims that SPAdes had no runtime validation, that supplied-reference BLAST execution was unreleased, and that binary alignment decoding was only a gap. Clarified that historical placeholder statuses are not actual workflow states. Updated menu documentation for option 23 and process-cleanup limits. No detailed unsupported biological schemas were added.
+Updated the current capability summary for the trusted registry, adapter contract, external-module placeholder and workflow states. The adapter-specific implementation contract is in `EXTERNAL_TOOL_ADAPTERS.md`. Historical architecture documents remain proposals and are not evidence of installed or validated scientific modules.
 
-Validation for this change consists of reading the cited code paths and checking documentation consistency. No new tests or repeated user analyses are warranted for a documentation-only update. The existing CI workflow still runs automatically for the PR; its results are recorded with the PR. The 217-test baseline is historical evidence, not a claim that the unimplemented capabilities were tested.
+Milestone test totals and the final PR/CI result are recorded in `DEVELOPMENT_HANDOFF.md` after the full suite and GitHub CI complete. No existing user QC/results were rerun or modified.
