@@ -6,6 +6,8 @@ Python modules, call arbitrary functions, or provide shell commands.
 from dataclasses import dataclass
 import re
 
+from .artifact_contracts import known_contract
+from .portable_paths import portable_name
 
 _STAGE_NAME = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,63}\Z')
 _MODULE_NAME = re.compile(r'[A-Za-z][A-Za-z0-9_.-]{0,127}\Z')
@@ -27,6 +29,9 @@ class StageDefinition:
     config_validator: object
     dynamic_inputs: bool = False
     description: str = ''
+    input_contracts: dict | None = None
+    output_contracts: dict | None = None
+    dependency_inspector: object = None
 
 
 class WorkflowStageRegistry:
@@ -39,7 +44,8 @@ class WorkflowStageRegistry:
     def register(self, kind, input_fields, handler, *, optional_input_fields=(),
                  version='1',
                  external_tool=False, module_name=None, config_validator=None,
-                 dynamic_inputs=False, description=''):
+                 dynamic_inputs=False, description='', input_contracts=None,
+                 output_contracts=None, dependency_inspector=None):
         if not isinstance(kind, str) or not _STAGE_NAME.fullmatch(kind):
             raise ValueError('Stage kind must be a safe registered name')
         if kind in self._stages:
@@ -73,6 +79,16 @@ class WorkflowStageRegistry:
         validator = config_validator or _empty_config
         if not callable(validator):
             raise ValueError('Configuration validator must be callable')
+        input_contracts = _validate_contract_mapping(
+            input_contracts or {}, 'input', dynamic_inputs=dynamic_inputs)
+        output_contracts = _validate_contract_mapping(output_contracts or {}, 'output')
+        if dynamic_inputs:
+            if set(input_contracts) - {'*'}:
+                raise ValueError('Dynamic-input contracts must use the wildcard input name')
+        elif set(input_contracts) - (fields | optional_fields):
+            raise ValueError('Input contracts must refer to registered stage inputs')
+        if dependency_inspector is not None and not callable(dependency_inspector):
+            raise ValueError('Dependency inspector must be callable')
         definition = StageDefinition(
             kind=kind,
             input_fields=fields,
@@ -84,6 +100,9 @@ class WorkflowStageRegistry:
             config_validator=validator,
             dynamic_inputs=dynamic_inputs,
             description=description,
+            input_contracts=input_contracts,
+            output_contracts=output_contracts,
+            dependency_inspector=dependency_inspector,
         )
         self._stages[kind] = definition
         if module_name is not None:
@@ -106,6 +125,9 @@ class WorkflowStageRegistry:
             module_name=adapter.module_name,
             config_validator=adapter.validate_config,
             description=getattr(adapter, 'description', ''),
+            input_contracts=getattr(adapter, 'input_contracts', {}),
+            output_contracts=getattr(adapter, 'output_contracts', {}),
+            dependency_inspector=getattr(adapter, 'inspect_dependency_for_config', None),
         )
 
     def get(self, kind):
@@ -150,6 +172,10 @@ class WorkflowStageRegistry:
                 'module_name': definition.module_name,
                 'description': definition.description,
                 'dynamic_inputs': definition.dynamic_inputs,
+                'input_contracts': {
+                    key: list(value) for key, value in sorted((definition.input_contracts or {}).items())
+                },
+                'output_contracts': dict(sorted((definition.output_contracts or {}).items())),
             }
             for definition in sorted(self._stages.values(), key=lambda item: item.kind)
         ]
@@ -162,3 +188,30 @@ def _empty_config(config):
     if config:
         raise ValueError('This stage does not accept configuration')
     return {}
+
+
+def _validate_contract_mapping(mapping, direction, dynamic_inputs=False):
+    if not isinstance(mapping, dict):
+        raise ValueError(f'{direction.title()} artifact contracts must be an object')
+    result = {}
+    for name, value in mapping.items():
+        if direction == 'output':
+            valid_name = (
+                (portable_name(name) and name.casefold() != 'manifest.json')
+                or (isinstance(name, str)
+                    and bool(re.fullmatch(r'\*[A-Za-z0-9_.-]{1,60}', name)))
+            )
+        else:
+            valid_name = isinstance(name, str) and (
+                name == '*' or bool(_STAGE_NAME.fullmatch(name))
+            )
+        if not valid_name:
+            raise ValueError(f'Invalid {direction} contract field')
+        values = (value,) if isinstance(value, str) else value
+        if not isinstance(values, (tuple, list, set, frozenset)) or not values:
+            raise ValueError(f'{direction.title()} contract types must be non-empty')
+        normalized = tuple(sorted(set(values)))
+        if any(not known_contract(item) for item in normalized):
+            raise ValueError(f'Unknown {direction} artifact contract type')
+        result[name] = normalized
+    return result

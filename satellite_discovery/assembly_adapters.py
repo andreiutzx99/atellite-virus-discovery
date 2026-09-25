@@ -529,6 +529,14 @@ class AssemblyWorkflowAdapter:
     adapter_version = ADAPTER_VERSION
     input_fields = frozenset({'read1'})
     optional_input_fields = frozenset({'read2'})
+    input_contracts = {
+        'read1': ('raw_read', 'validated_fastq'),
+        'read2': ('raw_read', 'validated_fastq'),
+    }
+    output_contracts = {
+        'contigs.fasta': 'canonical_contig_fasta',
+        'assembly_manifest.json': 'assembly_manifest',
+    }
     description = 'Selects a registered assembler; workflow configuration cannot provide commands.'
 
     def __init__(self, adapters=None):

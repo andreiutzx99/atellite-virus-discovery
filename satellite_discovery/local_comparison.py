@@ -36,15 +36,48 @@ def compare(query,reference,roles,output,tool_directory=None):
         roles=table(paths['roles'],('reference_id','reference_role','reference_source','reference_version'))
         if set(unique(roles,'reference_id'))!={r[0] for r in refs} or any(r['reference_role'] not in ROLES for r in roles):
             raise ValueError('Every supplied reference requires exactly one valid role and provenance record')
-        # Normalization preserves nucleotide content; no reconstruction or annotation.
-        for filename,records in [('queries.fasta',queries),('references.fasta',refs)]:
-            (directory/filename).write_text(''.join('>'+i+'\n'+s+'\n' for i,h,s in records),encoding='ascii')
+        # BLAST+ local identifiers have a 50-character limit. Use short stable
+        # IDs for execution, then restore the declared IDs in the reported hits.
+        def write_safe_fasta(filename, records, prefix):
+            mapping={}
+            with (directory/filename).open('w',encoding='ascii',newline='\n') as target:
+                for index,(identifier,_header,sequence) in enumerate(records,1):
+                    safe_id=f'{prefix}{index:08d}'
+                    mapping[safe_id]=identifier
+                    target.write('>'+safe_id+'\n'+sequence+'\n')
+            return mapping
+
+        query_ids=write_safe_fasta('queries.fasta',queries,'q')
+        reference_ids=write_safe_fasta('references.fasta',refs,'r')
+        raw_hits=directory/'raw_hits.tsv'
         commands=[
             [binaries['makeblastdb']['path'],'-in',str(directory/'references.fasta'),'-dbtype','nucl','-parse_seqids','-blastdb_version','4','-out',str(directory/'database')],
-            [binaries['blastn']['path'],'-query',str(directory/'queries.fasta'),'-db',str(directory/'database'),'-outfmt','6','-out',str(directory/'hits.tsv'),'-num_threads','1']]
-        write_json(directory/'commands.json',{'tools':binaries,'commands':commands,'parameters':'BLAST default search settings; one thread; standard nucleotide outfmt 6'})
+            [binaries['blastn']['path'],'-query',str(directory/'queries.fasta'),'-db',str(directory/'database'),'-outfmt','6','-out',str(raw_hits),'-num_threads','1']]
+        write_json(directory/'commands.json',{
+            'schema':'comparison-parameters-v1',
+            'tools':binaries,
+            'commands':commands,
+            'parameters':'BLAST default search settings; one thread; standard nucleotide outfmt 6',
+            'configured_thresholds':{},
+            'threshold_policy':'BLAST executable defaults; no additional pass/fail filter is configured.',
+            'identifier_mapping':{
+                'scheme':'short deterministic BLAST IDs; reported hits restore declared IDs',
+                'queries':query_ids,
+                'references':reference_ids,
+            },
+        })
         for index,command in enumerate(commands):
             process(command,directory,f'tool-{index}.log')
+        translated=[]
+        with raw_hits.open(encoding='ascii') as source:
+            for line in source:
+                columns=line.rstrip('\r\n').split('\t')
+                if len(columns)>=2:
+                    columns[0]=query_ids.get(columns[0],columns[0])
+                    columns[1]=reference_ids.get(columns[1],columns[1])
+                translated.append('\t'.join(columns))
+        (directory/'hits.tsv').write_text(
+            '\n'.join(translated)+('\n' if translated else ''),encoding='ascii')
         features=[{'feature_id':i,'length':len(s)} for i,h,s in queries]
         hits,status=normalize_hits(directory/'hits.tsv',features,roles)
         files=report(directory,'Local supplied-reference BLAST comparison',{'matches':hits,'features':features,'hit_status':status},[
@@ -52,5 +85,6 @@ def compare(query,reference,roles,output,tool_directory=None):
             'BLAST defaults and executable versions are recorded. No reported hit is not evidence of novelty.',
             'No satellite, helper-dependency, DVG, functional compatibility or confidence classification is performed.'])
         if not hits:(directory/'matches.csv').write_text('feature_id,reference_id,reference_role,query_start,query_end,percent_identity,reference_source,reference_version\n')
-        return files+['commands.json','queries.fasta','references.fasta','hits.tsv','tool-0.log','tool-1.log']+[p.name for p in directory.glob('database.*') if p.is_file()]
+        return files+['commands.json','queries.fasta','references.fasta',
+                      'raw_hits.tsv','hits.tsv','tool-0.log','tool-1.log']+[p.name for p in directory.glob('database.*') if p.is_file()]
     return execute('local-blast-v1:'+json.dumps(binaries,sort_keys=True),inputs,output,__file__,produce)
