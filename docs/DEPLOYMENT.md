@@ -39,7 +39,7 @@ Create the virtual environment on a filesystem visible to the job. Load site-app
 
 Choose persistent output storage: converting scratch-only output into a finished run is not automatic. Standard `TMPDIR` (Linux) or `TEMP`/`TMP` (Windows) affects Python temporary directories. Stage-native scratch remains inside the owned output folder so its bytes can be monitored. No global PATH or environment configuration is modified by the application. Set PATH in the batch job itself if modules differ from the login shell. Runtime records capture the Python/OS/package versions and the actual external commands and executable hashes.
 
-Request scheduler CPU/memory/time/storage resources according to site policy. Existing native review stages use bounded single-thread commands; application byte/time checks are polling limits, not scheduler quotas or process-tree supervision. No Slurm/PBS submission adapter or real HPC deployment was tested. Headless report opening prints the path when a browser cannot be launched; copy the complete output folder to view relative report links elsewhere.
+Request scheduler CPU/memory/time/storage resources according to site policy. Existing native review stages use bounded single-thread commands; application byte/time checks are polling limits, not scheduler quotas. Calls through the common process runner use POSIX process groups or Windows PID-specific tree cleanup, with the containment limits documented in PROCESS_RELIABILITY_REPORT.md. No Slurm/PBS submission adapter or real HPC deployment was tested. Headless report opening prints the path when a browser cannot be launched; copy the complete output folder to view relative report links elsewhere.
 
 ## Recovery and provenance
 

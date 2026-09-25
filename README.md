@@ -4,6 +4,8 @@ Public sequencing metadata retrieval, verified downloads, baseline QC and descri
 
 ## Start here
 
+For transfer to another development environment, read [DEVELOPMENT_HANDOFF.md](docs/DEVELOPMENT_HANDOFF.md). It inventories the released application, explains tests and dependencies, and explicitly lists unimplemented functionality. `python scripts/check_handoff.py` checks source publication against live `origin/main`; CI and application completeness are separate checks.
+
 Use Python 3.11 or newer. On Windows, double-click **Start.cmd** (or **Run-reviews.cmd**) and select the numbered review. On Linux, use **Run-reviews.sh**. The menu asks for existing files and an output folder, then prints the report path. No optional bioinformatics executable is required for the pure-Python review tools. See [Windows/Linux/WSL/HPC setup and recovery](docs/DEPLOYMENT.md).
 
 For an installed command on Windows or Linux, run `python -m pip install .` in a Python virtual environment, then use `satellite-reviews` to open the same numbered menu. See [portability and recovery instructions](docs/CONDITIONAL_TOOLS.md).

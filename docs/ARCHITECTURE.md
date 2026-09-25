@@ -1,5 +1,7 @@
 # Complete target architecture
 
+**Historical design, not the released architecture.** The module/tool choices and downstream diagram below include unimplemented proposals. Use [DEVELOPMENT_HANDOFF.md](DEVELOPMENT_HANDOFF.md) for the current implementation and [APPLICATION_CAPABILITY_AUDIT.md](APPLICATION_CAPABILITY_AUDIT.md) for its limits. Do not use this design as evidence of installed tools, executable modules or validated scientific functionality.
+
 ## Boundaries and present scope
 
 Phases 1–2 establish the repository and metadata path. Version 0.2.0 adds phase 3: budgeted ENA download with checksums and a portable baseline QC engine. Mapping and all later sequence inference remain a **design**, not executable or validated analyses. The runnable proof-of-concept extends to original/trimmed FASTQ and QC metrics. Biological satellite rediscovery is a separate future milestone.
