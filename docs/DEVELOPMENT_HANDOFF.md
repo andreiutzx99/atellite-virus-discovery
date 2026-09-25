@@ -127,7 +127,7 @@ python -I scripts/check_installed.py
 python -m unittest discover -s tests -v
 ```
 
-`check_installed.py` tests installed package resources/entry points and fixed artificial review/reuse/provenance operations. It does not use completed user QC runs. The source baseline before this milestone was 229 tests. Milestone 1 adds 17 adapter/registry/state tests; the current suite has 246 collected tests. Three existing optional-runtime tests are skipped in dependency-free runs. The Linux optional-tools CI job is expected to run them; record the actual final CI result below rather than inferring it from the count.
+`check_installed.py` tests installed package resources/entry points and fixed artificial review/reuse/provenance operations. It does not use completed user QC runs. The source baseline before this milestone was 229 tests. Milestone 1 adds 17 adapter/registry/state tests; the current suite has 246 collected tests. The local dependency-free run passed 243, failed 0 and skipped the three existing optional-runtime tests. The GitHub optional-tools job ran the full suite successfully.
 
 The existing handoff-checker tests use temporary local Git repositories and a local bare remote: clean matching source, merged and unmerged branches, untracked/modified files, unpublished main, live-remote disagreement despite stale tracking refs, stash detection, missing committed handoff files, expected-commit mismatch, detached HEAD, remote failure, timeout/malformed commit, and shallow-clone rejection. They perform no biological operations or internet access. Git absence skips these fixture tests, so a no-Git local result is not full verification.
 
@@ -171,7 +171,7 @@ The following are merged milestones; counts are historical suite sizes, not addi
 | PR #9, `e1c4791` | Fixed artificial SPAdes diagnostic, real Linux single/paired/reuse evidence, scratch-directory race fix and historical licence audit; 217 tests. |
 | PR #10, `dbc8592` | Documentation-only capability audit and correction of stale runtime/API claims; no new functionality. |
 | Prior handoff pass | Read-only source publication verifier and 12 regression tests; brought the baseline to 229 tests. No scientific integration. |
-| Milestone 1 / PR #12 | Trusted stage registry, generic external-tool adapter, eight stage states, module requirement placeholder, harmless runtime-tested text adapter, adapter documentation and 17 regression tests. Local result: 243 passed, 0 failed, 3 optional-tool skips. [PR checks](https://github.com/andreiutzx99/atellite-virus-discovery/pull/12) are the commit-specific CI receipt; merge is withheld until every job passes. No biological adapter or Milestone 2 work. |
+| Milestone 1 / PR #12 | Trusted stage registry, generic external-tool adapter, eight stage states, module requirement placeholder, harmless runtime-tested text adapter, adapter documentation and 17 regression tests. Local result: 243 passed, 0 failed, 3 optional-tool skips. PR and branch-push CI each passed all five jobs; [PR #12](https://github.com/andreiutzx99/atellite-virus-discovery/pull/12) merged as `96b6d057d5dcda7c7f1862a3696ef3cae1eb024c`. The [post-merge main run](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/36137959715) also passed all five jobs. No biological adapter or Milestone 2 work. |
 
 ## Remaining engineering and scientific gaps
 
@@ -197,9 +197,9 @@ Scientific-validation gaps are separate: appropriate independently curated truth
 
 ## Repository state and authoritative receipt
 
-Verified development baseline before Milestone 1: `c5b5eb15d737601b48009a090faef7717c92d54a`; baseline reproduction was 229 passing tests with no skips. Milestone 1 is PR #12; its live, commit-specific workflow results are shown in the [PR checks](https://github.com/andreiutzx99/atellite-virus-discovery/pull/12). Merge only after all five jobs pass. The final main commit SHA is included in the completion receipt because a commit cannot embed its own SHA.
+Verified development baseline before Milestone 1: `c5b5eb15d737601b48009a090faef7717c92d54a`; baseline reproduction was 229 passing tests with no skips. Milestone 1 PR #12 merged as `96b6d057d5dcda7c7f1862a3696ef3cae1eb024c`; the main-branch run `36137959715` passed all five jobs. The completion receipt reports the current main commit after the handoff-documentation follow-up.
 
-The final merge SHA cannot be embedded literally in the file contained by that same commit: changing the file changes its commit identity. Resolve the exact imported version with `git rev-parse HEAD` and its source tree with `git rev-parse HEAD^{tree}`. Verify the Replit checkout against GitHub main after merge. The [Actions tests history](https://github.com/andreiutzx99/atellite-virus-discovery/actions/workflows/tests.yml) provides commit-specific run status. A green older run must not be substituted for the imported commit.
+The implementation merge SHA and its passing main-branch run are recorded above. Resolve the exact current imported version with `git rev-parse HEAD` and its source tree with `git rev-parse HEAD^{tree}`. Verify the Replit checkout against GitHub main after merge. The [Actions tests history](https://github.com/andreiutzx99/atellite-virus-discovery/actions/workflows/tests.yml) provides commit-specific run status. A green older run must not be substituted for the imported commit.
 
 Authoritative source is GitHub main, including this document, adapter documentation, source, tests and workflow configuration. Local environments, ignored data/tools, expiring Actions artifacts and historical prototypes are not part of the released source. The registry is an infrastructure extension point only; it does not establish end-to-end scientific functionality.
 
