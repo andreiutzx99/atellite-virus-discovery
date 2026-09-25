@@ -66,6 +66,34 @@ class ExternalToolAdapterTests(unittest.TestCase):
         source.write_text('artificial text\n', encoding='utf-8')
         return source
 
+    def test_legacy_external_adapter_method_signatures_remain_supported(self):
+        class LegacyFixtureAdapter(CommandFixtureAdapter):
+            def validate_inputs(self, inputs, output):
+                return super().validate_inputs(inputs, output)
+
+            def inspect_dependency(self):
+                return super().inspect_dependency()
+
+        with scratch_directory() as folder:
+            root = Path(folder)
+            source = self.fixture(root)
+            specification = root/'workflow.json'
+            specification.write_text(json.dumps({
+                'schema': 'artifact-workflow-v1',
+                'stages': [{
+                    'id': 'legacy',
+                    'kind': 'fixture_external',
+                    'inputs': {'source': source.name},
+                }],
+            }), encoding='utf-8')
+            registry = WorkflowStageRegistry()
+            registry.register_external_adapter(LegacyFixtureAdapter())
+            artifact_workflow.run(specification, root/'out', registry)
+            workflow = json.loads((root/'out/workflow.json').read_text(encoding='utf-8'))
+            self.assertEqual(workflow['status'], 'complete')
+            self.assertEqual((root/'out/legacy/result.txt').read_text(encoding='utf-8'),
+                             'fixture:artificial text\n')
+
     def test_example_adapter_runs_and_records_provenance_and_outputs(self):
         with scratch_directory() as folder:
             root = Path(folder)
@@ -296,13 +324,14 @@ class ExternalToolAdapterTests(unittest.TestCase):
 
 
 class WorkflowRegistryAndStateTests(unittest.TestCase):
-    def test_default_registry_is_deterministic_and_includes_legacy_and_example_stages(self):
+    def test_default_registry_is_deterministic_and_includes_assembly_and_example_stages(self):
         registry = artifact_workflow.build_default_registry()
         rows = registry.describe()
         self.assertEqual(rows, sorted(rows, key=lambda row: row['kind']))
         self.assertEqual(registry.fields, artifact_workflow.FIELDS)
-        for kind in ('inventory', 'cram', 'artifact_benchmark', 'example_text_transform'):
+        for kind in ('inventory', 'cram', 'artifact_benchmark', 'assembly', 'example_text_transform'):
             self.assertIn(kind, registry.fields)
+        self.assertEqual(registry.get('assembly').module_name, 'assembly.generic')
         self.assertEqual(registry.get('example_text_transform').module_name, 'example.text_transform')
 
     def test_duplicate_registration_and_unknown_stage_are_rejected(self):

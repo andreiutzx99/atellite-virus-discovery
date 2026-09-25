@@ -6,6 +6,7 @@ import json
 import math
 import os
 from pathlib import Path
+import stat
 import time
 
 from . import bounded_process, reproducibility, stage_lock
@@ -151,7 +152,7 @@ class ExternalToolAdapter:
             raise ValueError('Adapter config must contain JSON-safe values') from error
         return dict(config)
 
-    def validate_inputs(self, inputs, output):
+    def validate_inputs(self, inputs, output, config=None):
         if (not isinstance(inputs, dict)
                 or not self.input_fields <= set(inputs)
                 or set(inputs) - (self.input_fields | self.optional_input_fields)):
@@ -166,7 +167,11 @@ class ExternalToolAdapter:
             paths[name] = path
         return paths
 
-    def inspect_dependency(self):
+    def validate_configured_inputs(self, inputs, output, config):
+        """Configuration-aware extension point that preserves legacy adapters."""
+        return self.validate_inputs(inputs, output)
+
+    def inspect_dependency(self, config=None):
         rows = [
             inspect_executable(item['name'], item['command'], tuple(item['version_args']))
             for item in self.dependencies
@@ -176,9 +181,35 @@ class ExternalToolAdapter:
             'dependencies': rows,
         }
 
+    def inspect_dependency_for_config(self, config):
+        """Configuration-aware extension point; old adapters need no signature change."""
+        return self.inspect_dependency()
+
     def build_command(self, executables, inputs, output, config):
         """Return the argument list. Subclasses must not invoke a shell."""
         raise NotImplementedError
+
+    def finalize_outputs(self, output, config, process_result, manifest):
+        """Create any canonical artifacts after a successful tool exit."""
+        return None
+
+    def validate_outputs(self, output, config):
+        """Validate declared outputs and return a JSON-safe output contract."""
+        return {}
+
+    def record_failure(self, output, state, error):
+        """Let adapters update any adapter-specific completion record."""
+        return None
+
+    def _output_bytes(self, output):
+        output = Path(output)
+        total = sum(row['bytes'] for row in _inventory(output))
+        total += sum(
+            (output / name).stat().st_size
+            for name in ('manifest.json', '.external-tool.lock')
+            if (output / name).is_file()
+        )
+        return total
 
     def _safe_command(self, command, inputs, output):
         safe = []
@@ -198,7 +229,7 @@ class ExternalToolAdapter:
             safe.append(replacement)
         return safe
 
-    def _identity(self, config, inputs, dependency, command, environment):
+    def _identity(self, config, inputs, dependency, command, environment, context=None):
         source_path = Path(inspect.getsourcefile(type(self)) or __file__).resolve()
         adapter_source = checksum(source_path) if source_path.is_file() else None
         relevant_environment = {
@@ -221,6 +252,7 @@ class ExternalToolAdapter:
             'command': command,
             'environment': relevant_environment,
             'declared_outputs': list(self.output_files),
+            'stage_id': context.get('stage_id') if isinstance(context, dict) else None,
         }
 
     def _verify_reuse(self, output, identity, previous):
@@ -250,7 +282,7 @@ class ExternalToolAdapter:
     def execute(self, inputs, output, config, context=None):
         config = self.validate_config(config)
         output = Path(output).resolve()
-        paths = self.validate_inputs(inputs, output)
+        paths = self.validate_configured_inputs(inputs, output, config)
         dependency = self.inspect_dependency()
         if dependency['status'] != 'available':
             raise DependencyMissingError(
@@ -273,7 +305,10 @@ class ExternalToolAdapter:
                 environment = reproducibility.environment()
                 command = self.build_command(executables, paths, output, config)
                 safe_command = self._safe_command(command, paths, output)
-                identity = self._identity(config, paths, dependency, safe_command, environment)
+                identity = self._identity(config, paths, dependency, safe_command, environment, context)
+                contract = self.validate_outputs(output, config)
+                if previous.get('output_contract') != contract:
+                    raise ValueError('External-tool output contract changed; existing files preserved')
                 return self._verify_reuse(output, identity, previous)
             if any(path != lock for path in output.iterdir()):
                 raise ValueError('External-tool output folder is nonempty without a matching manifest')
@@ -286,7 +321,7 @@ class ExternalToolAdapter:
             if command[0] != next(iter(executables.values())) and command[0] not in executables.values():
                 raise ValueError('Adapter command must start with a declared executable')
             safe_command = self._safe_command(command, paths, output)
-            identity = self._identity(config, paths, dependency, safe_command, environment)
+            identity = self._identity(config, paths, dependency, safe_command, environment, context)
             adapter_identity = identity['adapter']
             tool_identity = {
                 'name': self.tool_name,
@@ -303,6 +338,7 @@ class ExternalToolAdapter:
                 'safe_command': safe_command,
                 'environment': environment,
                 'dependency_report': dependency,
+                'stage_id': context.get('stage_id') if isinstance(context, dict) else None,
                 'started_utc': _now(),
             }
             write_json(marker, manifest)
@@ -313,10 +349,18 @@ class ExternalToolAdapter:
             )
             if process_result.returncode:
                 raise ExternalToolExitError(process_result.returncode, self.stderr_name)
+            self.finalize_outputs(output, config, process_result, manifest)
+            finalized_bytes = self._output_bytes(output)
+            if finalized_bytes > self.max_bytes:
+                raise ValueError(
+                    f'External-tool stage byte budget exceeded after output finalization '
+                    f'({finalized_bytes} > {self.max_bytes})'
+                )
             for relative in self.output_files:
                 artifact = (output/relative).resolve(strict=True)
                 if not artifact.is_relative_to(output) or not artifact.is_file():
                     raise ValueError(f'Declared external-tool output is missing or unsafe: {relative}')
+            output_contract = self.validate_outputs(output, config)
             for name, path in paths.items():
                 if checksum(path) != identity['inputs'][name]['sha256']:
                     raise ValueError(f'Input changed during external-tool execution: {name}')
@@ -326,10 +370,17 @@ class ExternalToolAdapter:
                 exit_status=process_result.returncode,
                 duration_seconds=process_result.duration_seconds,
                 finished_utc=_now(),
+                output_contract=output_contract,
                 output_inventory=inventory,
                 output_sha256={row['path']: row['sha256'] for row in inventory},
             )
             write_json(marker, manifest)
+            completed_bytes = self._output_bytes(output)
+            if completed_bytes > self.max_bytes:
+                raise ValueError(
+                    f'External-tool stage byte budget exceeded after completion manifest '
+                    f'({completed_bytes} > {self.max_bytes})'
+                )
             return ExternalToolExecution(
                 execution='executed',
                 adapter=adapter_identity,
@@ -342,18 +393,36 @@ class ExternalToolAdapter:
             if manifest is not None:
                 state = 'interrupted' if isinstance(error, (KeyboardInterrupt, SystemExit)) else 'failed'
                 try:
-                    manifest.update(
-                        status=state,
-                        error=str(error) or type(error).__name__,
-                        error_type=type(error).__name__,
-                        exit_status=getattr(error, 'returncode', None),
-                        duration_seconds=(time.monotonic()-started) if started is not None else None,
-                        finished_utc=_now(),
-                        output_inventory=_inventory(output),
-                    )
-                    write_json(marker, manifest)
-                except (OSError, ValueError):
+                    self.record_failure(output, state, error)
+                except Exception:
                     pass
+                try:
+                    inventory = _inventory(output)
+                    inventory_error = None
+                except (OSError, ValueError) as inventory_exception:
+                    inventory = []
+                    inventory_error = str(inventory_exception) or type(inventory_exception).__name__
+                marker_is_regular = False
+                try:
+                    marker_is_regular = stat.S_ISREG(marker.lstat().st_mode)
+                except OSError:
+                    pass
+                if marker_is_regular:
+                    try:
+                        manifest.update(
+                            status=state,
+                            error=str(error) or type(error).__name__,
+                            error_type=type(error).__name__,
+                            exit_status=getattr(error, 'returncode', None),
+                            duration_seconds=(time.monotonic()-started) if started is not None else None,
+                            finished_utc=_now(),
+                            output_inventory=inventory,
+                        )
+                        if inventory_error:
+                            manifest['output_inventory_error'] = inventory_error
+                        write_json(marker, manifest)
+                    except (OSError, ValueError):
+                        pass
             raise
         finally:
             stage_lock.release(lock, token)

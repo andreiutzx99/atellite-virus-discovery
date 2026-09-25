@@ -30,7 +30,7 @@ python -m unittest discover -s tests -q
 
 The public test suite uses artificial fixtures and mocked archive services. It verifies software contracts, not discovery sensitivity. Reports never turn arbitrary scores into probabilities or missing observations into absence. Supplied BLAST hits do not establish novelty; exact duplicate groups are not inferred viral families.
 
-See [module interfaces](docs/MODULE_INTERFACES.md) for unsupported/unavailable stages. Local historical mapping/assembly/BLAST prototypes are preserved in the developer working directory but are not part of the released source or user interface. Public source status is defined by the feature audit, not by untracked local files.
+See [module interfaces](docs/MODULE_INTERFACES.md) for unsupported/unavailable stages and the [registered assembly guide](docs/ASSEMBLY.md) for arbitrary-input SPAdes/Tadpole use. Assembly processes supplied FASTQ but does not perform biological discovery or interpretation. Local historical mapping/assembly/BLAST prototypes are preserved in the developer working directory but are not part of the released source or user interface. Public source status is defined by the feature audit, not by untracked local files.
 
 ## Conditional tools and workflow extension
 

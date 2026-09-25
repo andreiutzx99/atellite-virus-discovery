@@ -1,5 +1,7 @@
 # Application capability audit — 2026-09-25, Milestone 1
 
+Historical Milestone 1 snapshot. Later milestones added per-record reference imports, acquisition-provider infrastructure and the generic SPAdes/Tadpole assembly stage. For current capabilities and limits, see the [development handoff](DEVELOPMENT_HANDOFF.md) and [assembly guide](ASSEMBLY.md); the table below remains a record of the earlier audit.
+
 Audited source: Milestone 1 development branch based on verified main commit `c5b5eb15d737601b48009a090faef7717c92d54a`. The prior main baseline had 229 passing tests. This milestone adds registry/adapter/state infrastructure only; it does not add acquisition, reference-import, assembly or biological analysis functionality. No user QC/results were changed.
 
 A = implemented and software-tested within its stated scope; B = scientific interpretation/performance remains unvalidated; C = external runtime/data dependency; D = missing engineering; E = unsupported/external scientific functionality. A component can have several labels; a passing software test does not remove B or C.

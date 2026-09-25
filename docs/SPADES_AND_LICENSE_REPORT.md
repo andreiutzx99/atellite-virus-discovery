@@ -2,6 +2,8 @@
 
 Baseline: merged PR #8, `40804a62`, 208 tests. This is a partial delivery of the follow-up request. It adds an independent artificial SPAdes diagnostic and an upstream licence audit. It does not connect reconstruction, reference withholding or DVG analysis into the viral/helper-dependent discovery chain. Existing QC and user read data were not used.
 
+Historical PR #8 diagnostic report. Statements below that no arbitrary-input adapter existed describe that baseline; the current registered SPAdes/Tadpole stage is documented in the [assembly guide](ASSEMBLY.md). The licence findings remain specific to the audited sources.
+
 | Component | Implemented | Runtime tested | Dependency | Remaining limitation |
 |---|---|---|---|---|
 | SPAdes fixed artificial diagnostic | Yes: single/paired fixtures, detection/version, input validation, bounded execution, raw output preservation, provenance, failure reports and verified reuse | Actual Linux SPAdes 3.15.5 passed both layouts and reuse; software fixtures locally | Externally installed `spades.py` or `spades`; CI obtains the distribution package | No native Windows installation here; only fixed generated data, no arbitrary-read adapter, no equivalence to Tadpole |

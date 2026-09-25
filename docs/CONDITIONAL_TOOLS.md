@@ -38,7 +38,7 @@ Each step has `id`, `kind` and `inputs`. Input values are paths relative to the 
 | 22 | Reference snapshot comparison | Two completed snapshots and a new comparison output folder |
 | 23 | Supplied artifact-digest/control evaluation | Dataset status, expected digest and observed artifact CSVs |
 
-See [deployment and reproducibility instructions](DEPLOYMENT.md). Unknown workflow/stage configuration fields are rejected rather than ignored. Dependency reports include prefetch, vdb-validate, Tadpole PATH presence and isolated pysam/matplotlib import checks. `capability_test: not_performed` is explicit: import/version success is not functional proof. Assembly activation remains outside the supported workflow.
+See [deployment and reproducibility instructions](DEPLOYMENT.md) and the [assembly stage guide](ASSEMBLY.md). Unknown workflow/stage configuration fields are rejected rather than ignored. Dependency reports include prefetch, vdb-validate, Tadpole and isolated pysam/matplotlib checks. The generic assembly stage is registered separately from the fixed artificial diagnostics; version checks and software execution do not establish biological assembly quality.
 
 ## BAM/CRAM
 
@@ -80,4 +80,4 @@ Menu 22 verifies every recorded artifact in both snapshots before reporting adde
 
 ## Not added
 
-Approximate viral-family clustering, ORF/functional discovery analysis and novel-element reconstruction remain the existing category-4 interfaces. SPAdes can be version-detected if installed, but its biological assembly stage is not activated. No Replit connector is available; these standard Python entry points can be used in an independently configured Python environment without assuming a provider-specific plugin.
+Approximate viral-family clustering, ORF/functional discovery analysis and novel-element reconstruction remain outside the supported workflow. The registered SPAdes/Tadpole assembly stage handles supplied FASTQ as a generic file-processing step; it does not perform candidate discovery or biological interpretation. See [the assembly stage guide](ASSEMBLY.md).
