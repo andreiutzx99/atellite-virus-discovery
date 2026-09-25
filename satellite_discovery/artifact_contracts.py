@@ -49,6 +49,10 @@ _CONTRACTS = {
     'occurrence_table': 'Catalogue-linked sequence occurrences with provenance.',
     'occurrence_summary': 'Descriptive occurrence and control summaries.',
     'catalogue_imports': 'Declared sequence catalogue imports and sample metadata.',
+    'dvg_raw_output': 'Bounded UTF-8 native DVG caller output.',
+    'dvg_evidence': 'Validated normalized DVG evidence events.',
+    'dvg_evidence_summary': 'Validated caller-neutral DVG evaluation summary.',
+    'dvg_parameters': 'Declared DVG caller configuration and source provenance.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -128,7 +132,7 @@ def validate_artifact(path, artifact_type):
         raise ValueError('Artifacts must be regular files, not links or directories')
     path = path.resolve(strict=True)
     info = path.stat()
-    if info.st_size <= 0 and artifact_type != 'blast_hit_table':
+    if info.st_size <= 0 and artifact_type not in {'blast_hit_table', 'dvg_raw_output'}:
         raise ValueError('Artifact is empty')
 
     details = {}
@@ -308,6 +312,61 @@ def validate_artifact(path, artifact_type):
         value = _read_json(path)
         details['record_count'] = value.get('feature_count', value.get('record_count'))
         details['schema'] = value.get('schema')
+    elif artifact_type == 'dvg_raw_output':
+        from .dvg_evidence import _MAX_NATIVE_BYTES
+        if path.name != 'Virus_Recombination_Results.txt':
+            raise ValueError('DVG native output must be named Virus_Recombination_Results.txt')
+        if info.st_size > _MAX_NATIVE_BYTES:
+            raise ValueError('DVG native output exceeds the 32 MB contract limit')
+        try:
+            text = path.read_text(encoding='utf-8')
+        except (OSError, UnicodeDecodeError) as error:
+            raise ValueError('DVG native output must be readable UTF-8 text') from error
+        if '\x00' in text:
+            raise ValueError('DVG native output contains a NUL byte')
+        details['record_count'] = None
+    elif artifact_type in {'dvg_evidence', 'dvg_evidence_summary'}:
+        value = _read_json(path)
+        from . import dvg_evidence
+        if artifact_type == 'dvg_evidence':
+            dvg_evidence.validate_evidence_document(value)
+            details['record_count'] = len(value['events'])
+            details['schema'] = value['schema']
+        else:
+            dvg_evidence.validate_summary(value)
+            details['record_count'] = value['event_count']
+            details['schema'] = value['schema']
+    elif artifact_type == 'dvg_parameters':
+        value = _read_json(path)
+        required = {
+            'caller', 'caller_version', 'upstream_commit', 'source_sha256',
+            'configuration', 'input_sha256', 'command',
+        }
+        if (value.get('schema') != 'dvg-parameters-v1'
+                or not required <= set(value)
+                or any(not isinstance(value.get(key), str) or not value[key].strip()
+                       for key in ('caller', 'caller_version', 'upstream_commit'))
+                or not isinstance(value.get('configuration'), dict)
+                or not isinstance(value.get('command'), list)
+                or not value['command']
+                or any(not isinstance(arg, str) or not arg or '\x00' in arg
+                       for arg in value['command'])):
+            raise ValueError('DVG parameter record is incomplete')
+        hash_pattern = re.compile(r'^[a-f0-9]{64}$')
+        for field in ('source_sha256', 'input_sha256'):
+            mapping = value[field]
+            if (not isinstance(mapping, dict) or not mapping
+                    or any(not isinstance(name, str) or not name.strip()
+                           or not isinstance(digest, str) or not hash_pattern.fullmatch(digest)
+                           for name, digest in mapping.items())):
+                raise ValueError(f'DVG parameter record has an invalid {field} mapping')
+        details.update(
+            schema=value['schema'],
+            caller=value['caller'],
+            caller_version=value['caller_version'],
+            source_count=len(value['source_sha256']),
+            input_count=len(value['input_sha256']),
+        )
     elif artifact_type == 'catalogue_imports':
         rows = _csv_rows(path, ('catalogue_dir', 'sample_id', 'study_id', 'condition',
                                 'sample_type', 'library_molecule'))

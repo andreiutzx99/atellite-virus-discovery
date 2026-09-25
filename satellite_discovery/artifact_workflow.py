@@ -16,7 +16,8 @@ from . import stage_lock
 from .external_tool import DependencyMissingError, ExternalToolExecution
 from .example_transform_adapter import ExampleTextTransformAdapter
 from .assembly_adapters import AssemblyWorkflowAdapter
-from . import artifact_contracts, artifact_stage_handlers, local_comparison
+from .virema_adapter import ViReMaDVGAdapter
+from . import artifact_contracts, artifact_stage_handlers, dvg_evidence, local_comparison
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
     STAGE_TRANSITIONS, WORKFLOW_TRANSITIONS, aggregate_stage_status, transition,
@@ -159,6 +160,7 @@ def build_default_registry():
             'sequence_catalogue_summary', 'reference_snapshot_summary',
             'reference_snapshot_manifest', 'comparison_summary',
             'comparison_parameters', 'occurrence_summary', 'report',
+            'dvg_evidence', 'dvg_evidence_summary', 'dvg_parameters',
         )},
         output_contracts={'report.json': 'workflow_report_json', 'report.html': 'report'},
         description='Consolidates declared structured stage artifacts without interpretation.',
@@ -188,6 +190,7 @@ def build_default_registry():
     )
     registry.register_external_adapter(ExampleTextTransformAdapter())
     registry.register_external_adapter(AssemblyWorkflowAdapter())
+    registry.register_external_adapter(ViReMaDVGAdapter())
     return registry
 
 
@@ -428,6 +431,7 @@ def _resolve_stage_input(manifest,output,result,stage,definition,key,value,regis
 
 
 def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependency):
+    scoped_identity=getattr(definition.handler,'cache_implementation_identity',None)
     identity={
         'stage_id':stage['id'],
         'kind':stage['kind'],
@@ -437,9 +441,13 @@ def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependenc
             name:{'sha256':row['sha256'],'artifact_type':row.get('artifact_type')}
             for name,row in sorted(input_descriptors.items())
         },
-        'package_sha256':runtime.get('source_sha256'),
+        'package_sha256':(
+            None if callable(scoped_identity) else runtime.get('source_sha256')
+        ),
         'dependency':dependency,
     }
+    if callable(scoped_identity):
+        identity['implementation']=scoped_identity()
     return hashlib.sha256(
         json.dumps(identity,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')
     ).hexdigest()
@@ -645,8 +653,66 @@ def write_status(output, result):
     result['stage_statuses']={}
     result['input_artifacts']={}
     result['output_artifacts']={}
+    if any(stage.get('evidence_family') == 'dvg' for stage in result['stages']):
+        result['dvg_evaluations'] = {}
     for stage in result['stages']:
         result['stage_statuses'][stage['id']]=stage.get('status')
+        if stage.get('evidence_family') == 'dvg':
+            status = dvg_evidence.NOT_EVALUATED
+            count = None
+            raw = None
+            caller = stage.get('caller', 'External DVG caller')
+            caller_version = stage.get('caller_version')
+            event_references = []
+            remaining_event_references = 0
+            evidence_file = None
+            state = stage.get('status')
+            if state in {'dependency_missing', 'external_module_required'}:
+                status = dvg_evidence.ANALYSIS_UNAVAILABLE
+            elif state in {'failed', 'interrupted'}:
+                status = (
+                    dvg_evidence.INVALID_RESULT
+                    if stage.get('error_type') == 'InvalidDVGResultError'
+                    else dvg_evidence.ANALYSIS_FAILED
+                )
+            elif state == 'complete':
+                try:
+                    record = stage['output_files']['summary.json']
+                    path = output / stage['output_path'] / 'summary.json'
+                    if checksum(path) != record['sha256']:
+                        raise ValueError('DVG summary changed after output verification')
+                    summary = json.loads(path.read_text(encoding='utf-8'))
+                    dvg_evidence.validate_summary(summary)
+                    if summary['status'] not in {
+                        dvg_evidence.DVG_EVIDENCE_DETECTED,
+                        dvg_evidence.NO_DVG_EVIDENCE_DETECTED,
+                    }:
+                        raise ValueError('Completed DVG stage has no completed evaluation')
+                    status = summary['status']
+                    count = summary['event_count']
+                    raw = summary.get('raw_output')
+                    caller = summary['caller']
+                    caller_version = summary.get('caller_version', caller_version)
+                    references = summary.get('event_references', [])
+                    if not isinstance(references, list):
+                        raise ValueError('DVG event references must be a list')
+                    event_references = references[:25]
+                    remaining_event_references = max(0, len(references) - 25)
+                    evidence_file = summary.get('evidence_file')
+                except (OSError, ValueError, TypeError, KeyError):
+                    status = dvg_evidence.INVALID_RESULT
+            stage['dvg_evidence'] = {
+                'caller': caller, 'caller_version': caller_version, 'status': status,
+                'event_count': count, 'raw_output': raw,
+                'event_references': event_references,
+                'remaining_event_references': remaining_event_references,
+                'evidence_file': evidence_file,
+                'limitations': (
+                    'No detected event is not proof that a sequence is not a DVG; '
+                    'failed or unavailable analysis has no biological interpretation.'
+                ),
+            }
+            result['dvg_evaluations'][stage['id']] = stage['dvg_evidence']
         for name,details in stage.get('inputs',{}).items():
             result['input_artifacts'][stage['id']+'.'+name]=details
         for name,descriptor in stage.get('artifacts',{}).items():
@@ -717,6 +783,70 @@ def write_status(output, result):
             body += '<p>Output: <code>' + html.escape(stage['output_path']) + '</code></p>'
         if stage.get('comparison_result'):
             body += '<p>Comparison result: ' + html.escape(stage['comparison_result']) + '</p>'
+        evidence = stage.get('dvg_evidence')
+        if evidence:
+            caller = str(evidence['caller'])
+            status = evidence['status']
+            descriptions = {
+                dvg_evidence.DVG_EVIDENCE_DETECTED: (
+                    f"{caller} detected {evidence['event_count']} junction events."
+                ),
+                dvg_evidence.NO_DVG_EVIDENCE_DETECTED: (
+                    'No DVG evidence detected by the configured caller '
+                    f'({caller}) under this analysis configuration.'
+                ),
+                dvg_evidence.NOT_EVALUATED: f'{caller} analysis was not evaluated.',
+                dvg_evidence.ANALYSIS_UNAVAILABLE: (
+                    f'{caller} analysis was not performed because the dependency was unavailable.'
+                ),
+                dvg_evidence.ANALYSIS_FAILED: (
+                    f'{caller} execution failed or was interrupted; no biological conclusion can be drawn.'
+                ),
+                dvg_evidence.INVALID_RESULT: (
+                    f'{caller} result is invalid or incomplete; no biological conclusion can be drawn.'
+                ),
+            }
+            body += '<p>DVG evidence: ' + html.escape(descriptions[status]) + '</p>'
+            if evidence['caller_version']:
+                body += '<p>Caller version: ' + html.escape(
+                    str(evidence['caller_version'])[:120]
+                ) + '</p>'
+            if evidence['raw_output']:
+                raw = evidence['raw_output']
+                if (isinstance(raw, dict) and isinstance(raw.get('path'), str)
+                        and raw['path'] in stage.get('output_files', {})
+                        and stage['output_files'][raw['path']].get('sha256') == raw.get('sha256')):
+                    href = (Path(stage_output) / raw['path']).as_posix()
+                    body += '<p>Raw caller output: <a href="' + html.escape(
+                        href, quote=True
+                    ) + '">' + html.escape(raw['path']) + '</a> (SHA256 ' + html.escape(
+                        str(raw['sha256'])
+                    ) + ')</p>'
+                else:
+                    body += '<p>Raw caller output: <code>' + html.escape(
+                        str(raw)[:500]
+                    ) + '</code></p>'
+            if evidence['event_references']:
+                body += '<p>Evidence references:</p><ul>'
+                evidence_file = evidence.get('evidence_file')
+                href = None
+                if (evidence_file == 'evidence.json'
+                        and evidence_file in stage.get('output_files', {})):
+                    href = (Path(stage_output) / evidence_file).as_posix()
+                for reference in evidence['event_references']:
+                    label = html.escape(str(reference)[:180])
+                    if href:
+                        body += '<li><a href="' + html.escape(
+                            href, quote=True
+                        ) + '">' + label + '</a></li>'
+                    else:
+                        body += '<li><code>' + label + '</code></li>'
+                body += '</ul>'
+                if evidence['remaining_event_references']:
+                    body += '<p>' + str(evidence['remaining_event_references']) + (
+                        ' more evidence references are in the stage summary.</p>'
+                    )
+            body += '<p>' + html.escape(evidence['limitations']) + '</p>'
         if stage.get('inputs'):
             body += '<h3>Declared inputs</h3><ul>'
             for name, details in sorted(stage['inputs'].items()):
@@ -970,6 +1100,11 @@ def run(manifest,output,registry=None):
             row={'id':item['id'],'kind':item['kind'],'status':'pending'}
             if item['kind']=='external_module':
                 row['module']=item['module']
+            definition=_producer_definition(item,registry)
+            if getattr(definition.handler,'evidence_family',None)=='dvg':
+                row['evidence_family']='dvg'
+                row['caller']=getattr(definition.handler,'caller_name','External DVG caller')
+                row['caller_version']=getattr(definition.handler,'caller_version',None)
             stage_rows.append(row)
             for name,value in item['inputs'].items():
                 if isinstance(value,dict) and set(value)=={'stage','artifact'}:

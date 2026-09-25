@@ -291,7 +291,15 @@ def workflow_report(inputs, output, config):
                 value = json.loads(path.read_text(encoding='utf-8'))
                 if not isinstance(value, dict):
                     raise ValueError('Structured report inputs must be JSON objects')
+                if value.get('schema') in {'dvg-summary-v1', 'dvg-evidence-v1'}:
+                    from . import dvg_evidence
+                    if value['schema'] == 'dvg-summary-v1':
+                        dvg_evidence.validate_summary(value)
+                    else:
+                        dvg_evidence.validate_evidence_document(value)
                 record['summary'] = value
+                if value.get('schema') in {'dvg-summary-v1', 'dvg-evidence-v1'}:
+                    record['schema'] = value['schema']
                 tables = value.get('tables', {})
                 if isinstance(tables, dict) and 'matches' in tables and not tables['matches']:
                     record['comparison_status'] = 'no match found under the configured comparison'
@@ -310,6 +318,11 @@ def workflow_report(inputs, output, config):
                 'No biological classification, causality, replication, function or candidate ranking is performed.',
             ],
         }
+        if any(record.get('schema') in {'dvg-summary-v1', 'dvg-evidence-v1'}
+               for record in artifacts.values()):
+            report['limitations'].append(
+                'No DVG evidence detected by a configured caller means only that this run reported no supported junctions under its settings; it does not establish that the sequence is not a DVG. An unavailable, failed, interrupted or invalid run draws no biological conclusion.'
+            )
         write_json(directory / 'report.json', report)
         sections = [
             '<!doctype html><html><head><meta charset="utf-8"><title>' +
@@ -326,7 +339,50 @@ def workflow_report(inputs, output, config):
                             str(record['size_bytes']) + ' bytes.</p>')
             if record.get('comparison_status'):
                 sections.append('<p>' + html.escape(record['comparison_status']) + '.</p>')
-            if 'summary' in record:
+            if record.get('schema') == 'dvg-summary-v1':
+                summary = record['summary']
+                def concise(value):
+                    rendered = str(value) if value is not None else 'Not provided'
+                    return rendered[:500] + ('…' if len(rendered) > 500 else '')
+
+                fields = (
+                    ('Caller', summary.get('caller')),
+                    ('Version', summary.get(
+                        'caller_version', summary.get('version', summary.get('parser_version')))),
+                    ('Status', summary.get('status')),
+                    ('Event count', summary.get('event_count')),
+                    ('Raw output location', summary.get(
+                        'raw_output_location',
+                        summary.get('raw_output_path', summary.get('raw_output')))),
+                    ('Evidence references', (
+                        ', '.join(str(item)[:180] for item in
+                                  summary.get('event_references', [])[:20])
+                        + (f" (+{len(summary['event_references']) - 20} more in the summary)"
+                           if len(summary.get('event_references', [])) > 20 else '')
+                    ) if summary.get('event_references') else 'None reported'),
+                )
+                sections.append('<dl>' + ''.join(
+                    '<dt>' + html.escape(label) + '</dt><dd>' +
+                    html.escape(concise(value)) +
+                    '</dd>' for label, value in fields
+                ) + '</dl>')
+                limitations = summary.get('limitations', [])
+                if isinstance(limitations, list) and limitations:
+                    sections.append('<h3>DVG evaluation limitations</h3><ul>' + ''.join(
+                        '<li>' + html.escape(concise(item)) + '</li>'
+                        for item in limitations[:25]
+                    ) + '</ul>')
+            elif record.get('schema') == 'dvg-evidence-v1':
+                evidence = record['summary']
+                sections.append(
+                    '<p>Caller: ' + html.escape(str(evidence.get('caller', 'Not provided'))[:500]) +
+                    '; status: ' + html.escape(str(evidence.get('status', 'Not provided'))[:500]) +
+                    '; event count: ' + str(len(evidence['events'])) + '.</p>' +
+                    '<p>Hash-bound evidence reference: <code>' +
+                    html.escape(record['sha256']) + '</code>; declared path: <code>' +
+                    html.escape(record['path']) + '</code>.</p>'
+                )
+            elif 'summary' in record:
                 sections.append('<pre>' + html.escape(json.dumps(record['summary'], indent=2, sort_keys=True)) + '</pre>')
             else:
                 sections.append('<p>Declared artifact path: <code>' + html.escape(record['path']) + '</code>.</p>')

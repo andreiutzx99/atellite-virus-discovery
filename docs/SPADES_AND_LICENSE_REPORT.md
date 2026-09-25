@@ -2,7 +2,7 @@
 
 Baseline: merged PR #8, `40804a62`, 208 tests. This is a partial delivery of the follow-up request. It adds an independent artificial SPAdes diagnostic and an upstream licence audit. It does not connect reconstruction, reference withholding or DVG analysis into the viral/helper-dependent discovery chain. Existing QC and user read data were not used.
 
-Historical PR #8 diagnostic report. Statements below that no arbitrary-input adapter existed describe that baseline; the current registered SPAdes/Tadpole stage is documented in the [assembly guide](ASSEMBLY.md). The licence findings remain specific to the audited sources.
+Historical PR #8 diagnostic report. Statements below that no arbitrary-input adapter existed, or that ViReMa was not integrated, describe that baseline; the current registered SPAdes/Tadpole stage is documented in the [assembly guide](ASSEMBLY.md), and the later ViReMa adapter/runtime evidence is documented in [DVG evidence](DVG_EVIDENCE.md). The licence findings remain specific to the audited sources.
 
 | Component | Implemented | Runtime tested | Dependency | Remaining limitation |
 |---|---|---|---|---|
@@ -12,7 +12,7 @@ Historical PR #8 diagnostic report. Statements below that no arbitrary-input ada
 | Production acquisition fallback | Existing contract only | Existing regression tests | No production alternative registered | Still not operational as automatic alternative acquisition |
 | Independently verified withholding | No new mechanism | No | Existing supplied-digest evaluator | Withholding remains unverified |
 | ViReMa licence audit | Yes, pinned repository/root and embedded-component licence inspection | Not an execution test | Official Routh Lab repository and its linked upstream source | Licence facts do not establish safety, fitness, reproducibility or blanket redistribution rights for dependencies |
-| ViReMa adapter | No | No | No installation made | Not vendored, installed, containerised, detected by a new adapter, parsed or integrated |
+| ViReMa adapter at PR #8 baseline | No | No | No installation made at that baseline | Later implemented as an optional source-pinned external adapter; see [DVG evidence](DVG_EVIDENCE.md) |
 
 ## Diagnostic usage and interpretation
 
@@ -32,9 +32,9 @@ The [root licence](https://github.com/Routh-Lab/ViReMaDocker/blob/481defd7c340bb
 
 The bundled Bowtie directory has its own [Artistic licence](https://github.com/Routh-Lab/ViReMaDocker/blob/481defd7c340bb52fa80748a89d478be9c265f64/src/bowtie-0.12.9/COPYING). Thus the root MIT licence must not be treated as a blanket licence for the entire container or all dependencies. No complete dependency redistribution audit was performed, and no upstream implementation or example dataset was copied into this project.
 
-At a high level, the upstream [container recipe](https://github.com/Routh-Lab/ViReMaDocker/blob/481defd7c340bb52fa80748a89d478be9c265f64/virema) uses Python, alignment tools and NumPy. Some components are version-selected while other package installations float, so a source commit alone does not prove a reproducible container build. The README describes command-line software and structured alignment/event outputs; output schemas and invocation details were not turned into an adapter or validated here.
+At a high level, the upstream [container recipe](https://github.com/Routh-Lab/ViReMaDocker/blob/481defd7c340bb52fa80748a89d478be9c265f64/virema) uses Python, alignment tools and NumPy. Some components are version-selected while other package installations float, so a source commit alone does not prove a reproducible container build. The README describes command-line software and structured alignment/event outputs; output schemas and invocation details had not been turned into an adapter or validated at the PR #8 baseline.
 
-Actual integration choice: **not integrated**. From packaging/maintenance considerations alone, a separately installed, pinned upstream copy would avoid unnecessary vendoring and permit independent updates. That is a conditional packaging assessment, not an implemented adapter or permission to extend this application's discovery chain. No container was built or run.
+Historical PR #8 integration choice: **not integrated**. The later M5 implementation uses a separately installed, source-pinned upstream copy, avoiding vendoring. This adapter is optional and does not extend this application's viral/helper-dependent discovery chain. No container is required or used by its artificial runtime check.
 
 ## Eight requested answers
 
@@ -42,9 +42,9 @@ Actual integration choice: **not integrated**. From packaging/maintenance consid
 2. **Per-record reference import:** still not operational as a new reference importer.
 3. **Production acquisition fallback:** no registered automatic production alternative.
 4. **Independent withholding:** still not verified by the existing benchmark evaluator.
-5. **Verified ViReMa licence/method:** MIT for the audited repository and embedded ViReMa source; separate dependency licences apply. No integration method was implemented.
-6. **ViReMa disposition:** not integrated or installed; no vendoring, container or new detector.
-7. **ViReMa artificial execution:** none.
+5. **Verified ViReMa licence/method:** MIT for the audited repository and embedded ViReMa source; separate dependency licences apply. The later optional adapter and bounded Linux software diagnostic are described in [DVG evidence](DVG_EVIDENCE.md).
+6. **ViReMa disposition at this report's PR #8 baseline:** not integrated or installed; no vendoring or container. The current M5 adapter uses an externally sourced, hash-pinned caller and does not extend the biological discovery chain.
+7. **ViReMa artificial execution at this report's baseline:** none. A later real Linux runtime execution on generated software fixtures is recorded in [DVG evidence](DVG_EVIDENCE.md); it is not biological sensitivity/specificity evidence.
 8. **Remaining generic work:** fuller dependency pinning/fingerprinting, additional platform diagnostics, hard resource containment, and independent general-purpose acquisition/import/benchmark tooling remain. Viral/helper-dependent discovery integration and DVG discrimination are not supplied by this pass. Artificial success is not biological sensitivity evidence.
 
 ## Runtime and regression evidence
