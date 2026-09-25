@@ -1,4 +1,5 @@
 import hashlib
+import html as html_lib
 import json
 from pathlib import Path
 import tempfile
@@ -149,9 +150,16 @@ class DVGArtifactContractTests(unittest.TestCase):
             artifact_stage_handlers.workflow_report(
                 {'evidence': source}, root / 'report', {'title': 'Evidence report'})
             html = (root / 'report' / 'report.html').read_text(encoding='utf-8')
+            report = json.loads((root / 'report' / 'report.json').read_text(encoding='utf-8'))
+            reference = report['artifacts']['evidence']
             self.assertIn('event count: 1', html)
             self.assertIn(digest, html)
-            self.assertIn(str(source), html)
+            self.assertEqual(reference['sha256'], digest)
+            self.assertEqual(
+                Path(reference['path']).resolve(strict=True),
+                source.resolve(strict=True),
+            )
+            self.assertIn(html_lib.escape(reference['path']), html)
             self.assertNotIn('PRIVATE_EVENT_DETAILS', html)
 
     def test_other_json_schemas_keep_existing_full_summary_consolidation(self):
