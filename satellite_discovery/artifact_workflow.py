@@ -17,6 +17,7 @@ from .external_tool import DependencyMissingError, ExternalToolExecution
 from .example_transform_adapter import ExampleTextTransformAdapter
 from .assembly_adapters import AssemblyWorkflowAdapter
 from .virema_adapter import ViReMaDVGAdapter
+from .residual_evidence_adapter import ResidualEvidenceAdapter
 from . import artifact_contracts, artifact_stage_handlers, dvg_evidence, local_comparison
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -130,6 +131,25 @@ def build_default_registry():
         description='Validates and snapshots declared FASTQ inputs without running QC.',
     )
     registry.register(
+        'fastq_qc', ('read1',), artifact_stage_handlers.quality_control_fastq,
+        optional_input_fields=('read2',), version='1',
+        config_validator=artifact_stage_handlers.validate_qc_config,
+        input_contracts={
+            'read1': ('raw_read', 'validated_fastq'),
+            'read2': ('raw_read', 'validated_fastq'),
+        },
+        output_contracts={
+            'clean_single.fastq.gz': 'qc_fastq',
+            'rejected.fastq.gz': 'qc_fastq',
+            'clean_R1.fastq.gz': 'qc_fastq',
+            'clean_R2.fastq.gz': 'qc_fastq',
+            'orphan_R1.fastq.gz': 'qc_fastq',
+            'orphan_R2.fastq.gz': 'qc_fastq',
+            'qc.json': 'qc_manifest',
+        },
+        description='Runs the existing QC engine as a checksum-bound typed stage.',
+    )
+    registry.register(
         'catalogue_observations', None, artifact_stage_handlers.catalogue_observations,
         version='1', dynamic_inputs=True,
         config_validator=artifact_stage_handlers.validate_observation_config,
@@ -161,6 +181,9 @@ def build_default_registry():
             'reference_snapshot_manifest', 'comparison_summary',
             'comparison_parameters', 'occurrence_summary', 'report',
             'dvg_evidence', 'dvg_evidence_summary', 'dvg_parameters',
+            'qc_manifest', 'residual_read_manifest', 'read_triage_table',
+            'read_support_evidence', 'read_support_table',
+            'reconstruction_evidence',
         )},
         output_contracts={'report.json': 'workflow_report_json', 'report.html': 'report'},
         description='Consolidates declared structured stage artifacts without interpretation.',
@@ -191,6 +214,7 @@ def build_default_registry():
     registry.register_external_adapter(ExampleTextTransformAdapter())
     registry.register_external_adapter(AssemblyWorkflowAdapter())
     registry.register_external_adapter(ViReMaDVGAdapter())
+    registry.register_external_adapter(ResidualEvidenceAdapter())
     return registry
 
 

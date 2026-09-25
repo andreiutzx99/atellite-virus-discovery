@@ -23,7 +23,13 @@ CONTRACT_VERSION = '1'
 _CONTRACTS = {
     'raw_read': 'A supplied FASTQ file before workflow validation.',
     'validated_fastq': 'A structurally validated FASTQ file.',
+    'qc_fastq': 'A checksum-bound FASTQ emitted by the completed QC stage; it may contain zero reads.',
+    'residual_fastq': 'Original FASTQ records unexplained by a completed configured reference screen.',
+    'eligible_residual_fastq': 'Residual FASTQ records meeting configured technical assembly-triage criteria.',
+    'retained_unassembled_fastq': 'Residual FASTQ records retained but not sent to assembly.',
+    'unresolved_residual_fastq': 'Residual FASTQ records not represented by a read-supported reconstruction.',
     'fastq_manifest': 'A validated FASTQ handoff manifest with checksum-bound files.',
+    'qc_manifest': 'A completed QC manifest bound to its exact inputs and output FASTQs.',
     'sra_archive': 'A local SRA archive supplied for explicit conversion.',
     'raw_fasta': 'A supplied nucleotide FASTA file.',
     'assembly_manifest': 'A completed registered assembly manifest.',
@@ -53,6 +59,12 @@ _CONTRACTS = {
     'dvg_evidence': 'Validated normalized DVG evidence events.',
     'dvg_evidence_summary': 'Validated caller-neutral DVG evaluation summary.',
     'dvg_parameters': 'Declared DVG caller configuration and source provenance.',
+    'residual_read_manifest': 'Completion-accounted residual-read provenance and comparison scope.',
+    'read_triage_table': 'Per-read technical triage evidence and reason codes.',
+    'read_alignment_sam': 'Bounded raw SAM output from a completed read comparison.',
+    'read_support_evidence': 'Caller-neutral read-back support evidence for assembled contigs.',
+    'read_support_table': 'Per-read alignment support rows linked to stable read and contig identifiers.',
+    'reconstruction_evidence': 'Neutral assembly and read-support outcome; not a biological classification.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -99,6 +111,109 @@ def _csv_rows(path, required):
     return rows
 
 
+_HASH = re.compile(r'^[a-f0-9]{64}$')
+
+
+def _validate_fastq_file(path, *, allow_empty):
+    if not path.name.lower().endswith(('.fastq.gz', '.fq.gz')):
+        raise ValueError('Typed QC and residual FASTQ artifacts must be gzip-compressed FASTQ files')
+    from .assembly_adapters import _read_fastq
+    count = sum(1 for _ in _read_fastq(path, allow_empty=allow_empty))
+    return {'record_count': count}
+
+
+def _validate_qc_manifest(path):
+    value = _read_json(path)
+    fingerprint = value.get('fingerprint')
+    if (value.get('status') != 'complete'
+            or not isinstance(value.get('engine'), str) or not value['engine']
+            or not isinstance(fingerprint, dict)
+            or not isinstance(fingerprint.get('software_version'), str)
+            or not isinstance(fingerprint.get('config'), dict)
+            or not isinstance(fingerprint.get('inputs'), dict)
+            or not isinstance(value.get('output_sha256'), dict)
+            or not isinstance(value.get('before'), dict)
+            or not isinstance(value.get('after'), dict)
+            or not isinstance(value.get('counts'), dict)):
+        raise ValueError('QC manifest is incomplete or not marked complete')
+    inputs = fingerprint['inputs']
+    if set(inputs) not in ({'single'}, {'R1', 'R2'}):
+        raise ValueError('QC manifest input roles are inconsistent')
+    for record in inputs.values():
+        if (not isinstance(record, dict) or not _HASH.fullmatch(str(record.get('sha256', '')))
+                or not isinstance(record.get('bytes'), int) or record['bytes'] <= 0):
+            raise ValueError('QC manifest contains invalid input provenance')
+    expected_outputs = (
+        {'clean_single.fastq.gz', 'rejected.fastq.gz'}
+        if 'single' in inputs else
+        {'clean_single.fastq.gz', 'rejected.fastq.gz', 'clean_R1.fastq.gz',
+         'clean_R2.fastq.gz', 'orphan_R1.fastq.gz', 'orphan_R2.fastq.gz'}
+    )
+    outputs = value['output_sha256']
+    if set(outputs) != expected_outputs:
+        raise ValueError('QC manifest output list is inconsistent with its input layout')
+    for name, digest in outputs.items():
+        if Path(name).name != name or not _HASH.fullmatch(str(digest)):
+            raise ValueError('QC manifest contains an invalid output name or checksum')
+        output = path.parent / name
+        try:
+            info = output.lstat()
+        except OSError as error:
+            raise ValueError('QC output named by the manifest is missing') from error
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+            raise ValueError('QC outputs must be regular files')
+        if checksum(output) != digest:
+            raise ValueError('QC output integrity check failed')
+        _validate_fastq_file(output, allow_empty=True)
+    return {'schema': 'qc-manifest-current', 'input_roles': sorted(inputs),
+            'output_count': len(outputs), 'engine': value['engine']}
+
+
+def _csv_count(path, required, *, max_rows=1_000_000):
+    if path.stat().st_size > 256_000_000:
+        raise ValueError('CSV artifact exceeds the 256 MB contract limit')
+    with path.open(encoding='utf-8-sig', newline='') as source:
+        reader = csv.DictReader(source)
+        fields = reader.fieldnames or []
+        if len(fields) != len(set(fields)) or not set(required) <= set(fields):
+            raise ValueError('CSV artifact does not satisfy its declared columns')
+        count = 0
+        for row in reader:
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError('CSV artifact contains a malformed row')
+            count += 1
+            if count > max_rows:
+                raise ValueError('CSV artifact exceeds its row limit')
+    return count
+
+
+def _validate_sam(path):
+    if path.stat().st_size > 200_000_000:
+        raise ValueError('SAM artifact exceeds the 200 MB contract limit')
+    count = 0
+    has_header = False
+    with path.open(encoding='ascii', newline='') as source:
+        for line in source:
+            if line.startswith('@'):
+                has_header = True
+                continue
+            fields = line.rstrip('\r\n').split('\t')
+            if len(fields) < 11:
+                raise ValueError('SAM artifact contains a malformed alignment row')
+            try:
+                flag, position, mapq = int(fields[1]), int(fields[3]), int(fields[4])
+            except ValueError as error:
+                raise ValueError('SAM artifact contains invalid numeric fields') from error
+            if not 0 <= flag <= 65535 or position < 0 or not 0 <= mapq <= 255:
+                raise ValueError('SAM artifact contains out-of-range fields')
+            count += 1
+            if count > 4_000_000:
+                raise ValueError('SAM artifact exceeds its record limit')
+    if not has_header:
+        raise ValueError('SAM artifact is missing its header')
+    return {'record_count': count}
+
+
 def _validate_catalogue_database(path):
     uri = path.as_uri() + '?mode=ro'
     with closing(sqlite3.connect(uri, uri=True)) as db:
@@ -141,6 +256,11 @@ def validate_artifact(path, artifact_type):
             raise ValueError('FASTQ contract requires a .fastq, .fq or gzip FASTQ file')
         from .assembly_adapters import _read_fastq
         details['record_count'] = sum(1 for _ in _read_fastq(path))
+    elif artifact_type in {
+        'qc_fastq', 'residual_fastq', 'eligible_residual_fastq',
+        'retained_unassembled_fastq', 'unresolved_residual_fastq',
+    }:
+        details.update(_validate_fastq_file(path, allow_empty=True))
     elif artifact_type == 'sra_archive':
         if path.suffix.lower() != '.sra' or info.st_size > 100_000_000:
             raise ValueError('SRA archive contract requires a local .sra file no larger than 100 MB')
@@ -170,6 +290,8 @@ def validate_artifact(path, artifact_type):
             raise ValueError('FASTQ handoff mates contain different record counts')
         details['record_count'] = counts['read1']
         details['layout'] = value['layout']
+    elif artifact_type == 'qc_manifest':
+        details.update(_validate_qc_manifest(path))
     elif artifact_type == 'raw_fasta':
         from .sequence_catalogue import read_fasta
         records = read_fasta(path)
@@ -308,6 +430,67 @@ def validate_artifact(path, artifact_type):
                                           for row in rows):
                 raise ValueError('Occurrence table contains malformed or excessive rows')
         details['record_count'] = len(rows)
+    elif artifact_type == 'read_triage_table':
+        count = _csv_count(path, (
+            'query_id', 'mate', 'outcome', 'residual', 'length',
+            'ambiguous_fraction', 'entropy', 'mean_phred',
+            'sequence_hash', 'exact_duplicate_count', 'reason_codes',
+        ))
+        details['record_count'] = count
+        details['evidence_scope'] = 'technical read triage only'
+    elif artifact_type == 'read_support_table':
+        count = _csv_count(path, (
+            'query_id', 'mate', 'contig_id', 'mapq', 'query_aligned_bases',
+            'reference_aligned_bases', 'aligned_query_fraction',
+            'sequence_identity', 'qualifying',
+        ))
+        details['record_count'] = count
+    elif artifact_type == 'read_alignment_sam':
+        details.update(_validate_sam(path))
+    elif artifact_type == 'residual_read_manifest':
+        value = _read_json(path)
+        comparison = value.get('comparison')
+        if (value.get('schema') != 'm6-residual-manifest-v1'
+                or value.get('status') != 'complete'
+                or not isinstance(value.get('sample_id'), str)
+                or not isinstance(value.get('source_reads'), dict)
+                or not isinstance(value.get('qc_artifact'), dict)
+                or not isinstance(comparison, dict)
+                or comparison.get('status') != 'complete'
+                or not isinstance(comparison.get('input_read_count'), int)
+                or comparison['input_read_count'] < 1
+                or comparison.get('accounted_read_count') != comparison.get('input_read_count')
+                or not isinstance(value.get('counts'), dict)
+                or not isinstance(value.get('artifact_sha256'), dict)):
+            raise ValueError('Residual read manifest is incomplete or comparison accounting is not complete')
+        for digest in value['artifact_sha256'].values():
+            if not isinstance(digest, str) or not _HASH.fullmatch(digest):
+                raise ValueError('Residual read manifest contains an invalid artifact checksum')
+        details.update(schema=value['schema'], sample_id=value['sample_id'],
+                       comparison_scope=comparison.get('scope'))
+    elif artifact_type in {'read_support_evidence', 'reconstruction_evidence'}:
+        value = _read_json(path)
+        allowed_support = {
+            'READ_SUPPORTED_ASSEMBLY', 'NO_SUPPORTED_ASSEMBLY',
+            'NOT_EVALUATED', 'READ_SUPPORT_FAILED', 'INVALID_SUPPORT_OUTPUT',
+        }
+        allowed_reconstruction = {
+            'READ_SUPPORTED_ASSEMBLY', 'NO_SUPPORTED_ASSEMBLY',
+            'DEPENDENCY_UNAVAILABLE', 'EXECUTION_FAILED', 'INTERRUPTED',
+            'INVALID_OUTPUT', 'READ_SUPPORT_FAILED', 'INVALID_SUPPORT_OUTPUT',
+            'ASSEMBLY_NOT_ATTEMPTED',
+        }
+        schema = ('m6-read-support-v1' if artifact_type == 'read_support_evidence'
+                  else 'm6-reconstruction-evidence-v1')
+        allowed_status = allowed_support if artifact_type == 'read_support_evidence' else allowed_reconstruction
+        if (value.get('schema') != schema or value.get('status') not in allowed_status
+                or not isinstance(value.get('contigs'), list)
+                or not isinstance(value.get('configuration'), dict)
+                or not isinstance(value.get('provenance'), dict)):
+            raise ValueError(f'{artifact_type} document is malformed')
+        if artifact_type == 'read_support_evidence' and not isinstance(value.get('read_support'), list):
+            raise ValueError('Read-support evidence is missing its per-read records')
+        details.update(schema=schema, status=value['status'], record_count=len(value['contigs']))
     elif artifact_type in {'occurrence_summary', 'workflow_report_json'}:
         value = _read_json(path)
         details['record_count'] = value.get('feature_count', value.get('record_count'))
