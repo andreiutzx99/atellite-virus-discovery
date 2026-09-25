@@ -50,6 +50,7 @@ def build_default_registry():
         'contamination': ('contamination_review', 'run', ('features','matches','controls'), False),
         'catalogue_links': ('catalogue_linker', 'run', ('imports',), False),
         'reference_snapshot': ('reference_snapshot', 'snapshot', ('manifest',), False),
+        'reference_record_import': ('reference_record_import', 'import_from_snapshot', ('references_table',), False),
     }
     for kind, (module, function, fields, alignment) in builtins.items():
         registry.register(

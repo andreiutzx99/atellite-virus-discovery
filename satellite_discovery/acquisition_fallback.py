@@ -11,6 +11,46 @@ class VerificationError(ValueError):
     """A retrieved artifact failed validation; never bypass by fallback."""
 
 
+class DependencyMissingError(RuntimeError):
+    """A registered provider needs an executable that is not installed."""
+
+
+class MetadataUnavailableError(RuntimeError):
+    """A provider could not resolve file metadata for the requested run."""
+
+
+class RecordUnavailableError(RuntimeError):
+    """A provider does not have the requested run accession."""
+
+
+class FileUnavailableError(RuntimeError):
+    """A provider resolved the run but not the requested file set."""
+
+
+class RemoteUnavailableError(RuntimeError):
+    """A remote provider or transport is temporarily unavailable."""
+
+
+class RemoteRejectedError(RuntimeError):
+    """A remote provider rejected the request permanently."""
+
+
+class DownloadBudgetExceededError(RuntimeError):
+    """The provider could not stay within the requested byte/resource budget."""
+
+
+class UnsupportedLayoutError(ValueError):
+    """The run layout is outside the explicitly supported conversion contract."""
+
+
+class ConversionFailureError(RuntimeError):
+    """A provider retrieved data but could not safely convert it."""
+
+
+class ProviderExecutionError(RuntimeError):
+    """A registered provider failed for a non-transient execution reason."""
+
+
 class AcquisitionFailed(RuntimeError):
     def __init__(self, attempts):
         self.attempts = attempts
@@ -22,6 +62,26 @@ def classify(error):
         return 'interrupted'
     if isinstance(error, VerificationError):
         return 'integrity_failure'
+    if isinstance(error, DependencyMissingError):
+        return 'dependency_missing'
+    if isinstance(error, MetadataUnavailableError):
+        return 'metadata_unavailable'
+    if isinstance(error, RecordUnavailableError):
+        return 'record_unavailable'
+    if isinstance(error, FileUnavailableError):
+        return 'file_unavailable'
+    if isinstance(error, RemoteUnavailableError):
+        return 'remote_unavailable'
+    if isinstance(error, RemoteRejectedError):
+        return 'remote_rejected'
+    if isinstance(error, DownloadBudgetExceededError):
+        return 'download_budget_exceeded'
+    if isinstance(error, UnsupportedLayoutError):
+        return 'unsupported_layout'
+    if isinstance(error, ConversionFailureError):
+        return 'conversion_failure'
+    if isinstance(error, ProviderExecutionError):
+        return 'provider_execution_failed'
     if isinstance(error, PermissionError):
         return 'permission_denied'
     if isinstance(error, OSError) and error.errno == errno.ENOSPC:
@@ -35,16 +95,30 @@ def classify(error):
     if isinstance(error, FileNotFoundError):
         return 'missing_input_or_executable'
     if isinstance(error, ValueError):
+        if 'byte budget' in str(error).lower():
+            return 'download_budget_exceeded'
         return 'invalid_input_or_integrity'
     return 'execution_failed'
 
 
-def run(methods, providers, verify, record, *, retries=0, history=None):
+DEFAULT_FALLBACK_FAILURES = frozenset({
+    'timeout', 'remote_unavailable', 'missing_input_or_executable',
+})
+FALLBACK_FAILURE_CLASSES = frozenset({
+    'timeout', 'remote_unavailable', 'missing_input_or_executable',
+    'metadata_unavailable', 'record_unavailable', 'file_unavailable',
+    'integrity_failure',
+})
+
+
+def run(methods, providers, verify, record, *, retries=0, history=None,
+        fallback_on=None):
     """Execute configured trusted callables, verifying every success before acceptance.
 
     `record` persists the full attempt list after each transition. Providers and
     verifier are supplied by application code, never imported from user config.
-    No remote SRA provider is registered by the released acquisition workflow.
+    Fallback is possible only when application policy explicitly names a failure
+    class; provider implementations are registered by trusted application code.
     """
     if not isinstance(methods, list) or not methods or len(methods) > 5 or any(not isinstance(m, str) for m in methods):
         raise ValueError('Configure one to five named acquisition methods')
@@ -52,46 +126,91 @@ def run(methods, providers, verify, record, *, retries=0, history=None):
         raise ValueError('Unknown or duplicate acquisition backend')
     if type(retries) is not int or not 0 <= retries <= 2:
         raise ValueError('Retries must be an integer from zero to two')
+    if fallback_on is None:
+        fallback_on = DEFAULT_FALLBACK_FAILURES
+    if (not isinstance(fallback_on, (set, frozenset, tuple, list))
+            or any(not isinstance(item, str) or item not in FALLBACK_FAILURE_CLASSES
+                   for item in fallback_on)):
+        raise ValueError('Invalid provider fallback failure policy')
+    fallback_on = frozenset(fallback_on)
     if history is not None and (not isinstance(history, list) or len(history) > 1000 or
                                any(not isinstance(item, dict) for item in history)):
         raise ValueError('Invalid prior attempt history')
     # Prior success never bypasses verification: providers must safely reacquire or
     # return an existing artifact for the verifier. Preserve prior records verbatim.
     attempts = copy.deepcopy(history or [])
-    for method, attempt in ((m, n) for m in methods for n in range(1, retries + 2)):
+    for method in methods:
+        prior = [item.get('attempt', 0) for item in attempts
+                 if item.get('provider', item.get('method')) == method
+                 and type(item.get('attempt')) is int]
+        first_attempt = max(prior, default=0) + 1
+        for attempt in range(first_attempt, first_attempt + retries + 1):
         # Success returns; permanent errors break. A transient exhausted retry is
         # followed by the next explicitly configured provider.
-        started = time.monotonic()
-        item = {'method': method, 'attempt': attempt, 'status': 'running',
-                'started_utc': datetime.now(timezone.utc).isoformat()}
-        attempts.append(item); record(attempts)
-        try:
-            artifact = providers[method]()
-            item['status'] = 'verifying'; record(attempts)
+            started = time.monotonic()
+            item = {'method': method, 'provider': method, 'attempt': attempt, 'status': 'running',
+                    'started_utc': datetime.now(timezone.utc).isoformat()}
+            attempts.append(item); record(attempts)
             try:
-                provenance = verify(artifact)
-            except Exception as exc:
-                raise VerificationError('Artifact verification failed: '+str(exc)) from exc
-            if not isinstance(provenance, dict) or provenance.get('verified') is not True:
-                raise VerificationError('Verifier did not certify the artifact')
-            item.update(status='complete', verification=provenance,
-                        finished_utc=datetime.now(timezone.utc).isoformat(), elapsed_seconds=time.monotonic()-started)
-            record(attempts)
-            return artifact
-        except BaseException as exc:
-            reason = classify(exc)
-            item.update(status='interrupted' if reason == 'interrupted' else 'failed',
-                        failure_class=reason, error_type=type(exc).__name__, message=str(exc),
-                        finished_utc=datetime.now(timezone.utc).isoformat(), elapsed_seconds=time.monotonic()-started)
-            record(attempts)
-            if reason == 'interrupted':
-                raise
-            if reason not in {'timeout', 'remote_unavailable', 'missing_input_or_executable'}:
-                break
+                artifact = providers[method]()
+                item['status'] = 'verifying'; record(attempts)
+                try:
+                    provenance = verify(artifact)
+                except Exception as exc:
+                    raise VerificationError('Artifact verification failed: '+str(exc)) from exc
+                if not isinstance(provenance, dict) or provenance.get('verified') is not True:
+                    raise VerificationError('Verifier did not certify the artifact')
+                item.update(status='complete', verification=provenance,
+                            finished_utc=datetime.now(timezone.utc).isoformat(),
+                            elapsed_seconds=time.monotonic()-started)
+                record(attempts)
+                return artifact
+            except BaseException as exc:
+                reason = classify(exc)
+                item.update(status='interrupted' if reason == 'interrupted' else 'failed',
+                            failure_class=reason, error_type=type(exc).__name__, message=str(exc),
+                            finished_utc=datetime.now(timezone.utc).isoformat(),
+                            elapsed_seconds=time.monotonic()-started)
+                record(attempts)
+                if reason == 'interrupted':
+                    raise
+                if reason not in fallback_on:
+                    raise AcquisitionFailed(attempts) from None
     raise AcquisitionFailed(attempts)
 
 
-def diagnostic(error):
-    return {'failure_class': classify(error), 'error_type': type(error).__name__,
-            'primary_method': 'ena_fastq', 'automatic_alternative': 'not_configured',
-            'next_step': 'Inspect the error and download plan. Local SRA conversion is a separate explicit menu action; it is not automatically substituted.'}
+def diagnostic(error, attempts=None):
+    attempts = attempts if isinstance(attempts, list) else getattr(error, 'attempts', [])
+    failures = [item for item in attempts
+                if isinstance(item, dict) and item.get('status') == 'failed']
+    failure_class = failures[-1].get('failure_class') if failures else classify(error)
+    attempted = list(dict.fromkeys(
+        item.get('provider', item.get('method'))
+        for item in attempts
+        if isinstance(item, dict) and item.get('provider', item.get('method'))
+    ))
+    alternative = attempted[-1] if len(attempted) > 1 else 'not_configured'
+    next_steps = {
+        'dependency_missing': 'Install the registered NCBI SRA Toolkit tools prefetch, vdb-validate and fasterq-dump on PATH, then retry.',
+        'integrity_failure': 'Do not use the failed artifact. Review the provider integrity record and retry from a new verified source.',
+        'download_budget_exceeded': 'Increase the explicit byte or workspace budget, or select a smaller complete run.',
+        'insufficient_disk': 'Free the required disk space and retry; incomplete artifacts were not accepted.',
+        'unsupported_layout': 'Review the run layout manually; no files were silently discarded.',
+        'conversion_failure': 'Review the NCBI conversion log and retry with a supported SRA Toolkit build.',
+        'record_unavailable': 'Confirm that the run accession is public and available from the registered provider.',
+        'file_unavailable': 'Confirm that the provider still lists the requested complete file set.',
+        'metadata_unavailable': 'Retry metadata resolution later or inspect the archived provider response.',
+        'timeout': 'Retry after the provider is responsive; the attempt and any partial transfer are recorded.',
+        'remote_unavailable': 'Retry after the provider is responsive; the attempt and any partial transfer are recorded.',
+    }
+    return {
+        'failure_class': failure_class,
+        'error_type': type(error).__name__,
+        'primary_method': 'ena_fastq',
+        'automatic_alternative': alternative,
+        'providers_attempted': attempted,
+        'next_step': next_steps.get(
+            failure_class,
+            'Inspect the recorded provider attempts and download plan; no unregistered alternative was executed.',
+        ),
+    }
