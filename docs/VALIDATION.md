@@ -34,3 +34,7 @@ See [ARTIFACT_VALIDATION_REPORT.md](ARTIFACT_VALIDATION_REPORT.md) for implement
 ## Process reliability follow-up
 
 See [PROCESS_RELIABILITY_REPORT.md](PROCESS_RELIABILITY_REPORT.md) for the subprocess tree cleanup, budget scanning, lock-owner diagnostics, validation and remaining scope. This is a partial infrastructure delivery; no ViReMa/DVG integration is included.
+
+## Artificial SPAdes diagnostic and licence audit
+
+See [SPADES_AND_LICENSE_REPORT.md](SPADES_AND_LICENSE_REPORT.md) for the fixed-fixture diagnostic, external runtime requirements, ViReMa licence audit and explicit remaining work. No ViReMa adapter or discovery integration is added.

@@ -13,7 +13,7 @@ package = distribution('satellite-discovery')
 assert any(e.name == 'satellite-reviews' for e in package.entry_points)
 for name in ('helpers.json', 'model_scope.json'):
     assert json.loads(files('satellite_discovery').joinpath(name).read_text(encoding='utf-8'))
-for module in ('satellite_discovery', 'satellite_discovery.review_ui'):
+for module in ('satellite_discovery', 'satellite_discovery.review_ui', 'satellite_discovery.artificial_spades'):
     result = subprocess.run([sys.executable, '-I', '-m', module, '--help'], check=True, capture_output=True, text=True)
     assert 'usage:' in result.stdout
 print('Installed distribution, entry point and packaged registries verified')

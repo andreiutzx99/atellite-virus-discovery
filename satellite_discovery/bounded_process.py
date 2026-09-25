@@ -14,6 +14,10 @@ def stage_bytes(directory):
     import stat
     total = 0
     def scan_error(error):
+        if isinstance(error, FileNotFoundError) and Path(error.filename) != Path(directory):
+            # A discovered scratch directory can vanish before os.walk enters it.
+            # Missing stage roots and permission/IO failures must still fail.
+            return
         raise error
     for base, directories, files in os.walk(directory, followlinks=False, onerror=scan_error):
         for name in directories + files:
