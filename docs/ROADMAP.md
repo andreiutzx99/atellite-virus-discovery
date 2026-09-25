@@ -1,11 +1,11 @@
 # Milestone roadmap and evidence boundaries
 
-This is the current milestone register for the source tree after M6. It
-supersedes older roadmap snapshots where their status differs. M1–M6 are
-implemented as scoped software milestones; M7–M16 remain planned. A milestone
+This is the current milestone register for the source tree after M7. It
+supersedes older roadmap snapshots where their status differs. M1–M7 are
+implemented as scoped software milestones; M8–M16 remain planned. A milestone
 marked implemented describes software behavior, not biological validation.
 
-## M1–M6 — implemented
+## M1–M7 — implemented
 
 | Milestone | Status | Implemented evidence layer | Boundary |
 | --- | --- | --- | --- |
@@ -15,14 +15,14 @@ marked implemented describes software behavior, not biological validation.
 | M4 — Integrated artifact workflow | **IMPLEMENTED** | Typed handoffs, supplied-reference comparisons, context summaries, reports, preflight, and verified reuse. | This is modular supplied-artifact processing, not an autonomous discovery chain. |
 | M5 — DVG evidence | **IMPLEMENTED** | Optional ViReMa caller-specific junction parsing, completion/accounting checks, scoped statuses, and provenance. | A zero-event status is not evidence that a sample or sequence is biologically non-DVG. |
 | M6 — Residual assembly support | **IMPLEMENTED** | Reference-scoped primary-mapping accounting, residual triage, optional assembly, and separate read-back alignment. | Read-back uses the same eligible reads as assembly; results are technical and run-scoped. |
+| M7 — Independent recurrence | **IMPLEMENTED** | Typed M6 evidence handoff and exact recurrence groups over individually read-supported contigs; declared source-read checksums and sample/run/study metadata remain visible. | Exact recurrence only; declared independence metadata is unverified, and there is no pooling, co-assembly, related-sequence clustering, or biological classification. |
 
-## M7–M16 — planned, not implemented
+## M8–M16 — planned, not implemented
 
-No M7–M16 functionality was started by the post-M6 consolidation.
+No M8–M16 functionality was started by the post-M7 consolidation.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
-| M7 — Independent recurrence | **PLANNED** | Do technically supported sequences recur across independently prepared samples, studies, and controls? | Requires sample identity, study provenance, and denominator-aware recurrence evidence; recurrence alone is not function or causation. |
 | M8 — Host/read-origin attribution | **PLANNED** | Which reads or candidate regions have support for host, organelle, vector, or other declared origins? | Requires appropriate references, contamination controls, and evidence accounting; absence of a match is not origin exclusion. |
 | M9 — Candidate characterization | **PLANNED** | What sequence features, coding potential, motifs, and structural properties are supported? | Requires method/version provenance and cautious interpretation; predictions are not experimental function. |
 | M10 — DVG/satellite differential evidence | **PLANNED** | Which evidence distinguishes satellite-like candidates from DVGs and other alternatives? | Requires curated independent examples and an unresolved class; M5 caller output alone is insufficient. |
@@ -40,3 +40,4 @@ No M7–M16 functionality was started by the post-M6 consolidation.
 - [M6 workflow audit](M6_AUDIT.md)
 - [M1 foundation](M1_FOUNDATION.md) · [M2 acquisition and references](M2_REFERENCE_ACQUISITION.md) · [M3 assembly](M3_ASSEMBLY.md)
 - [M4 artifact workflow](M4_INTEGRATED_WORKFLOW.md) · [M5 DVG evidence](M5_DVG_EVIDENCE.md) · [M6 residual support](M6_RESIDUAL_ASSEMBLY_SUPPORT.md)
+- [M7 independent recurrence](M7_INDEPENDENT_RECURRENCE.md)
