@@ -12,13 +12,40 @@ Equivalent command from the repository root:
 python -m satellite_discovery.artifact_workflow --manifest examples/artifact-workflow/workflow.json --output runs/artifact-demo
 ```
 
+Use a read-only configuration/dependency/cache preview before execution:
+
+```console
+python -m satellite_discovery.artifact_workflow --manifest examples/artifact-workflow/workflow.json --output runs/artifact-demo --preflight
+```
+
+`--preflight` validates declared inputs and artifact contracts, checks dependencies, and reports planned, reusable, blocked, or missing-input stages. It does not execute workflow stages. `--output` is optional for preflight and required for execution.
+
 On Linux, WSL2, or a compatible HPC login environment, install into a user-owned Python 3.11+ virtual environment with `python -m pip install .`, then start the numbered menu with `satellite-reviews`. The same entry point is installed on Windows. Optional executables must be available on that environment's PATH (including scheduler jobs); a Windows installation does not supply Linux executables to WSL. No administrator access is needed for the base Python package. HPC scheduler submission and site-specific module configuration are not provided or validated.
 
-The workflow writes `report.html` and `workflow.json` while running and on failure. Each stage records pending/running/complete/failed/interrupted status, timestamps, and any exception type/message. A missing input is attributed to its stage; later stages stay pending. Completed-stage links are relative so the HTML remains usable when the whole output folder is copied. A graceful interrupt releases the workflow lock; forced process termination still requires the manual lock check above. Resume verifies completed stage outputs through their existing stage contracts. New lifecycle/engine versions intentionally require a new output folder; historical QC is not rerun or modified.
+The workflow writes `report.html`, `workflow.json`, and `reproducibility.json` while running and on failure. The manifest records workflow/configuration identity, Git/runtime information, stage order and graph, input/output artifact descriptors, dependency reports, reference-record snapshot IDs, execution/reuse status, warnings, failures, and final report paths. Artifact descriptors include contract version, checksum, size, producer, validation state, and provenance. Each stage records pending/running/complete/failed/interrupted/dependency-missing/external-module-required status, timestamps, and any exception type/message. A missing input is attributed to its stage; later stages stay pending. Completed-stage links are relative so the HTML remains usable when the whole output folder is copied. A graceful interrupt releases the workflow lock; forced process termination still requires the manual lock check above. Resume reuses completed outputs only after stage manifests, contracts, and hashes are verified. New lifecycle/engine versions intentionally require a new output folder; historical QC is not rerun or modified.
 
 Stage IDs and snapshot filenames must be portable: case-only duplicates and Windows device names such as `CON`, `NUL`, and `COM1` are rejected on every platform before work starts. Snapshot names cannot collide with report/manifest names, including by case.
 
-Each step has `id`, `kind` and `inputs`. Input values are paths relative to the workflow JSON, or `{"stage":"earlier_id","artifact":"filename.ext"}`. Only earlier, completed, hash-verified artifacts can be referenced. No arbitrary commands, plugins, forward references, discovery steps or shell scripts are accepted. The `FIELDS` registry in `artifact_workflow.py` is the exact list of supported inputs. The workflow reports linked results and records failures; it does not treat a blocked dependency as success.
+Each step has `id`, `kind` and `inputs`. Input values can be paths relative to the workflow JSON, explicitly typed files such as `{"path":"reads.fastq.gz","artifact_type":"validated_fastq"}`, or `{"stage":"earlier_id","artifact":"filename.ext"}`. Stage handoffs are checked against registered input/output contracts before execution; only earlier, completed, hash-verified artifacts can be referenced. No arbitrary commands, plugins, forward references, discovery steps or shell scripts are accepted. The trusted stage registry is the source of supported fields and contracts. The workflow reports linked results and records failures; it does not treat a blocked dependency as success.
+
+## Integrated typed workflow (Milestone 4)
+
+The generic `artifact-workflow-v1` runner can connect already-supported components without taking ownership of their data:
+
+```text
+declared FASTQ (or converted / explicitly validated FASTQ)
+  -> FASTQ validation -> registered SPAdes or Tadpole assembly
+  -> canonical contig FASTA -> exact sequence catalogue
+  -> declared immutable reference snapshot -> per-record import -> declared roles
+  -> local BLAST comparison -> descriptive occurrence/control handoff
+  -> workflow report
+```
+
+The flow is assembled from registered stage IDs and exact artifact names. FASTQ can enter through `fastq_validate`, an existing SRA conversion result, or an explicitly typed QC FASTQ; QC is not rerun. Catalogue observations link exact sequence hashes to declared sample/control metadata and preserve their source catalogue checksums. Reference roles come only from supplied snapshot metadata. No automatic reference curation or biological interpretation is performed.
+
+`workflow_report` produces machine-readable `report.json` and human-readable `report.html` from declared JSON summaries. The root `report.html` also shows stage execution/reuse, runtime and dependency details, verified structured summaries, checksummed inputs/outputs, warnings, failures, and links to stage/final reports. It distinguishes completed comparisons, no configured-reference match, missing dependencies, failed stages, and stages not executed; a missing BLAST dependency is never represented as zero matches. The BLAST stage retains executable identities and command parameters in `commands.json`, raw and restored hit tables, logs, and database files. It records an empty `configured_thresholds` object because no additional identity/coverage filter is applied; BLAST executable defaults remain in effect. Short deterministic internal identifiers accommodate BLAST's local-ID length limit; reported matches map back to the immutable record IDs.
+
+The deterministic test fixture is artificial: a seeded synthetic sequence, an exact supplied-reference match, distinct sample/control catalogues, and an ambiguous no-hit record. Test it with `python -m unittest discover -s tests -p 'test_artifact_workflow_m4.py' -v`. The real single-/paired-end SPAdes and Tadpole workflows are conditional integration tests; run them with `RUN_OPTIONAL_TOOL_TESTS=1` when those dependencies are installed. Tool execution and artificial fixtures validate software handoffs only, not sensitivity, specificity, or biological discovery.
 
 ## New menu options
 
@@ -52,7 +79,7 @@ Sources: [pysam installation](https://pysam.readthedocs.io/en/stable/installatio
 
 ## Local BLAST and reference snapshots
 
-BLAST+ discovery checks PATH, then one unambiguous portable installation under `.tools`. Every reference FASTA ID must have exactly one CSV row with `reference_id,reference_role,reference_source,reference_version`. Roles follow the existing contamination-review vocabulary. Each run builds a local nucleotide database from those supplied references, records commands and executable hashes/versions, runs standard nucleotide BLAST defaults with one thread, and exports `features.csv`, `matches.csv` and `hit_status.csv`. No hit is not evidence of novelty. BLAST database and log artifacts are retained and checked on reuse.
+BLAST+ discovery checks PATH, then one unambiguous portable installation under `.tools`. Every reference FASTA ID must have exactly one CSV row with `reference_id,reference_role,reference_source,reference_version`. Roles follow the existing contamination-review vocabulary. Each run builds a local nucleotide database from those supplied references, records commands and executable hashes/versions, runs standard nucleotide BLAST defaults with one thread, and exports descriptive hit/evidence tables and a structured summary. Short internal query/reference IDs are mapped back to the original declared IDs before reporting. No hit means only “no match found under the configured comparison”; it is not evidence of novelty or confirmed absence. BLAST database, raw/restored hit tables, ID mapping, and log artifacts are retained and checked on reuse.
 
 A workflow can pass BLAST `features.csv` and `matches.csv` into the existing `contamination` stage together with a separately supplied controls table. No automatic rejection or biological classification is added.
 

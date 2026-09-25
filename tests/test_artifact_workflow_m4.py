@@ -1,0 +1,875 @@
+"""Milestone 4 generic artifact-workflow integration and failure tests."""
+import csv
+from dataclasses import replace
+import hashlib
+import json
+import os
+from pathlib import Path
+import random
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+from satellite_discovery.artifact_workflow import (
+    build_default_registry,
+    inspect_configuration,
+    run,
+    validate,
+)
+from satellite_discovery.assembly_adapters import _read_fastq
+from satellite_discovery.review_stage import execute
+from satellite_discovery.sequence_downloader import checksum
+from satellite_discovery.stage_registry import WorkflowStageRegistry
+
+
+FIXTURE_SEED = 20260925
+SPADES_SEED = 17292026
+
+
+def _sequence(seed, length):
+    rng = random.Random(seed)
+    return ''.join(rng.choice('ACGT') for _ in range(length))
+
+
+def _write_fastq(path, records):
+    path = Path(path)
+    with path.open('w', encoding='ascii', newline='\n') as target:
+        for name, sequence in records:
+            target.write(f'@{name}\n{sequence}\n+\n{"I" * len(sequence)}\n')
+    return path
+
+
+def _write_json(path, value):
+    Path(path).write_text(json.dumps(value, indent=2, sort_keys=True) + '\n',
+                          encoding='utf-8')
+
+
+def _fixture_assembly_config(config):
+    if not isinstance(config, dict) or set(config) != {'profile'}:
+        raise ValueError('Fixture assembler accepts only a declared profile')
+    if config['profile'] not in {'sample', 'control'}:
+        raise ValueError('Unknown artificial fixture profile')
+    return {'profile': config['profile']}
+
+
+def _fixture_assembly(inputs, output, config):
+    def produce(paths, directory):
+        records = list(_read_fastq(paths['read1']))
+        if not records:
+            raise ValueError('Artificial assembly fixture received no reads')
+        fasta = directory / 'contigs.fasta'
+        with fasta.open('w', encoding='ascii', newline='\n') as target:
+            for header, sequence, _quality in records:
+                identifier = header[1:].split()[0]
+                target.write(f'>{config["profile"]}_{identifier}\n{sequence}\n')
+        return ['contigs.fasta']
+
+    identity = 'artificial-assembly-v1:' + config['profile']
+    return execute(identity, inputs, output, __file__, produce)
+
+
+def _fixture_registry():
+    registry = build_default_registry()
+    registry.register(
+        'fixture_assembly',
+        ('read1',),
+        _fixture_assembly,
+        config_validator=_fixture_assembly_config,
+        input_contracts={'read1': 'validated_fastq'},
+        output_contracts={'contigs.fasta': 'canonical_contig_fasta'},
+        description='Deterministic test-only FASTQ-to-contig pass-through.',
+    )
+    return registry
+
+
+def _stage(stage_id, kind, inputs, config=None):
+    row = {'id': stage_id, 'kind': kind, 'inputs': inputs}
+    if config is not None:
+        row['config'] = config
+    return row
+
+
+class ArtifactWorkflowM4Tests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix='artifact-workflow-m4-')
+        self.root = Path(self.temporary.name)
+        self.registry = _fixture_registry()
+        self.truth = _sequence(FIXTURE_SEED, 500)
+        self.no_hit = 'N' * 500
+        (self.root / 'reference.fa').write_text(
+            '>fixture_reference\n' + self.truth + '\n', encoding='ascii')
+        _write_fastq(self.root / 'sample.fastq', [
+            ('fixture_match', self.truth),
+            ('fixture_no_hit', self.no_hit),
+        ])
+        _write_fastq(self.root / 'control.fastq', [
+            ('fixture_control_match', self.truth),
+        ])
+        (self.root / 'no_hit.fa').write_text(
+            '>ambiguous_fixture_no_hit\n' + self.no_hit + '\n', encoding='ascii')
+        self._write_reference_config('fixture-snapshot-v1', self.truth, 'fixture-v1')
+        self.spec_path = self.root / 'workflow.json'
+        self.output = self.root / 'output'
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def _write_reference_config(self, snapshot_id, sequence, version):
+        reference = self.root / 'reference.fa'
+        reference.write_text('>fixture_reference\n' + sequence + '\n', encoding='ascii')
+        _write_json(self.root / 'reference-config.json', {
+            'snapshot_id': snapshot_id,
+            'files': [{
+                'name': 'fixture-reference.fa',
+                'path': reference.name,
+                'bytes': reference.stat().st_size,
+                'sha256': checksum(reference),
+                'source': 'deterministic artificial fixture',
+                'version': version,
+                'role': 'known_virus',
+                'reference_id': 'fixture-reference-collection',
+                'display_name': 'Artificial fixture reference',
+                'category': 'known_virus',
+                'provenance': 'generated by tests/test_artifact_workflow_m4.py',
+            }],
+        })
+
+    def _workflow(self, title='Artificial integrated workflow'):
+        stages = [
+            _stage('validate_sample', 'fastq_validate', {'read1': 'sample.fastq'},
+                   {'layout': 'single-end'}),
+            _stage('assemble_sample', 'fixture_assembly', {
+                'read1': {'stage': 'validate_sample', 'artifact': 'read1.fastq.gz'},
+            }, {'profile': 'sample'}),
+            _stage('catalogue_sample', 'inventory', {
+                'fasta': {'stage': 'assemble_sample', 'artifact': 'contigs.fasta'},
+            }),
+            _stage('validate_control', 'fastq_validate', {'read1': 'control.fastq'},
+                   {'layout': 'single-end'}),
+            _stage('assemble_control', 'fixture_assembly', {
+                'read1': {'stage': 'validate_control', 'artifact': 'read1.fastq.gz'},
+            }, {'profile': 'control'}),
+            _stage('catalogue_control', 'inventory', {
+                'fasta': {'stage': 'assemble_control', 'artifact': 'contigs.fasta'},
+            }),
+            _stage('reference_snapshot', 'reference_snapshot', {
+                'manifest': 'reference-config.json',
+            }),
+            _stage('reference_records', 'reference_record_import', {
+                'references_table': {
+                    'stage': 'reference_snapshot', 'artifact': 'references.csv',
+                },
+            }),
+            _stage('reference_roles', 'reference_roles', {
+                'records': {'stage': 'reference_records', 'artifact': 'records.csv'},
+            }),
+            _stage('comparison_hits', 'blast_compare', {
+                'query': {'stage': 'catalogue_sample', 'artifact': 'sequences.fasta'},
+                'reference': {'stage': 'reference_records', 'artifact': 'records.fasta'},
+                'roles': {'stage': 'reference_roles', 'artifact': 'roles.csv'},
+            }),
+            _stage('comparison_no_hit', 'blast_compare', {
+                'query': {'path': 'no_hit.fa', 'artifact_type': 'raw_fasta'},
+                'reference': {'stage': 'reference_records', 'artifact': 'records.fasta'},
+                'roles': {'stage': 'reference_roles', 'artifact': 'roles.csv'},
+            }),
+            _stage('occurrences', 'catalogue_observations', {
+                'sample': {'stage': 'catalogue_sample', 'artifact': 'catalogue.sqlite'},
+                'control': {'stage': 'catalogue_control', 'artifact': 'catalogue.sqlite'},
+            }, {'samples': {
+                'sample': {
+                    'sample_id': 'artificial_sample',
+                    'study_id': 'fixture_study',
+                    'condition': 'positive',
+                    'sample_type': 'biological',
+                    'library_molecule': 'RNA',
+                },
+                'control': {
+                    'sample_id': 'artificial_control',
+                    'study_id': 'fixture_study',
+                    'condition': 'negative',
+                    'sample_type': 'technical_control',
+                    'library_molecule': 'RNA',
+                },
+            }}),
+            _stage('workflow_report', 'workflow_report', {
+                'catalogue_summary': {
+                    'stage': 'catalogue_sample', 'artifact': 'summary.json',
+                },
+                'reference_summary': {
+                    'stage': 'reference_snapshot', 'artifact': 'summary.json',
+                },
+                'comparison_summary': {
+                    'stage': 'comparison_hits', 'artifact': 'summary.json',
+                },
+                'comparison_parameters': {
+                    'stage': 'comparison_hits', 'artifact': 'commands.json',
+                },
+                'no_hit_summary': {
+                    'stage': 'comparison_no_hit', 'artifact': 'summary.json',
+                },
+                'occurrence_summary': {
+                    'stage': 'occurrences', 'artifact': 'summary.json',
+                },
+            }, {'title': title}),
+        ]
+        _write_json(self.spec_path, {'schema': 'artifact-workflow-v1', 'stages': stages})
+        return stages
+
+    def _run(self, title='Artificial integrated workflow'):
+        self._workflow(title)
+        run(self.spec_path, self.output, registry=self.registry)
+        return json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+
+    def _assembly_spec(self, name):
+        reads = self.root / f'{name}.fastq'
+        _write_fastq(reads, [('assembly_fixture_read', self.truth)])
+        spec_path = self.root / f'{name}.json'
+        output = self.root / f'{name}-output'
+        _write_json(spec_path, {
+            'schema': 'artifact-workflow-v1',
+            'stages': [
+                _stage('validate', 'fastq_validate', {'read1': reads.name},
+                       {'layout': 'single-end'}),
+                _stage('assembly', 'assembly', {
+                    'read1': {'stage': 'validate', 'artifact': 'read1.fastq.gz'},
+                }, {
+                    'assembler': 'spades', 'layout': 'single-end',
+                    'threads': 1, 'memory_mb': 2048,
+                }),
+                _stage('catalogue', 'inventory', {
+                    'fasta': {'stage': 'assembly', 'artifact': 'contigs.fasta'},
+                }),
+            ],
+        })
+        return reads, spec_path, output
+
+    def test_incompatible_handoff_is_rejected_before_execution(self):
+        registry = WorkflowStageRegistry()
+        registry.register(
+            'test_source', ('path',), lambda *_: None,
+            output_contracts={'output.txt': 'report'},
+        )
+        registry.register(
+            'test_consumer', ('input',), lambda *_: None,
+            input_contracts={'input': 'validated_fastq'},
+        )
+        spec = {
+            'schema': 'artifact-workflow-v1',
+            'stages': [
+                _stage('source', 'test_source', {'path': 'not-read.txt'}),
+                _stage('consumer', 'test_consumer', {
+                    'input': {'stage': 'source', 'artifact': 'output.txt'},
+                }),
+            ],
+        }
+        with self.assertRaisesRegex(ValueError, 'Incompatible artifact handoff'):
+            validate(spec, registry)
+
+    def test_sra_conversion_and_explicit_qc_fastq_handoffs_are_typed(self):
+        registry = build_default_registry()
+        spec = {
+            'schema': 'artifact-workflow-v1',
+            'stages': [
+                _stage('convert', 'sra_conversion', {'archive': 'local.sra'}),
+                _stage('assembly', 'assembly', {
+                    'read1': {'stage': 'convert', 'artifact': 'local.fastq.gz'},
+                }, {
+                    'assembler': 'spades', 'layout': 'single-end',
+                    'threads': 1, 'memory_mb': 2048,
+                }),
+            ],
+        }
+        self.assertEqual(len(validate(spec, registry)), 2)
+        qc_spec = {
+            'schema': 'artifact-workflow-v1',
+            'stages': [_stage('assembly', 'assembly', {
+                'read1': {
+                    'path': 'existing-qc/clean_single.fastq.gz',
+                    'artifact_type': 'validated_fastq',
+                },
+            }, {
+                'assembler': 'spades', 'layout': 'single-end',
+                'threads': 1, 'memory_mb': 2048,
+            })],
+        }
+        self.assertEqual(len(validate(qc_spec, registry)), 1)
+
+    @unittest.skipUnless(shutil.which('blastn') and shutil.which('makeblastdb'),
+                         'BLAST+ is unavailable')
+    def test_integrated_reference_occurrence_and_report_handoffs(self):
+        result = self._run()
+        self.assertEqual(result['status'], 'complete')
+        rows = {row['id']: row for row in result['stages']}
+        reference_manifest = json.loads(
+            (self.output / rows['reference_records']['output_path'] / 'snapshot.json')
+            .read_text(encoding='utf-8')
+        )
+        self.assertEqual(reference_manifest['parent_snapshot_id'], 'fixture-snapshot-v1')
+        self.assertEqual(result['reference_snapshot_ids'], [reference_manifest['snapshot_id']])
+        self.assertEqual(
+            result['environment']['git_revision'],
+            result['git_revision'],
+        )
+        self.assertEqual(result['stage_order'], [row['id'] for row in result['stages']])
+        self.assertTrue(all(row['status'] == 'complete' for row in rows.values()))
+        hits = json.loads(
+            (self.output / rows['comparison_hits']['output_path'] / 'summary.json')
+            .read_text(encoding='utf-8')
+        )['tables']['matches']
+        self.assertIn('sample_fixture_match', {row['feature_id'] for row in hits})
+        no_hit_report = json.loads(
+            (self.output / rows['workflow_report']['output_path'] / 'report.json')
+            .read_text(encoding='utf-8')
+        )
+        self.assertEqual(
+            no_hit_report['artifacts']['no_hit_summary']['comparison_status'],
+            'no match found under the configured comparison',
+        )
+        self.assertEqual(
+            no_hit_report['artifacts']['comparison_parameters']['summary'][
+                'configured_thresholds'
+            ],
+            {},
+        )
+        workflow_html = (self.output / 'report.html').read_text(encoding='utf-8').lower()
+        self.assertNotIn('novel sequence', workflow_html)
+        self.assertNotIn('candidate satellite', workflow_html)
+        self.assertIn('execution/reuse: executed', workflow_html)
+        self.assertIn('dependencies by stage', workflow_html)
+        self.assertIn('verified structured summary', workflow_html)
+        occurrences = rows['occurrences']
+        occurrence_csv = (
+            self.output / occurrences['output_path'] / 'occurrences.csv'
+        ).read_text(encoding='utf-8-sig')
+        shared_checksum = hashlib.sha256(self.truth.encode('ascii')).hexdigest()
+        self.assertIn(shared_checksum, occurrence_csv)
+        self.assertIn('artificial_control', occurrence_csv)
+        self.assertIn('artificial_sample', occurrence_csv)
+        self.assertTrue(any(
+            edge['from_stage'] == 'assemble_sample'
+            and edge['artifact'] == 'contigs.fasta'
+            and edge['to_stage'] == 'catalogue_sample'
+            for edge in result['stage_graph']
+        ))
+        self.assertIn('workflow_report.report.json', result['output_artifacts'])
+        self.assertIn('report.html', result['final_report_paths'])
+        self.assertTrue((self.output / 'workflow.json').is_file())
+
+        preflight = inspect_configuration(
+            self.spec_path, registry=self.registry, output=self.output)
+        self.assertFalse(preflight['execution_started'])
+        self.assertTrue(all(
+            row['expected_action'] == 'reuse_verified'
+            for row in preflight['stages']
+        ))
+        self.assertTrue(any(
+            item['artifact_type'] == 'comparison_parameters'
+            for item in result['output_artifacts'].values()
+        ))
+        cli_spec = self.root / 'cli-preflight.json'
+        _write_json(cli_spec, {
+            'schema': 'artifact-workflow-v1',
+            'stages': [_stage('cli_inventory', 'inventory', {'fasta': 'reference.fa'})],
+        })
+        cli = subprocess.run(
+            [sys.executable, '-m', 'satellite_discovery.artifact_workflow',
+             '--manifest', str(cli_spec), '--output', str(self.root / 'cli-output'),
+             '--preflight'],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(cli.returncode, 0, cli.stderr)
+        self.assertFalse(json.loads(cli.stdout)['execution_started'])
+
+        repeat_output = self.root / 'repeat-output'
+        run(self.spec_path, repeat_output, registry=self.registry)
+        repeated = json.loads(
+            (repeat_output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['configuration_sha256'], repeated['configuration_sha256'])
+        stable_artifacts = (
+            'catalogue_sample.sequences.fasta',
+            'catalogue_sample.records.csv',
+            'reference_records.records.fasta',
+            'comparison_hits.matches.csv',
+            'comparison_no_hit.matches.csv',
+        )
+        for name in stable_artifacts:
+            self.assertEqual(
+                result['output_artifacts'][name]['sha256'],
+                repeated['output_artifacts'][name]['sha256'],
+                name,
+            )
+        def occurrence_content(manifest_path, output_path):
+            rows = {row['id']: row for row in json.loads(
+                manifest_path.read_text(encoding='utf-8'))['stages']}
+            csv_path = output_path / rows['occurrences']['output_path'] / 'occurrences.csv'
+            with csv_path.open(encoding='utf-8-sig', newline='') as source:
+                return [
+                    tuple(row[key] for key in (
+                        'sample_id', 'contig_id', 'sequence_sha256', 'detection',
+                        'source_fasta_sha256',
+                    ))
+                    for row in csv.DictReader(source)
+                ]
+        self.assertEqual(
+            occurrence_content(self.output / 'workflow.json', self.output),
+            occurrence_content(repeat_output / 'workflow.json', repeat_output),
+        )
+
+    @unittest.skipUnless(shutil.which('blastn') and shutil.which('makeblastdb'),
+                         'BLAST+ is unavailable')
+    def test_reference_and_report_changes_do_not_reassemble(self):
+        first = self._run()
+        first_rows = {row['id']: row for row in first['stages']}
+        self._write_reference_config(
+            'fixture-snapshot-v2', _sequence(FIXTURE_SEED + 1, 500), 'fixture-v2')
+        second = self._run()
+        second_rows = {row['id']: row for row in second['stages']}
+        for stage_id in ('assemble_sample', 'assemble_control',
+                         'catalogue_sample', 'catalogue_control'):
+            self.assertEqual(second_rows[stage_id]['execution'], 'verified_reuse')
+        self.assertNotEqual(
+            first_rows['comparison_hits']['cache_key'],
+            second_rows['comparison_hits']['cache_key'],
+        )
+        second_reference_manifest = json.loads(
+            (self.output / second_rows['reference_records']['output_path'] / 'snapshot.json')
+            .read_text(encoding='utf-8')
+        )
+        self.assertEqual(second_reference_manifest['parent_snapshot_id'], 'fixture-snapshot-v2')
+        self.assertEqual(
+            second['reference_snapshot_ids'], [second_reference_manifest['snapshot_id']])
+
+        third = self._run('Report-only configuration change')
+        third_rows = {row['id']: row for row in third['stages']}
+        self.assertEqual(third_rows['assemble_sample']['execution'], 'verified_reuse')
+        self.assertEqual(third_rows['comparison_hits']['execution'], 'verified_reuse')
+        self.assertEqual(third_rows['workflow_report']['execution'], 'executed')
+
+    def test_corrupted_contigs_fail_and_never_feed_catalogue(self):
+        self._workflow()
+        spec = json.loads(self.spec_path.read_text(encoding='utf-8'))
+        spec['stages'] = spec['stages'][:3]
+        _write_json(self.spec_path, spec)
+        run(self.spec_path, self.output, registry=self.registry)
+        result = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        assembly = next(row for row in result['stages'] if row['id'] == 'assemble_sample')
+        contigs = self.output / assembly['output_path'] / 'contigs.fasta'
+        contigs.write_text('>corrupted\nACGT\n', encoding='ascii')
+        with self.assertRaisesRegex(ValueError, 'integrity|output'):
+            run(self.spec_path, self.output, registry=self.registry)
+        failed = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(failed['status'], 'failed')
+        self.assertEqual(failed['stages'][2]['status'], 'pending')
+        self.assertIn('not executed because upstream stage', (self.output / 'report.html')
+                      .read_text(encoding='utf-8').lower())
+
+    def test_changed_fastq_and_stage_configuration_invalidate_dependents(self):
+        reads, spec_path, output = self._assembly_spec('invalidate')
+        spec = json.loads(spec_path.read_text(encoding='utf-8'))
+        spec['stages'] = [spec['stages'][0], {
+            'id': 'assemble_fixture',
+            'kind': 'fixture_assembly',
+            'inputs': {'read1': {'stage': 'validate', 'artifact': 'read1.fastq.gz'}},
+            'config': {'profile': 'sample'},
+        }, {
+            'id': 'catalogue',
+            'kind': 'inventory',
+            'inputs': {'fasta': {'stage': 'assemble_fixture', 'artifact': 'contigs.fasta'}},
+        }]
+        _write_json(spec_path, spec)
+        run(spec_path, output, registry=self.registry)
+
+        changed = ('C' if self.truth[0] != 'C' else 'A') + self.truth[1:]
+        _write_fastq(reads, [('assembly_fixture_read', changed)])
+        run(spec_path, output, registry=self.registry)
+        changed_input = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+        input_rows = {row['id']: row for row in changed_input['stages']}
+        self.assertTrue(all(input_rows[stage]['execution'] == 'executed'
+                            for stage in ('validate', 'assemble_fixture', 'catalogue')))
+
+        spec['stages'][1]['config'] = {'profile': 'control'}
+        _write_json(spec_path, spec)
+        run(spec_path, output, registry=self.registry)
+        changed_config = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+        config_rows = {row['id']: row for row in changed_config['stages']}
+        self.assertEqual(config_rows['validate']['execution'], 'verified_reuse')
+        self.assertEqual(config_rows['assemble_fixture']['execution'], 'executed')
+        self.assertEqual(config_rows['catalogue']['execution'], 'executed')
+
+    def test_bad_workflow_and_fastq_inputs_fail_with_stage_status(self):
+        malformed_spec = {
+            'schema': 'artifact-workflow-v1',
+            'stages': [{
+                'id': 'bad',
+                'kind': 'fastq_validate',
+                'inputs': {'read1': 'sample.fastq'},
+                'unknown': True,
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, 'Unknown or missing stage'):
+            validate(malformed_spec, self.registry)
+
+        for label, input_name, contents in (
+            ('missing', 'missing.fastq', None),
+            ('malformed', 'malformed.fastq', '@broken\nACGT\n+\nII\n'),
+        ):
+            if contents is not None:
+                (self.root / input_name).write_text(contents, encoding='ascii')
+            spec_path = self.root / f'{label}-fastq.json'
+            output = self.root / f'{label}-fastq-output'
+            _write_json(spec_path, {
+                'schema': 'artifact-workflow-v1',
+                'stages': [_stage(
+                    'validate', 'fastq_validate', {'read1': input_name},
+                    {'layout': 'single-end'},
+                )],
+            })
+            with self.assertRaises((FileNotFoundError, ValueError), msg=label):
+                run(spec_path, output, registry=self.registry)
+            result = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+            self.assertEqual(result['status'], 'failed', label)
+            self.assertEqual(result['stages'][0]['status'], 'failed', label)
+            self.assertEqual(result['failure']['stage_id'], 'validate', label)
+
+    def test_assembler_dependency_and_execution_failures_block_catalogue(self):
+        _reads, spec_path, output = self._assembly_spec('assembler-missing')
+        registry = build_default_registry()
+        handler = registry.get('assembly').handler
+        missing = {
+            'status': 'dependency_missing',
+            'dependencies': [{'tool': 'fixture-assembler', 'status': 'missing'}],
+        }
+        with mock.patch.object(handler, 'inspect_dependency_for_config', return_value=missing):
+            run(spec_path, output, registry=registry)
+        result = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'dependency_missing')
+        self.assertEqual(result['stages'][1]['status'], 'dependency_missing')
+        self.assertEqual(result['stages'][2]['status'], 'pending')
+
+        _reads, spec_path, output = self._assembly_spec('assembler-failed')
+        registry = build_default_registry()
+        handler = registry.get('assembly').handler
+        available = {'status': 'available', 'dependencies': []}
+        with mock.patch.object(handler, 'inspect_dependency_for_config',
+                               return_value=available), mock.patch.object(
+                                   handler, 'execute',
+                                   side_effect=RuntimeError('synthetic assembler failure')):
+            with self.assertRaisesRegex(RuntimeError, 'synthetic assembler failure'):
+                run(spec_path, output, registry=registry)
+        result = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['failure']['stage_id'], 'assembly')
+        self.assertEqual(result['stages'][2]['status'], 'pending')
+
+    def test_interrupted_stage_is_not_reusable(self):
+        _reads, spec_path, output = self._assembly_spec('assembler-interrupted')
+        registry = build_default_registry()
+        handler = registry.get('assembly').handler
+        with mock.patch.object(
+                handler, 'inspect_dependency_for_config',
+                return_value={'status': 'available', 'dependencies': []}), mock.patch.object(
+                    handler, 'execute', side_effect=KeyboardInterrupt('fixture interrupt')):
+            with self.assertRaises(KeyboardInterrupt):
+                run(spec_path, output, registry=registry)
+        result = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'interrupted')
+        self.assertEqual(result['stages'][1]['status'], 'interrupted')
+        self.assertEqual(result['stages'][2]['status'], 'pending')
+        preflight = inspect_configuration(spec_path, registry=registry, output=output)
+        self.assertNotEqual(preflight['stages'][1].get('expected_action'), 'reuse_verified')
+
+    def test_partial_run_resumes_completed_stage_without_repeating_it(self):
+        stages = self._workflow()[:3]
+        _write_json(self.spec_path, {'schema': 'artifact-workflow-v1', 'stages': stages})
+        original_definition = self.registry.get('fixture_assembly')
+        should_fail = {'once': True}
+
+        def fail_fixture_once(inputs, output, config):
+            if should_fail['once']:
+                should_fail['once'] = False
+                raise RuntimeError('synthetic first-attempt assembly failure')
+            return original_definition.handler(inputs, output, config)
+
+        self.registry._stages['fixture_assembly'] = replace(
+            original_definition, handler=fail_fixture_once)
+        try:
+            with self.assertRaisesRegex(
+                    RuntimeError, 'synthetic first-attempt assembly failure'):
+                run(self.spec_path, self.output, registry=self.registry)
+        finally:
+            self.registry._stages['fixture_assembly'] = original_definition
+        partial = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(partial['status'], 'failed')
+        self.assertEqual(partial['stages'][0]['status'], 'complete')
+        self.assertEqual(partial['stages'][1]['status'], 'failed')
+        self.assertEqual(partial['stages'][2]['status'], 'pending')
+
+        run(self.spec_path, self.output, registry=self.registry)
+        resumed = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(resumed['status'], 'complete')
+        self.assertEqual(resumed['stages'][0]['execution'], 'verified_reuse')
+        self.assertEqual(resumed['stages'][1]['execution'], 'executed')
+
+    def test_corrupt_catalogue_blocks_occurrence_and_reporting(self):
+        stages = self._workflow()
+        selected = stages[:6] + [stages[11], _stage(
+            'workflow_report', 'workflow_report', {
+                'catalogue_summary': {
+                    'stage': 'catalogue_sample', 'artifact': 'summary.json',
+                },
+                'occurrence_summary': {
+                    'stage': 'occurrences', 'artifact': 'summary.json',
+                },
+            }, {'title': 'Artificial occurrence report'},
+        )]
+        _write_json(self.spec_path, {'schema': 'artifact-workflow-v1', 'stages': selected})
+        run(self.spec_path, self.output, registry=self.registry)
+        first = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        rows = {row['id']: row for row in first['stages']}
+        catalogue = self.output / rows['catalogue_sample']['output_path'] / 'catalogue.sqlite'
+        catalogue.write_bytes(b'corrupted catalogue')
+        with self.assertRaisesRegex(ValueError, 'integrity|output'):
+            run(self.spec_path, self.output, registry=self.registry)
+        failed = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(failed['status'], 'failed')
+        self.assertEqual(failed['stages'][6]['status'], 'pending')
+        self.assertEqual(failed['stages'][7]['status'], 'pending')
+
+    def test_corrupt_reference_snapshot_blocks_record_import(self):
+        _write_json(self.spec_path, {
+            'schema': 'artifact-workflow-v1',
+            'stages': [
+                _stage('snapshot', 'reference_snapshot', {'manifest': 'reference-config.json'}),
+                _stage('records', 'reference_record_import', {
+                    'references_table': {'stage': 'snapshot', 'artifact': 'references.csv'},
+                }),
+            ],
+        })
+        registry = build_default_registry()
+        run(self.spec_path, self.output, registry=registry)
+        completed = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        snapshot = self.output / completed['stages'][0]['output_path'] / 'references.csv'
+        snapshot.write_text('corrupted\n', encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'integrity|output'):
+            run(self.spec_path, self.output, registry=registry)
+        failed = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(failed['status'], 'failed')
+        self.assertEqual(failed['stages'][0]['status'], 'failed')
+        self.assertEqual(failed['stages'][1]['status'], 'pending')
+
+    def test_comparison_execution_failure_is_not_an_empty_result(self):
+        query = self.root / 'query-failure.fa'
+        query.write_text('>query\n' + self.no_hit + '\n', encoding='ascii')
+        reference = self.root / 'reference-failure.fa'
+        reference.write_text('>reference\n' + self.truth + '\n', encoding='ascii')
+        roles = self.root / 'roles-failure.csv'
+        roles.write_text(
+            'reference_id,reference_role,reference_source,reference_version\n'
+            'reference,known_virus,fixture,1\n',
+            encoding='utf-8',
+        )
+        _write_json(self.spec_path, {
+            'schema': 'artifact-workflow-v1',
+            'stages': [
+                _stage('comparison', 'blast_compare', {
+                    'query': {'path': query.name, 'artifact_type': 'raw_fasta'},
+                    'reference': {'path': reference.name, 'artifact_type': 'raw_fasta'},
+                    'roles': {'path': roles.name, 'artifact_type': 'reference_roles'},
+                }),
+                _stage('report', 'workflow_report', {
+                    'comparison': {'stage': 'comparison', 'artifact': 'summary.json'},
+                }),
+            ],
+        })
+        available_tools = {
+            name: {'path': name, 'version': 'fixture', 'sha256': '0' * 64}
+            for name in ('blastn', 'makeblastdb')
+        }
+        with mock.patch('satellite_discovery.local_comparison.tools',
+                        return_value=available_tools), mock.patch(
+                            'satellite_discovery.local_comparison.compare',
+                            side_effect=RuntimeError('synthetic BLAST execution failure')):
+            with self.assertRaisesRegex(RuntimeError, 'synthetic BLAST execution failure'):
+                run(self.spec_path, self.output, registry=build_default_registry())
+        result = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['failure']['stage_id'], 'comparison')
+        self.assertEqual(result['stages'][1]['status'], 'pending')
+        report = (self.output / 'report.html').read_text(encoding='utf-8').lower()
+        self.assertNotIn('0 reference matches', report)
+
+    def test_missing_blast_is_not_reported_as_zero_matches(self):
+        query = self.root / 'query.fa'
+        query.write_text('>query\n' + self.no_hit + '\n', encoding='ascii')
+        reference = self.root / 'direct-reference.fa'
+        reference.write_text('>reference\n' + self.truth + '\n', encoding='ascii')
+        roles = self.root / 'roles.csv'
+        roles.write_text(
+            'reference_id,reference_role,reference_source,reference_version\n'
+            'reference,known_virus,artificial,1\n',
+            encoding='utf-8',
+        )
+        _write_json(self.spec_path, {
+            'schema': 'artifact-workflow-v1',
+            'stages': [
+                _stage('comparison', 'blast_compare', {
+                    'query': {'path': 'query.fa', 'artifact_type': 'raw_fasta'},
+                    'reference': {'path': 'direct-reference.fa', 'artifact_type': 'raw_fasta'},
+                    'roles': {'path': 'roles.csv', 'artifact_type': 'reference_roles'},
+                }),
+                _stage('report', 'workflow_report', {
+                    'comparison': {'stage': 'comparison', 'artifact': 'summary.json'},
+                }),
+            ],
+        })
+        with mock.patch(
+                'satellite_discovery.local_comparison.tools',
+                side_effect=RuntimeError('synthetic missing BLAST')):
+            run(self.spec_path, self.output, registry=build_default_registry())
+        result = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'dependency_missing')
+        self.assertEqual(result['stages'][0]['status'], 'dependency_missing')
+        self.assertEqual(result['stages'][1]['status'], 'pending')
+        report = (self.output / 'report.html').read_text(encoding='utf-8').lower()
+        self.assertIn('not executed because the required comparison dependency is missing', report)
+        self.assertNotIn('0 reference matches', report)
+
+
+@unittest.skipUnless(os.environ.get('RUN_OPTIONAL_TOOL_TESTS') == '1',
+                     'Optional live-tool integration job')
+class RealArtifactWorkflowAssemblyTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix='real-artifact-workflow-')
+        self.root = Path(self.temporary.name)
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def _run_real(self, assembler, paired):
+        truth = _sequence(SPADES_SEED, 1000)
+        first, second = [], []
+        stop = 801 if paired else 901
+        for repeat in range(4):
+            for start in range(0, stop, 5):
+                first.append((
+                    f'fixture_{repeat}_{start}/1' if paired else f'fixture_{repeat}_{start}',
+                    truth[start:start + 100],
+                ))
+                if paired:
+                    mate = truth[start + 100:start + 200]
+                    mate = mate.translate(str.maketrans('ACGT', 'TGCA'))[::-1]
+                    second.append((f'fixture_{repeat}_{start}/2', mate))
+        read1 = _write_fastq(self.root / 'reads_R1.fastq', first)
+        inputs = {'read1': read1.name}
+        if paired:
+            read2 = _write_fastq(self.root / 'reads_R2.fastq', second)
+            inputs['read2'] = read2.name
+        layout = 'paired-end' if paired else 'single-end'
+        stages = [
+            _stage('validate', 'fastq_validate', inputs, {'layout': layout}),
+            _stage('assembly', 'assembly', {
+                'read1': {'stage': 'validate', 'artifact': 'read1.fastq.gz'},
+                **({'read2': {'stage': 'validate', 'artifact': 'read2.fastq.gz'}}
+                   if paired else {}),
+            }, {
+                'assembler': assembler,
+                'layout': layout,
+                'threads': 2,
+                'memory_mb': 2048 if assembler == 'spades' else 512,
+            }),
+            _stage('catalogue', 'inventory', {
+                'fasta': {'stage': 'assembly', 'artifact': 'contigs.fasta'},
+            }),
+            _stage('occurrences', 'catalogue_observations', {
+                'fixture_sample': {
+                    'stage': 'catalogue', 'artifact': 'catalogue.sqlite',
+                },
+            }, {'samples': {'fixture_sample': {
+                'sample_id': f'artificial_{assembler}_{"paired" if paired else "single"}',
+                'study_id': 'artificial_assembly_fixture',
+                'condition': 'unknown',
+                'sample_type': 'biological',
+                'library_molecule': 'RNA',
+            }}}),
+            _stage('report', 'workflow_report', {
+                'assembly': {'stage': 'assembly', 'artifact': 'assembly_manifest.json'},
+                'catalogue': {'stage': 'catalogue', 'artifact': 'summary.json'},
+                'occurrences': {'stage': 'occurrences', 'artifact': 'summary.json'},
+            }, {'title': f'Artificial {assembler} {layout} workflow'}),
+        ]
+        spec_path = self.root / f'{assembler}-{"paired" if paired else "single"}.json'
+        out = self.root / f'{assembler}-{"paired" if paired else "single"}-output'
+        _write_json(spec_path, {'schema': 'artifact-workflow-v1', 'stages': stages})
+        run(spec_path, out)
+        result = json.loads((out / 'workflow.json').read_text(encoding='utf-8'))
+        self.assertEqual(result['status'], 'complete')
+        rows = {row['id']: row for row in result['stages']}
+        self.assertEqual(rows['assembly']['assembly']['assembler'], assembler)
+        self.assertGreater(rows['assembly']['assembly']['contig_count'], 0)
+        self.assertGreater(
+            json.loads((out / rows['catalogue']['output_path'] / 'summary.json')
+                       .read_text(encoding='utf-8'))['records'],
+            0,
+        )
+        self.assertTrue((out / 'report.html').is_file())
+        structured_report_path = out / rows['report']['output_path'] / 'report.json'
+        self.assertTrue(structured_report_path.is_file())
+        structured_report = json.loads(structured_report_path.read_text(encoding='utf-8'))
+        self.assertEqual(
+            structured_report['artifacts']['assembly']['summary']['assembler'],
+            assembler,
+        )
+        self.assertIn('catalogue', structured_report['artifacts'])
+        self.assertIn('occurrences', structured_report['artifacts'])
+        return spec_path, out
+
+    def test_real_spades_single_and_paired_workflows(self):
+        if not (shutil.which('spades.py') or shutil.which('spades')):
+            self.skipTest('SPAdes is not installed')
+        self._run_real('spades', paired=False)
+        self._run_real('spades', paired=True)
+
+    def test_assembler_change_invalidates_assembly_and_downstream(self):
+        registry = build_default_registry()
+        handler = registry.get('assembly').handler
+        for assembler, memory in (('spades', 2048), ('tadpole', 512)):
+            dependency = handler.inspect_dependency_for_config({
+                'assembler': assembler, 'layout': 'single-end',
+                'threads': 2, 'memory_mb': memory,
+            })
+            if dependency.get('status') != 'available':
+                self.skipTest(f'{assembler} unavailable: {json.dumps(dependency, sort_keys=True)}')
+
+        spec_path, output = self._run_real('spades', paired=False)
+        specification = json.loads(spec_path.read_text(encoding='utf-8'))
+        specification['stages'][1]['config']['assembler'] = 'tadpole'
+        specification['stages'][1]['config']['memory_mb'] = 512
+        _write_json(spec_path, specification)
+        run(spec_path, output, registry=registry)
+        result = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+        rows = {row['id']: row for row in result['stages']}
+        self.assertEqual(rows['validate']['execution'], 'verified_reuse')
+        self.assertEqual(rows['assembly']['assembly']['assembler'], 'tadpole')
+        self.assertEqual(rows['assembly']['execution'], 'executed')
+        self.assertEqual(rows['catalogue']['execution'], 'executed')
+        self.assertEqual(rows['occurrences']['execution'], 'executed')
+        self.assertEqual(rows['report']['execution'], 'executed')
+
+    def test_tadpole_single_and_paired_workflows_when_available(self):
+        config = {
+            'assembler': 'tadpole', 'layout': 'single-end',
+            'threads': 2, 'memory_mb': 512,
+        }
+        dependency = build_default_registry().get('assembly').handler.inspect_dependency_for_config(config)
+        if dependency.get('status') != 'available':
+            self.skipTest(json.dumps(dependency, sort_keys=True))
+        self._run_real('tadpole', paired=False)
+        self._run_real('tadpole', paired=True)
+
+
+if __name__ == '__main__':
+    unittest.main()
