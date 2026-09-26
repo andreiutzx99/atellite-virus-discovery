@@ -13,6 +13,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from . import artifact_contracts
 from . import m8_blastn_profile as profile
 from . import m8_contracts, m8_reference_panels, m8_search_adapters
 from .m8_candidate_handoff import (
@@ -39,6 +40,16 @@ _M7_INPUT_TYPES = {
     "m7_validation": "m7_validation_report",
     "m7_provenance": "m7_provenance_manifest",
 }
+_M8_ARTIFACT_TYPES = frozenset(_M7_INPUT_TYPES.values()) | frozenset({
+    "m8_candidate_sequence_set",
+    "m8_reference_snapshot_manifest",
+    "m8_reference_payload",
+    "m8_raw_blast_output",
+    "m8_query_status",
+    "m8_match_evidence",
+    "m8_summary",
+    "m8_search_commands",
+})
 
 
 class ReferencePanelIncompleteError(ValueError):
@@ -111,7 +122,7 @@ def inspect_dependency(config):
 
 
 def implementation_identity():
-    """Hash only code that can change M8 output or its validated contracts."""
+    """Identify M8 code and only the artifact contracts it actually uses."""
     paths = (
         Path(__file__),
         Path(__file__).with_name("m8_reference_panels.py"),
@@ -120,11 +131,12 @@ def implementation_identity():
         Path(__file__).with_name("m8_contracts.py"),
         Path(__file__).with_name("m8_candidate_handoff.py"),
         Path(__file__).with_name("bounded_process.py"),
-        Path(__file__).with_name("artifact_contracts.py"),
-        Path(__file__).with_name("artifact_workflow.py"),
+        Path(__file__).with_name("sequence_downloader.py"),
     )
     return {
-        "schema": "m8-implementation-identity-v1",
+        "schema": "m8-implementation-identity-v2",
+        "artifact_contract_semantics": artifact_contracts.semantic_identity(
+            _M8_ARTIFACT_TYPES),
         "source_sha256": {
             path.name: checksum(path) for path in paths
         },

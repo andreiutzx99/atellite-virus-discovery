@@ -259,33 +259,47 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
 
     def _identity(self, config, inputs, dependency, command, environment, context=None):
         identity = super()._identity(config, inputs, dependency, command, environment, context)
+        identity["identity_schema"] = "m6-external-stage-identity-v2"
+        identity["artifact_contract_semantics"] = artifact_contracts.semantic_identity(
+            self._artifact_contract_types())
         identity["implementation_sha256"] = {
             name: checksum(Path(__file__).with_name(name))
-            for name in (
-                "residual_evidence_adapter.py", "residual_reads.py",
-                "read_support.py", "quality_control.py", "artifact_contracts.py",
-                "external_tool.py", "assembly_adapters.py",
-            )
+            for name in self._implementation_source_files()
+        }
+        # Keep package/revision provenance in the outer manifest environment,
+        # but do not let unrelated milestone code invalidate M6 reuse.
+        identity["environment"] = {
+            name: value for name, value in identity["environment"].items()
+            if name in {"python", "platform"}
         }
         identity["assembler"] = config["assembly"]
         identity["optional_assembler_dependency"] = dependency.get("assembly")
         return identity
 
-    def cache_implementation_identity(self):
-        """Keep M6 reuse scoped to code that can change its own artifacts."""
-        source_files = (
+    def _artifact_contract_types(self):
+        return set(self.input_contracts.values()) | set(self.output_contracts.values())
+
+    @staticmethod
+    def _implementation_source_files():
+        return (
             "residual_evidence_adapter.py", "residual_reads.py",
-            "read_support.py", "quality_control.py", "artifact_contracts.py",
-            "sequence_catalogue.py", "external_tool.py", "bounded_process.py",
-            "assembly_adapters.py",
+            "read_support.py", "quality_control.py",
+            "sequence_catalogue.py", "sequence_downloader.py",
+            "external_tool.py", "bounded_process.py", "assembly_adapters.py",
             "m8_candidate_handoff.py",
         )
+
+    def cache_implementation_identity(self):
+        """Keep M6 reuse scoped to code that can change its own artifacts."""
         return {
+            "identity_schema": "m6-cache-implementation-v2",
             "stage": "m6-residual-evidence",
             "adapter_version": self.adapter_version,
+            "artifact_contract_semantics": artifact_contracts.semantic_identity(
+                self._artifact_contract_types()),
             "implementation_sha256": {
                 name: checksum(Path(__file__).with_name(name))
-                for name in source_files
+                for name in self._implementation_source_files()
             },
         }
 
