@@ -1,11 +1,11 @@
 # Milestone roadmap and evidence boundaries
 
-This is the current milestone register for the source tree after M8. It
-supersedes older roadmap snapshots where their status differs. M1–M8 are
-implemented as scoped software milestones; M9–M16 remain planned. A milestone
+This is the current milestone register for the source tree after M9. It
+supersedes older roadmap snapshots where their status differs. M1–M9 are
+implemented as scoped software milestones; M10–M16 remain planned. A milestone
 marked implemented describes software behavior, not biological validation.
 
-## M1–M8 — implemented
+## M1–M9 — implemented
 
 | Milestone | Status | Implemented evidence layer | Boundary |
 | --- | --- | --- | --- |
@@ -17,14 +17,14 @@ marked implemented describes software behavior, not biological validation.
 | M6 — Residual assembly support | **IMPLEMENTED** | Reference-scoped primary-mapping accounting, residual triage, optional assembly, and separate read-back alignment. | Read-back uses the same eligible reads as assembly; results are technical and run-scoped. |
 | M7 — Independent recurrence | **IMPLEMENTED** | Typed M6 evidence handoff and exact recurrence groups over individually read-supported contigs; declared source-read checksums and sample/run/study metadata remain visible. | Exact recurrence only; declared independence metadata is unverified, and there is no pooling, co-assembly, related-sequence clustering, or biological classification. |
 | M8 — Candidate/reference nucleotide homology | **IMPLEMENTED (SOFTWARE)** | Typed candidate and snapshot inputs, role-scoped local BLASTN evidence, separate masking branches, raw outputs, and explicit incomplete/unavailable/truncated states; validated with synthetic fixtures. | Reference payloads and indexes are caller-supplied and remain external. No candidate dataset was searched during implementation. Similarity is not identity or classification; no-hit is scoped to the completed snapshot and method. |
+| M9 — Translated and protein evidence | **IMPLEMENTED** | Deterministic six-frame ORF hypotheses and translation under the approved table-1/ATG-only policy, preserving nested, overlapping, and partial hypotheses. Ordinary local BLASTP against an explicitly supplied typed protein snapshot; typed no-ORF/no-hit/failure/incomplete outcomes; provenance and integrity; stage-scoped cache/reuse; synthetic/offline validation. | Protein-level computational evidence only. It does not classify satellites, establish novelty or helper dependence, or prove expression or biological function. No biological candidate dataset or protein database was searched for this implementation milestone. |
 
-## M9–M16 — planned, not implemented
+## M10–M16 — planned, not implemented
 
-No M9–M16 functionality has been started.
+M10–M16 remain planned and are not implemented.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
-| M9 — Translated and protein evidence | **PLANNED** | What ORF hypotheses, translated similarities, protein/domain/profile-HMM matches, or remote-homology leads are supported? | Record methods and assumptions. Predictions and model matches are not expression, function, or biological classification. |
 | M10 — Genome architecture and topology | **PLANNED** | What architecture, termini, completeness limits, and topology signals can be described? | Preserve alternative explanations and uncertainty. Computational topology signals do not confirm circularity or a complete genome. |
 | M11 — RNA structure and ribozyme evidence | **PLANNED** | What RNA folds, structural models, or ribozyme-family similarities are predicted? | Predictions and model matches are hypotheses, not evidence of catalytic function or activity. |
 | M12 — Read-origin and technical-artifact review | **PLANNED** | What do source reads, controls, batches, and technical evidence support about candidate origin or artifacts? | Requires suitable references, controls, provenance, and read accounting; sequence similarity alone does not establish source attribution. |
