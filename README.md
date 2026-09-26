@@ -123,6 +123,41 @@ The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
 M8–M16 are not started here. Do not treat the roadmap as evidence that a
 planned feature exists.
 
+### Planned evidence layers
+
+- **M8 — Candidate/reference nucleotide homology:** compare exact candidate
+  sequences with declared, role-separated reference panels. Competing matches
+  remain evidence, not classification; no-hit is limited to the searched
+  references and method. A valid candidate sequence is not gated on a minimum
+  upstream support category or arbitrary biological length; existing evidence
+  states remain visible and unchanged.
+- **M9 — Translated and protein evidence:** evaluate ORF hypotheses, translated
+  similarity, protein/domain and profile-HMM matches, and remote homology as
+  predictions, not demonstrated expression or function.
+- **M10 — Genome architecture and topology:** describe architecture, termini,
+  completeness limits, and guarded topology signals; a computational signal is
+  not confirmed circularity.
+- **M11 — RNA structure and ribozyme evidence:** retain predicted folds and
+  model matches as hypotheses, not proof of a functional ribozyme.
+- **M12 — Read-origin and technical-artifact review:** assess source reads,
+  controls, contamination, batches, and reconstruction alternatives. Sequence
+  similarity alone does not establish origin.
+- **M13 — DVG-versus-satellite differential evidence:** compare scoped evidence
+  and alternatives without forcing a binary biological class.
+- **M14 — Helper association and dependence:** report association separately
+  from dependence, which requires claim-appropriate validation.
+- **M15 — Evidence integration and prioritization:** present provenance,
+  missingness, alternatives, and dependencies; any ranking must be transparent
+  and appropriately validated.
+- **M16 — Blinded benchmarking and validation:** evaluate frozen methods on
+  independent holdouts and use claim-appropriate biological or orthogonal
+  validation.
+
+The [M8 homology specification](docs/M8_REFERENCE_AND_HOMOLOGY_SPEC.md) and
+[M8 benchmark fixture design](docs/M8_BENCHMARK_FIXTURE_DESIGN.md) are design
+documents, not implementations or approved biological thresholds. Historical
+proposals are linked from the [roadmap](docs/ROADMAP.md).
+
 ## Installation
 
 Python 3.11 or newer is required. To install the package in an activated
