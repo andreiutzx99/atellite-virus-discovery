@@ -79,10 +79,29 @@ _CONTRACTS = {
     'm8_match_evidence': 'Normalized M8 nucleotide alignment evidence with reference and raw-output provenance.',
     'm8_summary': 'M8 scope, per-role results, runtime identity and limitations.',
     'm8_search_commands': 'Exact argv and runtime identity for every executed M8 search branch.',
+    'm9_orf_results': 'M6-identity-bound ORF hypotheses and table-1 protein translations.',
+    'm9_protein_fasta': 'Protein sequences derived from the checksum-bound M9 ORF result.',
+    'm9_orf_bundle': 'M9 ORF-stage input and local output integrity manifest.',
+    'm9_protein_reference_manifest': 'Canonical metadata and membership for an explicitly supplied M9 protein snapshot.',
+    'm9_protein_reference_payload': 'Explicitly supplied protein FASTA payload bound by an M9 snapshot manifest.',
+    'm9_protein_search_status': 'Per-ORF local BLASTP status and complete query accounting.',
+    'm9_protein_match_evidence': 'Normalized protein HSP evidence with query, reference and raw-output provenance.',
+    'm9_protein_summary': 'M9 protein-search scope, runtime identity, accounting and limitations.',
+    'm9_search_commands': 'Ordinary local BLASTP command and profile provenance.',
+    'm9_output_bundle': 'M9 protein-search input and local output integrity manifest.',
+    'm9_raw_blast_output': 'Bounded UTF-8 raw output or log from local M9 BLASTP execution.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
-_CONTRACT_SEMANTIC_VERSIONS = {}
+_CONTRACT_SEMANTIC_VERSIONS = {
+    name: '2' for name in (
+        'm9_orf_results', 'm9_protein_fasta', 'm9_orf_bundle',
+        'm9_protein_reference_manifest', 'm9_protein_reference_payload',
+        'm9_protein_search_status', 'm9_protein_match_evidence',
+        'm9_protein_summary', 'm9_search_commands', 'm9_output_bundle',
+        'm9_raw_blast_output',
+    )
+}
 
 
 def semantic_identity(artifact_types):
@@ -291,6 +310,7 @@ def validate_artifact(path, artifact_type):
     info = path.stat()
     if info.st_size <= 0 and artifact_type not in {
         'blast_hit_table', 'dvg_raw_output', 'm8_raw_blast_output',
+        'm9_protein_fasta', 'm9_raw_blast_output',
     }:
         raise ValueError('Artifact is empty')
 
@@ -738,6 +758,25 @@ def validate_artifact(path, artifact_type):
     }:
         from .m8_homology import validate_m8_artifact
         details.update(validate_m8_artifact(path, artifact_type))
+    elif artifact_type.startswith('m9_'):
+        from . import m9_contracts
+        validators = {
+            'm9_orf_results': m9_contracts.validate_orf_results,
+            'm9_protein_fasta': m9_contracts.validate_protein_fasta,
+            'm9_orf_bundle': m9_contracts.validate_bundle,
+            'm9_protein_reference_manifest': m9_contracts.validate_reference_manifest,
+            'm9_protein_reference_payload': m9_contracts.validate_raw_output,
+            'm9_protein_search_status': m9_contracts.validate_protein_search_status,
+            'm9_protein_match_evidence': m9_contracts.validate_protein_match_evidence,
+            'm9_protein_summary': m9_contracts.validate_protein_summary,
+            'm9_search_commands': m9_contracts.validate_search_commands,
+            'm9_output_bundle': m9_contracts.validate_bundle,
+            'm9_raw_blast_output': m9_contracts.validate_raw_output,
+        }
+        validator = validators.get(artifact_type)
+        if validator is None:
+            raise ValueError(f'No validator is registered for {artifact_type!r}')
+        details.update(validator(path))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')

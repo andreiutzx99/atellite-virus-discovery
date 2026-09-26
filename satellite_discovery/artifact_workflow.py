@@ -21,6 +21,7 @@ from .residual_evidence_adapter import ResidualEvidenceAdapter
 from . import (
     artifact_contracts, artifact_stage_handlers, dvg_evidence,
     independent_recurrence, local_comparison, m8_homology,
+    m9_blastp_stage, m9_orf_stage,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -218,6 +219,53 @@ def build_default_registry():
         ),
     )
     registry.register(
+        'm9_orf_translation', None, m9_orf_stage.run_stage,
+        version=m9_orf_stage.STAGE_VERSION, dynamic_inputs=True,
+        config_validator=m9_orf_stage.validate_config,
+        input_contracts={
+            '*': (
+                'm8_candidate_sequence_set',
+                'm7_observation_table', 'm7_exact_recurrence_table',
+                'm7_independence_summary', 'm7_validation_report',
+                'm7_provenance_manifest', 'm8_query_status',
+                'm8_match_evidence', 'm8_summary', 'm8_search_commands',
+                'm8_raw_blast_output',
+            ),
+        },
+        output_contracts={
+            'orf_results.json': 'm9_orf_results',
+            'proteins.faa': 'm9_protein_fasta',
+            'orf_bundle.json': 'm9_orf_bundle',
+        },
+        description=(
+            'Enumerates deterministic six-frame table-1 ORF hypotheses from '
+            'the checksum-bound M6 candidate handoff; preserves optional M7/M8 '
+            'context without gating translation.'
+        ),
+    )
+    registry.register(
+        'm9_blastp', None, m9_blastp_stage.run_stage,
+        version=m9_blastp_stage.STAGE_VERSION, dynamic_inputs=True,
+        config_validator=m9_blastp_stage.validate_config,
+        dependency_inspector=m9_blastp_stage.inspect_dependency,
+        input_contracts={
+            '*': tuple(m9_blastp_stage._INPUT_TYPES.values()),
+        },
+        output_contracts={
+            'query_status.json': 'm9_protein_search_status',
+            'matches.json': 'm9_protein_match_evidence',
+            'summary.json': 'm9_protein_summary',
+            'commands.json': 'm9_search_commands',
+            'm9_bundle.json': 'm9_output_bundle',
+            '*.tsv': 'm9_raw_blast_output',
+            '*.log': 'm9_raw_blast_output',
+        },
+        description=(
+            'Runs pinned local ordinary BLASTP against one explicitly supplied '
+            'and checksum-validated protein snapshot; does not retrieve references.'
+        ),
+    )
+    registry.register(
         'workflow_report', None, artifact_stage_handlers.workflow_report,
         version='1', dynamic_inputs=True,
         config_validator=artifact_stage_handlers.validate_workflow_report_config,
@@ -235,6 +283,11 @@ def build_default_registry():
             'm8_candidate_sequence_set', 'm8_reference_snapshot_manifest',
             'm8_raw_blast_output', 'm8_query_status', 'm8_match_evidence',
             'm8_summary', 'm8_search_commands',
+             'm9_orf_results', 'm9_protein_fasta', 'm9_orf_bundle',
+             'm9_protein_reference_manifest', 'm9_protein_reference_payload',
+             'm9_protein_search_status', 'm9_protein_match_evidence',
+             'm9_protein_summary', 'm9_search_commands', 'm9_output_bundle',
+             'm9_raw_blast_output',
         )},
         output_contracts={'report.json': 'workflow_report_json', 'report.html': 'report'},
         description='Consolidates declared structured stage artifacts without interpretation.',
