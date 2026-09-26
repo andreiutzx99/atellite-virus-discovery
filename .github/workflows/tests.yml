@@ -32,6 +32,12 @@ jobs:
       - run: python scripts/check_tadpole_ci.py
       - run: python scripts/check_spades_ci.py
       - run: python scripts/check_virema_ci.py
+      - name: Optional pinned BLASTN synthetic suite
+        if: ${{ vars.M8_BLASTN_EXECUTABLE != '' && vars.M8_MAKEBLASTDB_EXECUTABLE != '' }}
+        env:
+          BLASTN_EXECUTABLE: ${{ vars.M8_BLASTN_EXECUTABLE }}
+          MAKEBLASTDB_EXECUTABLE: ${{ vars.M8_MAKEBLASTDB_EXECUTABLE }}
+        run: python -m unittest tests.test_m8_blastn_synthetic -v
       - uses: actions/upload-artifact@v4
         if: always()
         with:
