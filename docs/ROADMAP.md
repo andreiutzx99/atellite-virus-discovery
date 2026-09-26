@@ -23,15 +23,15 @@ No M8–M16 functionality was started by the post-M7 consolidation.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
-| M8 — Host/read-origin attribution | **PLANNED** | Which reads or candidate regions have support for host, organelle, vector, or other declared origins? | Requires appropriate references, contamination controls, and evidence accounting; absence of a match is not origin exclusion. |
-| M9 — Candidate characterization | **PLANNED** | What sequence features, coding potential, motifs, and structural properties are supported? | Requires method/version provenance and cautious interpretation; predictions are not experimental function. |
-| M10 — DVG/satellite differential evidence | **PLANNED** | Which evidence distinguishes satellite-like candidates from DVGs and other alternatives? | Requires curated independent examples and an unresolved class; M5 caller output alone is insufficient. |
-| M11 — Helper association | **PLANNED** | Which candidates co-occur or covary with plausible helper systems across suitable observations? | Requires matched samples, controls, and denominators; association does not prove helper dependence. |
-| M12 — Reference-aware novelty analysis | **PLANNED** | How similar are candidates to frozen, declared reference collections under recorded methods? | Requires auditable panel curation and withholding; no-hit does not prove universal novelty. |
-| M13 — Contamination and artifact review | **PLANNED** | How well do negative controls, batch/lane evidence, and technical artifacts explain candidates? | Requires trustworthy controls and laboratory provenance; a control match is evidence, not automatic source attribution. |
-| M14 — Evidence integration | **PLANNED** | Can independently scoped evidence be combined without hiding missingness or double-counting? | Requires declared dependencies, calibrated interpretation, and no circular reuse of the same evidence as independent support. |
-| M15 — Candidate prioritization | **PLANNED** | Can candidates be ranked transparently for follow-up? | Requires predeclared objectives, validated calibration, uncertainty, and explicit unresolved outcomes; ranking is not classification. |
-| M16 — Blinded biological validation | **PLANNED** | Does a frozen workflow recover independently labelled known positives while controlling false positives? | Requires held-out truth sets, justified negatives, reference withholding, predeclared criteria, and experimental or orthogonal confirmation as appropriate. |
+| M8 — Candidate/reference nucleotide homology | **PLANNED** | What nucleotide-level relationships or competing reference explanations are supported for a typed candidate sequence? | Use frozen, role-separated panels and retain competing evidence. Similarity is not identity or classification; no-hit is scoped to the searched snapshot and method. |
+| M9 — Translated and protein evidence | **PLANNED** | What ORF hypotheses, translated similarities, protein/domain/profile-HMM matches, or remote-homology leads are supported? | Record methods and assumptions. Predictions and model matches are not expression, function, or biological classification. |
+| M10 — Genome architecture and topology | **PLANNED** | What architecture, termini, completeness limits, and topology signals can be described? | Preserve alternative explanations and uncertainty. Computational topology signals do not confirm circularity or a complete genome. |
+| M11 — RNA structure and ribozyme evidence | **PLANNED** | What RNA folds, structural models, or ribozyme-family similarities are predicted? | Predictions and model matches are hypotheses, not evidence of catalytic function or activity. |
+| M12 — Read-origin and technical-artifact review | **PLANNED** | What do source reads, controls, batches, and technical evidence support about candidate origin or artifacts? | Requires suitable references, controls, provenance, and read accounting; sequence similarity alone does not establish source attribution. |
+| M13 — DVG-versus-satellite differential evidence | **PLANNED** | How do scoped observations bear on DVG, satellite/subviral, and other alternatives? | Requires curated independent examples and an unresolved outcome; M5 caller output alone is insufficient. |
+| M14 — Helper association and dependence | **PLANNED** | What association is supported across matched observations, and is there separate evidence of dependence? | Requires suitable samples, controls, denominators, and claim-appropriate experiments; association does not prove dependence. |
+| M15 — Evidence integration and transparent prioritization | **PLANNED** | Can scoped evidence and alternatives be integrated and, if justified, ranked for follow-up? | Preserve provenance, missingness, dependencies, and correlated evidence. Ranking is not classification and requires predeclared objectives and validation. |
+| M16 — Blinded benchmarking and claim-appropriate validation | **PLANNED** | How does a frozen workflow perform on independent holdouts, and what biological claims receive orthogonal or experimental validation? | Requires justified positives/negatives, leakage controls, predeclared criteria, and appropriate assays; software benchmarks do not establish a candidate's identity or function. |
 
 ## Supporting documents
 
@@ -41,3 +41,6 @@ No M8–M16 functionality was started by the post-M7 consolidation.
 - [M1 foundation](M1_FOUNDATION.md) · [M2 acquisition and references](M2_REFERENCE_ACQUISITION.md) · [M3 assembly](M3_ASSEMBLY.md)
 - [M4 artifact workflow](M4_INTEGRATED_WORKFLOW.md) · [M5 DVG evidence](M5_DVG_EVIDENCE.md) · [M6 residual support](M6_RESIDUAL_ASSEMBLY_SUPPORT.md)
 - [M7 independent recurrence](M7_INDEPENDENT_RECURRENCE.md)
+- [M8 reference and homology specification](M8_REFERENCE_AND_HOMOLOGY_SPEC.md) · [M8 benchmark fixture design](M8_BENCHMARK_FIXTURE_DESIGN.md)
+- [Post-M7 roadmap reconciliation proposal](POST_M7_ROADMAP_RECONCILIATION.md)
+- [M8/M9 design research](research/M8_M9_DESIGN_RESEARCH.md) · [M10/M11 design research](research/M10_M11_DESIGN_RESEARCH.md)
