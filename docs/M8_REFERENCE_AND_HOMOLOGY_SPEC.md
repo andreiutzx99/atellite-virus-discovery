@@ -7,10 +7,14 @@ typed candidate-sequence artifacts, retaining whatever upstream evidence state
 is available. The approved [roadmap](ROADMAP.md) assigns nucleotide/reference
 homology to M8, translated and protein evidence to M9, and read-origin and
 technical-artifact review to M12. The milestone ownership and eligibility
-principles follow those decisions; reference panels, software contracts,
-licenses, methods, and thresholds remain design proposals. Search results are
-evidence about comparisons that were actually run, not identities assigned to
-candidates.
+principles follow those decisions. The separate
+[M8 reference-panel policy](M8_REFERENCE_PANEL_APPROVAL.md) records source and
+acquisition recommendations and selects local, pinned BLASTN as the initial
+nucleotide-search baseline. It does not clear third-party redistribution or
+instantiate reference snapshots. The exact BLAST+ release, tasks, parameters,
+reporting limits, full output contracts, and biological thresholds remain
+subject to review. Search results are evidence about comparisons that were
+actually run, not identities assigned to candidates.
 
 ## 1. M8 scientific purpose
 
@@ -140,26 +144,31 @@ diff; existing results continue to name the original snapshot.
 
 ## 6. Search hierarchy
 
-The final methods and parameters require approval and software/benchmark
-evaluation. The design should be staged and panel-specific:
+The initial method baseline is local, pinned BLASTN, as selected by the
+reference-panel policy. Its exact release, tasks, parameters, reporting limits,
+and method-specific applicability rules require approval and
+software/benchmark evaluation. Any alternative aligner needs an explicit
+method identity and comparative validation. The design should be staged and
+panel-specific:
 
 1. **Validate and scope.** Verify candidate and snapshot manifests, alphabets,
    IDs, checksums, panel roles, holdout exclusions, generated database hashes,
    and complete index-build state. Record nucleotide molecule type as declared
    (`DNA`, `RNA`, or `unknown`); do not silently convert T/U.
-2. **Nucleotide local similarity.** Run a pinned BLASTn or equivalent local
-   nucleotide search separately against each approved panel. The method must
-   examine both orientations and support local/fragmented alignments. Record
-   exact program/task, executable or container identity, database build,
-   parameters, masking, reporting limits, and raw output. Use a short-query
-   aware mode where justified; do not apply one default scoring configuration
-   to every query length and panel without validation.
-3. **Short-query and sensitivity branches.** Where method support permits,
-   run explicitly declared short-query settings and low-complexity-masked and
-   unmasked branches. Preserve branch outcomes independently. Any limits on
-   reported target sequences, HSPs, or alignments must be recorded, and
-   truncation must be exposed rather than described as a complete competing-hit
-   set.
+2. **Nucleotide local similarity.** Run the pinned local BLASTN baseline
+   separately against each approved panel. The method must examine both
+   orientations and support local/fragmented alignments. Record exact
+   program/task, executable or container identity, database build, parameters,
+   masking, reporting limits, and raw output. Other nucleotide aligners require
+   an explicit method identity and comparative validation.
+3. **Short-query and sensitivity branches.** Where technically appropriate and
+   supported by validation, include an explicitly declared short-query mode
+   such as BLASTN `blastn-short`, and low-complexity-masked and unmasked
+   branches. Preserve branch outcomes independently. Do not apply one default
+   scoring configuration to every query length and panel without validation.
+   Any limits on reported target sequences, HSPs, or alignments must be
+   recorded, and truncation must be exposed rather than described as a complete
+   competing-hit set.
 4. **M9 boundary.** M8 performs nucleotide/reference comparisons only. It does
    not run translated nucleotide-to-protein searches, call ORFs, search protein
    or domain databases, run profile-HMMs, or interpret remote homology. M8 may
@@ -564,16 +573,18 @@ record.
 
 ## 19. Remaining design decisions requiring review
 
-1. **Panel approval:** which source releases, organism/taxon scope, accessions,
-   local technical-contaminant material, curation owners, taxonomy crosswalks,
-   and role subdivisions are appropriate for intended studies?
+1. **Panel instantiation:** which exact source releases, organism/taxon scope,
+   accessions, local technical-contaminant material, curation owners, and
+   taxonomy crosswalks are appropriate for intended studies under the
+   role-level framework in the reference-panel policy?
 2. **Licensing and distribution:** which snapshots may be redistributed,
    which require local construction, and how will per-record/vendor/repository
    terms, attribution, and local confidential materials be reviewed?
-3. **Search-method approval:** which nucleotide methods, tool versions, masks,
-   reporting limits, parameters, and method-specific
-   insufficient-information rules should be evaluated and predeclared? No
-   thresholds are selected here.
+3. **Search configuration:** the policy selects local BLASTN as the initial
+   baseline. Which exact BLAST+ release, tasks, masks, reporting limits,
+   parameters, and method-specific insufficient-information rules should be
+   evaluated and predeclared? Any alternative method requires comparative
+   validation. No biological thresholds are selected here.
 4. **Benchmark and leakage policy:** who will curate truth labels, define
    family/clade and study holdouts, audit close-relative exclusion, and set
    blinded M16 acceptance criteria?
@@ -582,9 +593,11 @@ record.
    M1–M7 contracts without changing their behavior?
 
 Milestone ownership, candidate eligibility principles, and the M8/M9/M12
-boundaries follow the current roadmap and approved architecture decisions.
-Reference panels, search methods, output contracts, thresholds, and benchmark
-policies remain proposals requiring review. This document does not implement
-M8/M9 or support biological classification.
+boundaries follow the current roadmap and approved architecture decisions. The
+role-level panel framework and initial local BLASTN baseline follow the
+reference-panel policy. Exact reference snapshots and terms, BLAST+ release
+and configuration, output contracts, biological thresholds, and benchmark
+policies remain subject to review. This document does not implement M8/M9 or
+support biological classification.
 
 M8 specification: READY FOR REVIEW
