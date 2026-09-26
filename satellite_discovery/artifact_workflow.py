@@ -20,7 +20,7 @@ from .virema_adapter import ViReMaDVGAdapter
 from .residual_evidence_adapter import ResidualEvidenceAdapter
 from . import (
     artifact_contracts, artifact_stage_handlers, dvg_evidence,
-    independent_recurrence, local_comparison,
+    independent_recurrence, local_comparison, m8_homology,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -188,6 +188,36 @@ def build_default_registry():
         ),
     )
     registry.register(
+        'm8_homology', None, m8_homology.run_stage,
+        version=m8_homology.STAGE_VERSION, dynamic_inputs=True,
+        config_validator=m8_homology.validate_config,
+        dependency_inspector=m8_homology.inspect_dependency,
+        input_contracts={
+            '*': (
+                'm8_candidate_sequence_set',
+                'm8_reference_snapshot_manifest',
+                'm8_reference_payload',
+                'm7_observation_table', 'm7_exact_recurrence_table',
+                'm7_independence_summary', 'm7_validation_report',
+                'm7_provenance_manifest',
+            ),
+        },
+        output_contracts={
+            'query_status.json': 'm8_query_status',
+            'matches.json': 'm8_match_evidence',
+            'summary.json': 'm8_summary',
+            'commands.json': 'm8_search_commands',
+            '*.tsv': 'm8_raw_blast_output',
+            '*.stdout.log': 'm8_raw_blast_output',
+            '*.stderr.log': 'm8_raw_blast_output',
+        },
+        description=(
+            'Compares checksum-bound M6 nucleotide candidates with one declared '
+            'external M8 snapshot using the pinned BLASTN profile; records '
+            'homology evidence without biological classification.'
+        ),
+    )
+    registry.register(
         'workflow_report', None, artifact_stage_handlers.workflow_report,
         version='1', dynamic_inputs=True,
         config_validator=artifact_stage_handlers.validate_workflow_report_config,
@@ -202,6 +232,9 @@ def build_default_registry():
             'reconstruction_evidence', 'm7_observation_table',
             'm7_exact_recurrence_table', 'm7_independence_summary',
             'm7_validation_report', 'm7_provenance_manifest',
+            'm8_candidate_sequence_set', 'm8_reference_snapshot_manifest',
+            'm8_raw_blast_output', 'm8_query_status', 'm8_match_evidence',
+            'm8_summary', 'm8_search_commands',
         )},
         output_contracts={'report.json': 'workflow_report_json', 'report.html': 'report'},
         description='Consolidates declared structured stage artifacts without interpretation.',
@@ -350,6 +383,65 @@ def validate(spec,registry=None):
                     raise ValueError(
                         'M7 workflow inputs must match the declared M6 artifact roles exactly'
                     )
+            if kind=='m8_homology':
+                required_m8 = {
+                    'candidate_sequence_set': 'm8_candidate_sequence_set',
+                    'reference_snapshot_manifest': 'm8_reference_snapshot_manifest',
+                }
+                optional_m7 = {
+                    'm7_observations': 'm7_observation_table',
+                    'm7_recurrence': 'm7_exact_recurrence_table',
+                    'm7_independence': 'm7_independence_summary',
+                    'm7_validation': 'm7_validation_report',
+                    'm7_provenance': 'm7_provenance_manifest',
+                }
+                payload_names = {
+                    name for name in stage['inputs']
+                    if name.startswith('reference_payload_')
+                }
+                if (
+                    not set(required_m8) <= set(stage['inputs'])
+                    or set(stage['inputs']) - set(required_m8)
+                    - set(optional_m7) - payload_names
+                ):
+                    raise ValueError(
+                        'M8 requires a typed candidate set, snapshot manifest, '
+                        'all declared payload files and only supported optional M7 inputs'
+                    )
+                exact_types = {
+                    **required_m8,
+                    **{
+                        name: expected_type for name, expected_type in optional_m7.items()
+                        if name in stage['inputs']
+                    },
+                    **{name: 'm8_reference_payload' for name in payload_names},
+                }
+                for input_name, required_type in exact_types.items():
+                    value = stage['inputs'][input_name]
+                    if isinstance(value, str):
+                        raise ValueError(
+                            f'M8 input {input_name!r} must declare its exact artifact_type'
+                        )
+                    if isinstance(value, dict) and set(value) == {'path', 'artifact_type'}:
+                        if value['artifact_type'] != required_type:
+                            raise ValueError(
+                                f'M8 input {input_name!r} must be {required_type!r}'
+                            )
+                    elif isinstance(value, dict) and set(value) == {'stage', 'artifact'}:
+                        producer = seen_stages[value['stage']]
+                        producer_definition = registry.get(producer['kind'])
+                        if producer['kind'] == 'external_module':
+                            producer_definition = (
+                                registry.get_module(producer['module']) or producer_definition
+                            )
+                        produced = _output_contract(producer_definition, value['artifact'])
+                        if required_type not in produced:
+                            raise ValueError(
+                                f'M8 input {input_name!r} requires {required_type!r}, '
+                                f'not {list(produced)}'
+                            )
+                    else:
+                        raise ValueError(f'M8 input {input_name!r} is not a typed input or stage handoff')
             if kind=='workflow_report' and not stage['inputs']:
                 raise ValueError('Consolidated report requires at least one declared upstream artifact')
         contracts=contract_definition.input_contracts or {}
@@ -1290,7 +1382,8 @@ def run(manifest,output,registry=None):
             if dependency is not None:
                 active['dependency_report']=dependency
                 result['dependency_versions'][stage['id']]=dependency
-                if dependency.get('status')!='available':
+                handles_missing = getattr(definition.handler, 'handles_dependency_missing', False)
+                if dependency.get('status')!='available' and not handles_missing:
                     reason='One or more required external executables are unavailable.'
                     result['failure']={
                         'stage_id':stage['id'],

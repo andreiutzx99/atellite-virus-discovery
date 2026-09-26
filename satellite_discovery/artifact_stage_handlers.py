@@ -359,8 +359,42 @@ def workflow_report(inputs, output, config):
                     'm7-observations-v1', 'm7-exact-recurrence-v1',
                     'm7-independence-summary-v1', 'm7-validation-report-v1',
                     'm7-recurrence-provenance-v1',
+                    'm8-query-status-v1', 'm8-match-evidence-v1',
+                    'm8-homology-summary-v1', 'm8-search-commands-v1',
                 }:
                     record['schema'] = value['schema']
+                if value.get('schema') == 'm8-match-evidence-v1':
+                    rows = value.get('matches', [])
+                    record['summary'] = {
+                        'match_count': len(rows) if isinstance(rows, list) else 0,
+                        'candidate_count': len({
+                            row.get('candidate_id') for row in rows
+                            if isinstance(row, dict) and row.get('candidate_id')
+                        }) if isinstance(rows, list) else 0,
+                        'panel_roles': sorted({
+                            row.get('panel_role') for row in rows
+                            if isinstance(row, dict) and row.get('panel_role')
+                        }) if isinstance(rows, list) else [],
+                        'evidence_is_linked_by': 'path and sha256',
+                    }
+                elif value.get('schema') == 'm8-query-status-v1':
+                    record['summary'] = {
+                        'aggregate_status': value.get('aggregate_status'),
+                        'candidate_availability_state': value.get(
+                            'candidate_availability_state'),
+                        'candidate_record_count': value.get('candidate_record_count'),
+                        'branch_status_counts': value.get('branch_status_counts', {}),
+                        'query_count': len(value.get('queries', []))
+                        if isinstance(value.get('queries'), list) else 0,
+                    }
+                elif value.get('schema') == 'm8-search-commands-v1':
+                    record['summary'] = {
+                        'profile_id': value.get('profile_id'),
+                        'branch_count': len(value.get('branches', []))
+                        if isinstance(value.get('branches'), list) else 0,
+                        'runtime': value.get('runtime'),
+                        'commands_are_linked_by': 'path and sha256',
+                    }
                 tables = value.get('tables', {})
                 if isinstance(tables, dict) and 'matches' in tables and not tables['matches']:
                     record['comparison_status'] = 'no match found under the configured comparison'
@@ -383,6 +417,16 @@ def workflow_report(inputs, output, config):
                for record in artifacts.values()):
             report['limitations'].append(
                 'No DVG evidence detected by a configured caller means only that this run reported no supported junctions under its settings; it does not establish that the sequence is not a DVG. An unavailable, failed, interrupted or invalid run draws no biological conclusion.'
+            )
+        if any(record.get('schema') in {
+                'm8-query-status-v1', 'm8-match-evidence-v1',
+                'm8-homology-summary-v1', 'm8-search-commands-v1',
+        } for record in artifacts.values()):
+            report['limitations'].append(
+                'M8 nucleotide alignments are descriptive homology evidence only. '
+                'A no-hit is scoped to the complete declared reference snapshot and '
+                'search profile and does not establish novelty, biological class, '
+                'function, causality or ranking.'
             )
         write_json(directory / 'report.json', report)
         sections = [
@@ -542,6 +586,15 @@ def workflow_report(inputs, output, config):
                     html.escape(str(summary.get('configuration_sha256', 'Not reported'))) +
                     '</code>; declared input artifacts: ' +
                     str(len(summary.get('input_artifacts', {}))) + '.</p>'
+                )
+            elif record.get('schema') in {
+                    'm8-query-status-v1', 'm8-match-evidence-v1',
+                    'm8-homology-summary-v1', 'm8-search-commands-v1'}:
+                sections.append(
+                    '<p>M8 output is linked by the artifact path and SHA-256 above; '
+                    'it is not a biological classification.</p><pre>' +
+                    html.escape(json.dumps(record.get('summary', {}), indent=2, sort_keys=True)) +
+                    '</pre>'
                 )
             elif 'summary' in record:
                 sections.append('<pre>' + html.escape(json.dumps(record['summary'], indent=2, sort_keys=True)) + '</pre>')

@@ -1,8 +1,8 @@
 # M8 — Reference and homology evidence specification
 
-**Status: READY FOR REVIEW — design only; M8 is not implemented.**
+**Status: M8 software path implemented; this specification remains the evidence boundary and review record.**
 
-This document specifies a proposed, provenance-bound comparison layer for
+This document specifies a provenance-bound comparison layer for
 typed candidate-sequence artifacts, retaining whatever upstream evidence state
 is available. The approved [roadmap](ROADMAP.md) assigns nucleotide/reference
 homology to M8, translated and protein evidence to M9, and read-origin and
@@ -10,10 +10,12 @@ technical-artifact review to M12. The milestone ownership and eligibility
 principles follow those decisions. The separate
 [M8 reference-panel policy](M8_REFERENCE_PANEL_APPROVAL.md) records source and
 acquisition recommendations and selects local, pinned BLASTN as the initial
-nucleotide-search baseline. It does not clear third-party redistribution or
-instantiate reference snapshots. The exact BLAST+ release, tasks, parameters,
-reporting limits, full output contracts, and biological thresholds remain
-subject to review. Search results are evidence about comparisons that were
+nucleotide-search baseline. The implementation pins its BLAST+ profile, uses
+versioned typed output contracts, and keeps masking branches separate. It does
+not clear third-party redistribution rights or supply reference payloads.
+Exact snapshot contents, source terms, and benchmark policy remain subject to
+review; no universal biological threshold is defined. Search results are
+evidence about comparisons that were
 actually run, not identities assigned to candidates.
 
 ## 1. M8 scientific purpose
@@ -605,10 +607,11 @@ record.
 
 Milestone ownership, candidate eligibility principles, and the M8/M9/M12
 boundaries follow the current roadmap and approved architecture decisions. The
-role-level panel framework and initial local BLASTN baseline follow the
-reference-panel policy. Exact reference snapshots and terms, BLAST+ release
-and configuration, output contracts, biological thresholds, and benchmark
-policies remain subject to review. This document does not implement M8/M9 or
-support biological classification.
+M8 software path implements the role-level panel framework, pinned local
+BLASTN baseline, and typed workflow outputs. Exact reference snapshots and
+source terms, redistribution rights, and benchmark policy remain subject to
+review. Implementation validation used synthetic inputs only; no candidate
+dataset was searched. M9 remains unimplemented, and M8 does not support
+biological classification.
 
-M8 specification: READY FOR REVIEW
+M8 specification: IMPLEMENTED SCOPE — READY FOR REVIEW

@@ -108,6 +108,7 @@ SEARCH_STATUSES = frozenset({
     "SEARCH_COMPLETED_MATCHES_REPORTED",
     "SEARCH_COMPLETED_NO_MATCH_WITHIN_SEARCHED_REFERENCES",
     "INSUFFICIENT_INFORMATION",
+    "CANDIDATE_SEQUENCE_UNAVAILABLE",
     "DEPENDENCY_UNAVAILABLE",
     "SEARCH_FAILED",
     "SEARCH_INTERRUPTED",
@@ -123,6 +124,7 @@ AGGREGATE_STATUSES = frozenset({"COMPLETE", "PARTIAL"})
 
 _UNAVAILABLE_CAUSES = {
     "dependency": "DEPENDENCY_UNAVAILABLE",
+    "candidate_sequence": "CANDIDATE_SEQUENCE_UNAVAILABLE",
     "invalid_candidate": "INPUT_INVALID",
     "invalid_panel": "REFERENCE_PANEL_INVALID",
     "incomplete_panel": "REFERENCE_PANEL_INCOMPLETE",
@@ -197,13 +199,16 @@ def normalize_panel_role(role, subrole=None, *, accession_version=None):
 
 
 def completed_search_status(*, hit_count, accounting_complete,
-                            candidate_valid=True, dependency_available=True,
+                            candidate_valid=True, candidate_available=True,
+                            dependency_available=True,
                             panel_state="VALID", execution_state="COMPLETED",
                             output_truncated=False,
                             method_informative=True):
     """Serialize one branch outcome without turning failure into a no-hit."""
     if not candidate_valid:
         return "INPUT_INVALID"
+    if not candidate_available:
+        return "CANDIDATE_SEQUENCE_UNAVAILABLE"
     if not dependency_available:
         return "DEPENDENCY_UNAVAILABLE"
     if panel_state not in {"VALID", "INVALID", "INCOMPLETE"}:

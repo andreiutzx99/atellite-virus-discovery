@@ -71,6 +71,13 @@ _CONTRACTS = {
     'm7_validation_report': 'Validation and completeness state for an M7 recurrence evaluation.',
     'm7_provenance_manifest': 'M7 input, configuration, implementation and output provenance.',
     'm8_candidate_sequence_set': 'Producer-declared M6 candidate sequences with byte availability and provenance.',
+    'm8_reference_snapshot_manifest': 'Canonical metadata and membership for an immutable external M8 reference snapshot.',
+    'm8_reference_payload': 'An externally stored M8 reference FASTA or BLAST index file, bound by the snapshot manifest.',
+    'm8_raw_blast_output': 'Raw bounded stdout, stderr or tabular BLAST output from an M8 search branch.',
+    'm8_query_status': 'Candidate-by-role-by-branch M8 execution status and completeness accounting.',
+    'm8_match_evidence': 'Normalized M8 nucleotide alignment evidence with reference and raw-output provenance.',
+    'm8_summary': 'M8 scope, per-role results, runtime identity and limitations.',
+    'm8_search_commands': 'Exact argv and runtime identity for every executed M8 search branch.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -253,7 +260,9 @@ def validate_artifact(path, artifact_type):
         raise ValueError('Artifacts must be regular files, not links or directories')
     path = path.resolve(strict=True)
     info = path.stat()
-    if info.st_size <= 0 and artifact_type not in {'blast_hit_table', 'dvg_raw_output'}:
+    if info.st_size <= 0 and artifact_type not in {
+        'blast_hit_table', 'dvg_raw_output', 'm8_raw_blast_output',
+    }:
         raise ValueError('Artifact is empty')
 
     details = {}
@@ -693,6 +702,13 @@ def validate_artifact(path, artifact_type):
     elif artifact_type == 'm8_candidate_sequence_set':
         from .m8_candidate_handoff import validate_candidate_sequence_set
         details.update(validate_candidate_sequence_set(path))
+    elif artifact_type in {
+        'm8_reference_snapshot_manifest', 'm8_reference_payload',
+        'm8_raw_blast_output', 'm8_query_status',
+        'm8_match_evidence', 'm8_summary', 'm8_search_commands',
+    }:
+        from .m8_homology import validate_m8_artifact
+        details.update(validate_m8_artifact(path, artifact_type))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')

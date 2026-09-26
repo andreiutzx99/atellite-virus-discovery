@@ -1,6 +1,6 @@
 # M8 Reference-Panel Policy
 
-**Status: READY FOR REVIEW — policy recommendations; M8 is not implemented.**
+**Status: READY FOR REVIEW — policy recommendations; M8 software path implemented; snapshot payload rights remain per-snapshot review items.**
 Provider pages were checked on 2026-09-26. This policy recommends panel roles,
 source products, acquisition routes, and implementation dispositions. It is
 not legal advice, a legal clearance, a complete biological catalogue, or
@@ -548,6 +548,8 @@ building a real snapshot.
   changed.
 - No full biological database, reference snapshot, index, or search tool was
   downloaded or installed; no searches were run.
-- No M9 work began. M8 remains planned and unimplemented.
+- No M9 work began. M8 software is implemented, but this policy does not
+  supply or download reference payloads or indexes and does not clear
+  redistribution rights.
 
 M8 reference-panel policy: READY FOR REVIEW
