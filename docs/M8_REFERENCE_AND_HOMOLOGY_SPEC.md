@@ -55,10 +55,13 @@ not source reads:
    sequence ID, exact sequence bytes and digest, declared molecule type, and
    any known completeness or observation links.
 2. Upstream evidence is carried with its source and status. M6 reconstruction
-   state and artifacts, M7 observation or recurrence links, source-read
-   checksums, and independence metadata may be included when available.
-   Recurrence is contextual evidence and is not a substitute for sequence
-   bytes or an upgrade to reconstruction support.
+   state and artifacts are linked from the required candidate-set handoff.
+   Optional M7 observation or recurrence artifacts are supplied separately as
+   typed M8 inputs and linked by explicit candidate/sequence identity. The M6
+   candidate-set artifact cannot embed M7 tables. Source-read checksums and
+   independence metadata may be included when available. Recurrence is
+   contextual evidence and is not a substitute for sequence bytes or an
+   upgrade to reconstruction support.
 3. Missing, weak, partial, unresolved, unsupported, or failed upstream evidence
    remains explicit in the M8 record. An unavailable upstream result is not
    treated as an empty candidate set or a completed search with no match.
@@ -321,6 +324,14 @@ Required execution/evidence outcomes:
   warning, but a scoped no-hit cannot be asserted for the intended panel.
 - `INPUT_INVALID` — malformed sequence, contradictory identity, failed
   checksum, or invalid handoff prevents a search.
+
+For the frozen Linux BLASTN profile, the software-only method-applicability
+check selects the task and compares query length with its explicit word size.
+A query shorter than that word size remains a valid, eligible candidate but
+its branch is `INSUFFICIENT_INFORMATION` with diagnostic reason
+`QUERY_SHORTER_THAN_WORD_SIZE`; it is not a completed no-hit. For the selected
+profile this applies only below 7 nt. The 50-nt task selector is not an
+eligibility cutoff, and any reported alignment remains evidence.
 
 `NOT_SELECTED`, `NOT_APPLICABLE`, `NOT_STARTED`, and `RUNNING` may be represented
 as planning/lifecycle values, not as successful search outcomes. A

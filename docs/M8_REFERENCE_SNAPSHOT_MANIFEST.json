@@ -1,0 +1,72 @@
+{
+  "schema": "m8-reference-snapshot-manifest-v1",
+  "snapshot_id": "m8-class-b-b3ce1c2a410a4ee05ded",
+  "retrieved_utc": "2026-09-26T13:48:22.440247+00:00",
+  "status": "TECHNICALLY_BUILT_EXTERNAL_UNTRACKED; not a redistributable bundle",
+  "provider": "NCBI Nucleotide / INSDC",
+  "database": "nuccore",
+  "request_endpoint": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+  "retrieval_method": "One GenBank flatfile request per exact accession.version; rettype=gb; retmode=text; tool=m8_implementation_gate.",
+  "normalization": "Sequence SHA-256 is over uppercase ASCII bases concatenated from GenBank ORIGIN after removing line digits and whitespace only. T/U is preserved; no trimming, reverse-complement, or other sequence transformation is performed.",
+  "taxonomy_provenance": "TaxID and organism are copied from each accession-pinned GenBank response. No external taxonomy dump/release was used for index construction.",
+  "rights": {
+    "redistribution_class": "B",
+    "provider_policy_urls": [
+      "https://www.ncbi.nlm.nih.gov/genbank/about",
+      "https://www.ebi.ac.uk/ena/browser/about/policies"
+    ],
+    "record_scan": "The retrieved accession records contained no explicit patent, copyright, restriction, license, or intellectual-property marker under the recorded keyword scan. This is not legal clearance.",
+    "analysis_disposition": "External accession-pinned retrieval for analysis only. Repository stores manifest, provenance, and hashes only.",
+    "redistribution_disposition": "NOT_APPROVED; do not bundle, rehost, or redistribute sequence payloads.",
+    "publication_supplements": "Not retrieved; no article or supplemental payload was used as a sequence source."
+  },
+  "payload_storage": "Sequence and GenBank payloads plus generated index are under /tmp/m8-final-gate/reference, outside the repository and source control. These temporary files are not deliverables and may be removed by environment cleanup.",
+  "panel_fasta": {
+    "external_filename": "panel.fasta",
+    "sha256": "4da298a28b744ac786a4a73130f2274e17dfe0a441a7b83522e55e1fbbed990f",
+    "size_bytes": 93406,
+    "record_count": 14,
+    "total_bases": 91910
+  },
+  "blast_toolchain": {
+    "release": "2.17.0+",
+    "archive_url": "https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.17.0/ncbi-blast-2.17.0+-x64-linux.tar.gz",
+    "archive_md5_from_ncbi_sidecar": "bdec166721de3b55f90a3badc83538e8",
+    "archive_sha256_recomputed_from_fresh_download": "3888112d8207831aa47371d93583c601f058f88b5db22dc782438b039a3a411b",
+    "blastn_sha256": "33b64bc67d3149cee2459b2f7766b363323df632cf12c099546de00aea9698b5",
+    "makeblastdb_sha256": "c1ffdcf6f15d1d8d75377cc9f37afa42bc9fa06678903bad77c2641e60778fce",
+    "makeblastdb_command": "makeblastdb -in <external panel.fasta> -dbtype nucl -parse_seqids -out <external database prefix> -title \"M8 approved accession-version panel\"",
+    "index_validation": "BLASTDB Version 5; blastdbcmd -info reported 14 sequences and 91,910 bases; blastdbcmd -entry all returned the same 14 accession.version IDs listed below.",
+    "database_search_performed": false,
+    "index_files_external": [
+      {"filename": "m8_class_b.ndb", "sha256": "6a22e3c39e2e24d379512d34d6f083d2989f84c1dbba4194bae5a33348a6908c", "size_bytes": 32768},
+      {"filename": "m8_class_b.nhr", "sha256": "c19af3a94cfaf7311c9d931163a2f154a9867c4d904899a90bbf7d0b88428ba5", "size_bytes": 820},
+      {"filename": "m8_class_b.nin", "sha256": "9c3a1e6c16d3f02fafd2809365fd0848067623db3b617d42c68157b9801a76ed", "size_bytes": 292},
+      {"filename": "m8_class_b.njs", "sha256": "d2c1b8792535fcc4c247fe8cf5676865872e5ef7a5f7dba123579ab8dc04bd4d", "size_bytes": 542},
+      {"filename": "m8_class_b.nog", "sha256": "08b24cd1ae69c4f7097cedf6017a81da6a943f5572e0c70119ea0d93c0d91121", "size_bytes": 88},
+      {"filename": "m8_class_b.nos", "sha256": "27ef84eab958c63285e322008b5fc089437661dd69d20413508f59f1a78392bb", "size_bytes": 282},
+      {"filename": "m8_class_b.not", "sha256": "c378a69441f4755abb6fdad7ebd5953359f07a680626489cbb9a09b8f099ebf5", "size_bytes": 176},
+      {"filename": "m8_class_b.nsq", "sha256": "dc0e7d24d60a5be3a765a9c28d77b72ad9c3bd7f3f08a737cb0113b37f66ab48", "size_bytes": 22995},
+      {"filename": "m8_class_b.ntf", "sha256": "67982e4d7b1490b09cce06e7c29175c6bd011cd542cfacb1a1c310084a50821a", "size_bytes": 16384},
+      {"filename": "m8_class_b.nto", "sha256": "ac8395ac8f34e542e185ffa412ed9fe4c0ae1bbce89a246b8acc3c127652d161", "size_bytes": 60}
+    ]
+  },
+  "records": [
+    {"accession_version": "NC_002602.2", "role": "satellite_subviral", "subrole": "satellite_rna", "curation_state": "APPROVED_INITIAL_REFERENCE", "source_study_ids": ["PMID:18627882"], "taxid": 12436, "source_organism": "Cucumber mosaic virus satellite RNA", "length": 336, "sequence_sha256": "3be57391af48ed37a0c785e2785b7d185de3c59ec5de8aba9a8d52019b0d6c8b", "source_response_sha256": "a5c61daa0efd5df82fbd0ad5389f98feb7eb8314c2046e22efa603bc0555a9eb"},
+    {"accession_version": "NC_003847.1", "role": "satellite_subviral", "subrole": "satellite_virus", "curation_state": "APPROVED_INITIAL_REFERENCE", "source_study_ids": ["PMID:18644571"], "taxid": 154834, "source_organism": "Panicum mosaic satellite virus", "length": 826, "sequence_sha256": "31daa9f4adbf1f37b612789f650a62bbb686b4706e28c859f866c1a023dcc8e4", "source_response_sha256": "75c799efe0bcfb0e3eb8fde3a36a247f5906c13b8628980265a47a33d4afb82e"},
+    {"accession_version": "V01468.1", "role": "satellite_subviral", "subrole": "satellite_virus", "curation_state": "APPROVED_INITIAL_REFERENCE", "source_study_ids": ["PMID:6260960", "PMID:427118"], "taxid": 3426007, "source_organism": "Albetovirus alphatabaci", "length": 1239, "sequence_sha256": "1a47635d3f83b7f57d5c0202e706317a75cf7913f67d439910917c737feeb627", "source_response_sha256": "8743a7bc49ab2f7e60ff9ea9931a8f052529b85f63380d5ed31d49eeade020d3"},
+    {"accession_version": "AJ298903.1", "role": "satellite_subviral", "subrole": "satellite_dna", "curation_state": "APPROVED_INITIAL_REFERENCE", "source_study_ids": ["PMID:11437658"], "taxid": 306025, "source_organism": "Cotton leaf curl Multan betasatellite", "length": 1349, "sequence_sha256": "0b10dccaf92a2d61bfd7e6a24502b05ff7c80635686b05fca1dc9a703513a75c", "source_response_sha256": "7c67308e5789277ccf01237f158541bb4d26006b6fa734007ea4cb1fa07848a7"},
+    {"accession_version": "NC_001653.2", "role": "related_non_satellite", "subrole": "deltavirus_context", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:3627276", "PMID:2374010"], "taxid": 12475, "source_organism": "Hepatitis delta virus", "length": 1682, "sequence_sha256": "6916905ec9ee5babc41e940fe4b15ae38c697b8df6399fd9351ac9760dff3bf6", "source_response_sha256": "0d2a45d3ff2c81220b54452a03c8800f376acc48fbb5db4e7d66d42801e2765a"},
+    {"accession_version": "NC_002030.1", "role": "related_non_satellite", "subrole": "viroid_context", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:643081"], "taxid": 12892, "source_organism": "Potato spindle tuber viroid", "length": 359, "sequence_sha256": "b1545c2c2253029c0d6dafa538a845ecadfbabbd598c6470a07de71c36b8f95d", "source_response_sha256": "6db23c8d64f7c7596ebd3e695c0ad305ac749320bf34666dda392922c4893918"},
+    {"accession_version": "NC_011132.1", "role": "related_non_satellite", "subrole": "virophage_context", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:18690211"], "taxid": 543939, "source_organism": "Sputnik virophage", "length": 18343, "sequence_sha256": "28c913ec0f1ad610f7b1470076aac0f0291127357b7fe64ad27745a8e848c029", "source_response_sha256": "e4e6de524b6058d2732f58f53ccee9d3caa1ef55ba8ab694398d90d1107ffc43"},
+    {"accession_version": "KU052222.1", "role": "related_non_satellite", "subrole": "proviral_context", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:27929021"], "taxid": 1932923, "source_organism": "Cafeteriavirus-dependent mavirus", "length": 40196, "sequence_sha256": "d777ec7dea3165267de041efff067b074edcf7ad33ed0e37ebd2f930f0bb695c", "source_response_sha256": "579f20cead87a7d7d95b1871e5eac96c6b4f8d3f15d05aa2ee9172a0844d8c31"},
+    {"accession_version": "KJ683044.1", "role": "related_non_satellite", "subrole": "polinton_like_context", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:39100687"], "taxid": 1612310, "source_organism": "Adoxophyes honmai entomopoxvirus 'L' virophage 1", "length": 11449, "sequence_sha256": "46f292cde83814d0c627d643a843a3a8a2d1034b2e930da2f8f60851f46c99ab", "source_response_sha256": "d9c9696fd1299f505c351206ecb62de710062d99e83a7abbeee0cc1f4f0290a8"},
+    {"accession_version": "NC_002598.1", "role": "virus_helper", "subrole": "declared_potential_helper", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:9454725"], "taxid": 40279, "source_organism": "Panicum mosaic virus", "length": 4326, "sequence_sha256": "d1571dcffe1b58c57c5985296555f2fc216e989b17537fc2e54b2eefc3064042", "source_response_sha256": "7e65fd5c6044db23bcd13428d0c4a04fea2f6224bfdfaf365f7737e8a4e13020"},
+    {"accession_version": "NC_002034.1", "role": "virus_helper", "subrole": "segmented_helper_genome", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:2732682"], "taxid": 12305, "source_organism": "cucumber mosaic cucumovirus", "length": 3357, "sequence_sha256": "ec66294fa342ecdcdc938976e181cf014825e6752bd56af589d1f927c7e48f11", "source_response_sha256": "1ff573bf7d4471385002680d743ee9fb2893c97f915f97118e4eccc5a259f612"},
+    {"accession_version": "NC_002035.1", "role": "virus_helper", "subrole": "segmented_helper_genome", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:3404113"], "taxid": 12305, "source_organism": "cucumber mosaic cucumovirus", "length": 3050, "sequence_sha256": "64f551ac0ed673b8d5e44118c52de02c15ceb409b895779bb79e05dee3884842", "source_response_sha256": "86d7ef5454f2f04167d226658e5a4234009151a1be5209c6c9ffde7d17e4bb3a"},
+    {"accession_version": "NC_001440.1", "role": "virus_helper", "subrole": "segmented_helper_genome", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:2230731"], "taxid": 12305, "source_organism": "cucumber mosaic cucumovirus", "length": 2216, "sequence_sha256": "417182a4fc520c55fedf101d31894a194bbd308fe81d7a8dba65c236e4119f5d", "source_response_sha256": "b92b45fca2e743047a02221503baeb252abe86f8f5a9e7107a270d9fa9a250f7"},
+    {"accession_version": "NC_003977.2", "role": "virus_helper", "subrole": "declared_potential_helper", "curation_state": "APPROVED_CONTEXT_REFERENCE", "source_study_ids": ["PMID:399327"], "taxid": 10407, "source_organism": "Hepatitis B virus", "length": 3182, "sequence_sha256": "d623f10d58d62a7550ebae0437858e92744e218e5a743c2dce31b24d4ac0a56f", "source_response_sha256": "fc029dde709c58f70647eeb8ee0f5194e849a49febca952b8bd429b6a22ba16f"}
+  ],
+  "snapshot_digest_algorithm": "SHA-256 over this manifest serialized as canonical JSON with sorted keys, compact separators, UTF-8; exclude snapshot_digest and snapshot_digest_algorithm.",
+  "snapshot_digest": "e7bbf885b628a7a43b8c5f495698a9428ba3172ee9bb482e74f10433a3999a18"
+}

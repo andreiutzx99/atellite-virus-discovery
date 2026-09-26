@@ -1096,3 +1096,24 @@ def run_stage(inputs, output, config):
         raise
     finally:
         stage_lock.release(lock, token)
+
+
+def _cache_implementation_identity():
+    """Exclude package-wide M8-only edits from M7 stage cache identity."""
+    files = {
+        "independent_recurrence.py": Path(__file__),
+        "sequence_catalogue.py": Path(sequence_catalogue.__file__),
+        "sequence_downloader.py": Path(sequence_downloader.__file__),
+        "stage_lock.py": Path(stage_lock.__file__),
+        "portable_paths.py": Path(__file__).with_name("portable_paths.py"),
+    }
+    return {
+        "stage": "m7-independent-recurrence",
+        "stage_version": STAGE_VERSION,
+        "implementation_sha256": {
+            name: checksum(path) for name, path in sorted(files.items())
+        },
+    }
+
+
+run_stage.cache_implementation_identity = _cache_implementation_identity
