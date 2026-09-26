@@ -111,7 +111,7 @@ class M8BlastAdapterTests(unittest.TestCase):
                     query, root / "panel", root, {"query_id": "q1", "query_length": 16},
                     {"r1": {}}, "dust_masked")
             self.assertEqual(result["status"], "SEARCH_INTERRUPTED")
-            self.assertEqual(result["raw_output"], str(output))
+            self.assertEqual(result["raw_output"], str(output.resolve()))
             with patch.object(adapter, "inspect_blast_runtime", return_value=runtime), \
                  patch.object(adapter.bounded_process, "run_captured", side_effect=ValueError("output exceeds stage byte budget")):
                 result = adapter.run_blast_branch(

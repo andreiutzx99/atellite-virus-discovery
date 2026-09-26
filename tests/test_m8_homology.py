@@ -159,7 +159,7 @@ class M8HomologyWorkflowTests(unittest.TestCase):
                               "run_blast_branch", side_effect=self._fake_branch):
                 registry = artifact_workflow.build_default_registry()
                 result = artifact_workflow.run(spec_path, root / "out", registry)
-            self.assertEqual(result, root / "out" / "report.html")
+            self.assertEqual(result, (root / "out" / "report.html").resolve())
             manifest = json.loads((root / "out" / "workflow.json").read_text())
             self.assertEqual(manifest["status"], "complete")
             stage_output = root / "out" / manifest["stages"][0]["output_path"]
