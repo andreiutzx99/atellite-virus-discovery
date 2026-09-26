@@ -27,17 +27,113 @@ jobs:
         with:
           python-version: '3.12'
       - run: "python -m pip install --only-binary=:all: pysam==0.24.1 matplotlib==3.10.1 numpy==2.2.6"
-      - run: sudo apt-get update && sudo apt-get install -y samtools ncbi-blast+ spades minimap2
+      # System BLAST remains for legacy optional-tool tests; M8 uses the verified archive below.
+      - run: sudo apt-get update && sudo apt-get install -y libgomp1 samtools ncbi-blast+ spades minimap2
+      - name: Provision verified NCBI BLAST+ 2.17.0+ runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_url="$(python -c 'from satellite_discovery.m8_blastn_profile import BLAST_ARCHIVE_URL; print(BLAST_ARCHIVE_URL)')"
+          archive="$RUNNER_TEMP/ncbi-blast-2.17.0+-x64-linux.tar.gz"
+          sidecar="$archive.md5"
+          install_dir="$RUNNER_TEMP/m8-blast-2.17.0+"
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
+            "$archive_url" --output "$archive"
+          curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
+            "$archive_url.md5" --output "$sidecar"
+          python - "$archive" "$sidecar" "$install_dir" "$GITHUB_ENV" <<'PY'
+          import hashlib
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+
+          from satellite_discovery import m8_blastn_profile as profile
+
+          archive, sidecar, install_dir, github_env = map(Path, sys.argv[1:])
+
+          def digest(path, algorithm):
+              hasher = hashlib.new(algorithm)
+              with path.open("rb") as stream:
+                  for block in iter(lambda: stream.read(1024 * 1024), b""):
+                      hasher.update(block)
+              return hasher.hexdigest()
+
+          sidecar_match = re.match(
+              r"^\s*([0-9a-fA-F]{32})\b", sidecar.read_text(encoding="ascii")
+          )
+          if not sidecar_match:
+              raise SystemExit("NCBI BLAST archive MD5 sidecar has an invalid format")
+          sidecar_md5 = sidecar_match.group(1).lower()
+          if sidecar_md5 != profile.BLAST_ARCHIVE_MD5:
+              raise SystemExit("NCBI BLAST archive MD5 sidecar does not match the approved pin")
+          archive_md5 = digest(archive, "md5")
+          archive_sha256 = digest(archive, "sha256")
+          if archive_md5 != profile.BLAST_ARCHIVE_MD5:
+              raise SystemExit("NCBI BLAST archive MD5 does not match the approved pin")
+          if archive_sha256 != profile.BLAST_ARCHIVE_SHA256:
+              raise SystemExit("NCBI BLAST archive SHA-256 does not match the approved pin")
+
+          install_dir.mkdir(parents=True, exist_ok=True)
+          subprocess.run(
+              [
+                  "tar",
+                  "-xzf",
+                  str(archive),
+                  "-C",
+                  str(install_dir),
+                  "--strip-components=1",
+              ],
+              check=True,
+          )
+          executables = {
+              "blastn": (install_dir / "bin" / "blastn", profile.BLASTN_BINARY_SHA256),
+              "makeblastdb": (
+                  install_dir / "bin" / "makeblastdb",
+                  profile.MAKEBLASTDB_BINARY_SHA256,
+              ),
+          }
+          paths = {}
+          for name, (path, expected_hash) in executables.items():
+              if not path.is_file():
+                  raise SystemExit(f"Verified archive is missing bin/{name}")
+              actual_hash = digest(path, "sha256")
+              if actual_hash != expected_hash:
+                  raise SystemExit(f"{name} SHA-256 does not match the approved pin")
+              version = subprocess.run(
+                  [str(path), "-version"],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout
+              if not re.search(r"\b2\.17\.0\+", version):
+                  raise SystemExit(f"{name} did not report the approved 2.17.0+ release")
+              paths[name] = path.resolve()
+              print(
+                  f"Verified {name}: {paths[name]} "
+                  f"({version.splitlines()[0]}) sha256={actual_hash}"
+              )
+
+          with github_env.open("a", encoding="utf-8") as stream:
+              stream.write(f"M8_BLASTN_EXECUTABLE={paths['blastn']}\n")
+              stream.write(f"M8_MAKEBLASTDB_EXECUTABLE={paths['makeblastdb']}\n")
+          print(f"Verified NCBI archive MD5: {archive_md5}")
+          print(f"Verified NCBI archive SHA-256: {archive_sha256}")
       - run: PYTHONPATH=. python scripts/check_minimap2_ci.py
       - run: python scripts/check_tadpole_ci.py
       - run: python scripts/check_spades_ci.py
       - run: python scripts/check_virema_ci.py
-      - name: Optional pinned BLASTN synthetic suite
-        if: ${{ vars.M8_BLASTN_EXECUTABLE != '' && vars.M8_MAKEBLASTDB_EXECUTABLE != '' }}
-        env:
-          BLASTN_EXECUTABLE: ${{ vars.M8_BLASTN_EXECUTABLE }}
-          MAKEBLASTDB_EXECUTABLE: ${{ vars.M8_MAKEBLASTDB_EXECUTABLE }}
-        run: python -m unittest tests.test_m8_blastn_synthetic -v
+      - name: M8 pinned BLASTN synthetic suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$M8_BLASTN_EXECUTABLE"
+          test -x "$M8_MAKEBLASTDB_EXECUTABLE"
+          printf 'M8 synthetic suite BLASTN: %s\n' "$M8_BLASTN_EXECUTABLE"
+          printf 'M8 synthetic suite makeblastdb: %s\n' "$M8_MAKEBLASTDB_EXECUTABLE"
+          BLASTN_EXECUTABLE="$M8_BLASTN_EXECUTABLE" \
+          MAKEBLASTDB_EXECUTABLE="$M8_MAKEBLASTDB_EXECUTABLE" \
+            python -m unittest tests.test_m8_blastn_synthetic -v
       - uses: actions/upload-artifact@v4
         if: always()
         with:
