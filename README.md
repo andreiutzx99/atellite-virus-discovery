@@ -6,16 +6,18 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M8 software provides
+sequencing-derived candidates. The implemented M1–M9 software provides
 provenance-aware acquisition and reference records, registered assembly,
-typed artifact workflows, optional caller-specific DVG evidence, and a
-reference-scoped residual-read and read-back stage, followed by exact recurrence
-reporting across declared M6 observations, plus scoped nucleotide homology
-against caller-supplied reference snapshots.
+typed artifact workflows, optional caller-specific DVG evidence,
+reference-scoped residual-read and read-back analysis, exact recurrence
+reporting, scoped nucleotide homology, and protein-level ORF and local BLASTP
+evidence.
 
-M1–M8 implement technical software stages. They do **not** demonstrate that
-the software discovers novel satellite viruses, classifies biological
-sequences, or establishes helper dependence. This is not yet an autonomous,
+M1–M9 implement technical software stages. M9 provides protein-level
+computational evidence only; it does **not** classify satellites, establish
+novelty or helper dependence, or prove expression or biological function. No
+biological candidate dataset or biological protein database was searched or
+bundled as part of the M9 implementation milestone. This is not an autonomous,
 biologically validated discovery pipeline.
 
 ## Scientific problem
@@ -46,7 +48,7 @@ do not validate this software's output or technical defaults. See
 - Project-specific defaults are technical settings, not biologically
   validated thresholds.
 
-## Implemented workflow — M1 to M8
+## Implemented workflow — M1 to M9
 
 | Milestone | Implemented software capability | Evidence boundary |
 | --- | --- | --- |
@@ -58,6 +60,7 @@ do not validate this software's output or technical defaults. See
 | M6 — Residual assembly support | Reference-scoped primary-mapping accounting, conservative residual triage, optional assembly, and separate read-back support. | Technical reconstruction support using the same eligible reads, not independent biological validation. |
 | M7 — Independent recurrence | Typed M6 handoffs and exact grouping of individually supported contigs, with declared sample/run/study categories and source-read checksum deduplication. | Exact recurrence within declared observations only; metadata labels are not verified, and recurrence is not biological validation. |
 | M8 — Candidate/reference nucleotide homology | Role-scoped BLASTN comparisons of typed candidate sequences against caller-supplied, versioned reference snapshots, with separate masking branches and explicit incomplete/unavailable/truncated states. | Scoped sequence-similarity evidence only; no classification, novelty, helper dependence, or source attribution. Reference payloads and indexes remain external. |
+| M9 — Translated and protein evidence | Deterministic six-frame ORF hypotheses under the approved table-1/ATG-only policy, preserving nested, overlapping, and partial hypotheses; ordinary local BLASTP against an explicitly supplied typed protein snapshot; typed no-ORF/no-hit/failure/incomplete states; provenance, integrity, and stage-scoped cache/reuse; synthetic/offline validation. | Protein-level computational evidence only; no satellite classification, novelty, helper dependence, expression, or biological function. No biological candidate dataset or protein database was searched for this milestone. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
@@ -99,7 +102,9 @@ sequencing reads and declared references
                   M8 scoped nucleotide homology on typed candidates
                     (optional M7 context; supplied references)
                                ↓
-                 planned evidence layers M9–M16
+                  M9 ORF/translation and local BLASTP evidence
+                                ↓
+                   planned evidence layers M10–M16
 ```
 
 In paired data, a primary mapping for either mate excludes the whole fragment
@@ -116,24 +121,22 @@ contig.
 | Technical evidence | That a declared software stage completed and met its input/output contract. | That its biological premise is true. |
 | Reconstruction support | That eligible source reads passed configured read-back criteria for a contig. | Independent replication, a real satellite genome, or biological validation. |
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
+| ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
 | Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M8 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M9 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M8: IMPLEMENTED** as scoped software milestones.
-- **M9–M16: PLANNED**, not implemented.
+- **M1–M9: IMPLEMENTED** as scoped software milestones.
+- **M10–M16: PLANNED**, not implemented.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
-M9–M16 are not started here. Do not treat the roadmap as evidence that a
-planned feature exists.
+M9 is limited to protein-level computational evidence; the planned M10–M16
+features are not implemented.
 
-### Planned evidence layers (M9–M16)
+### Planned evidence layers (M10–M16)
 
-- **M9 — Translated and protein evidence:** evaluate ORF hypotheses, translated
-  similarity, protein/domain and profile-HMM matches, and remote homology as
-  predictions, not demonstrated expression or function.
 - **M10 — Genome architecture and topology:** describe architecture, termini,
   completeness limits, and guarded topology signals; a computational signal is
   not confirmed circularity.
@@ -226,6 +229,12 @@ is distinct from the dependency-free matrix.
   sequences has not been benchmarked.
 - **DVG caller limits:** ViReMa reports caller-specific junction evidence;
   its zero-event state is scoped to a completed run and its settings.
+- **M9 protein evidence is not classification:** ORFs and BLASTP matches are
+  computational hypotheses scoped to the declared policy and protein snapshot.
+  No-ORF, no-hit, failed, and incomplete outcomes remain distinct; none
+  establishes satellite identity, novelty, helper dependence, expression, or
+  biological function. No biological candidate dataset or protein database
+  was searched for the M9 implementation milestone.
 - **No demonstrated helper dependence or validated satellite classification.**
 - **No established sensitivity, specificity, or false-positive rate for novel
   satellite discovery.**
