@@ -6,13 +6,14 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M7 software provides
+sequencing-derived candidates. The implemented M1–M8 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence, and a
 reference-scoped residual-read and read-back stage, followed by exact recurrence
-reporting across declared M6 observations.
+reporting across declared M6 observations, plus scoped nucleotide homology
+against caller-supplied reference snapshots.
 
-M1–M7 implement technical software stages. They do **not** demonstrate that
+M1–M8 implement technical software stages. They do **not** demonstrate that
 the software discovers novel satellite viruses, classifies biological
 sequences, or establishes helper dependence. This is not yet an autonomous,
 biologically validated discovery pipeline.
@@ -45,7 +46,7 @@ do not validate this software's output or technical defaults. See
 - Project-specific defaults are technical settings, not biologically
   validated thresholds.
 
-## Implemented workflow — M1 to M7
+## Implemented workflow — M1 to M8
 
 | Milestone | Implemented software capability | Evidence boundary |
 | --- | --- | --- |
@@ -56,13 +57,15 @@ do not validate this software's output or technical defaults. See
 | M5 — DVG evidence | Optional ViReMa integration that records supported caller-specific junction evidence and scoped outcomes. | Caller-specific evidence only; no DVG/non-DVG or satellite classification. |
 | M6 — Residual assembly support | Reference-scoped primary-mapping accounting, conservative residual triage, optional assembly, and separate read-back support. | Technical reconstruction support using the same eligible reads, not independent biological validation. |
 | M7 — Independent recurrence | Typed M6 handoffs and exact grouping of individually supported contigs, with declared sample/run/study categories and source-read checksum deduplication. | Exact recurrence within declared observations only; metadata labels are not verified, and recurrence is not biological validation. |
+| M8 — Candidate/reference nucleotide homology | Role-scoped BLASTN comparisons of typed candidate sequences against caller-supplied, versioned reference snapshots, with separate masking branches and explicit incomplete/unavailable/truncated states. | Scoped sequence-similarity evidence only; no classification, novelty, helper dependence, or source attribution. Reference payloads and indexes remain external. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
 [M4](docs/M4_INTEGRATED_WORKFLOW.md), [M5](docs/M5_DVG_EVIDENCE.md),
 [M6](docs/M6_RESIDUAL_ASSEMBLY_SUPPORT.md), and
-[M7](docs/M7_INDEPENDENT_RECURRENCE.md). The
-[M1–M6 scientific audit](docs/M1_M6_SCIENTIFIC_AUDIT.md) and
+[M7](docs/M7_INDEPENDENT_RECURRENCE.md), plus the
+[M8 reference and homology specification](docs/M8_REFERENCE_AND_HOMOLOGY_SPEC.md).
+The [M1–M6 scientific audit](docs/M1_M6_SCIENTIFIC_AUDIT.md) and
 [M6 workflow audit](docs/M6_AUDIT.md) explain the evidence limits.
 
 ## Pipeline architecture
@@ -93,7 +96,10 @@ sequencing reads and declared references
                               ↓
                  M7 exact recurrence over supported M6 contigs
                               ↓
-                 planned evidence layers M8–M16
+                  M8 scoped nucleotide homology on typed candidates
+                    (optional M7 context; supplied references)
+                               ↓
+                 planned evidence layers M9–M16
 ```
 
 In paired data, a primary mapping for either mate excludes the whole fragment
@@ -111,26 +117,20 @@ contig.
 | Reconstruction support | That eligible source reads passed configured read-back criteria for a contig. | Independent replication, a real satellite genome, or biological validation. |
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M7 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M8 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M7: IMPLEMENTED** as scoped software milestones.
-- **M8–M16: PLANNED**, not implemented by this consolidation.
+- **M1–M8: IMPLEMENTED** as scoped software milestones.
+- **M9–M16: PLANNED**, not implemented.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
-M8–M16 are not started here. Do not treat the roadmap as evidence that a
+M9–M16 are not started here. Do not treat the roadmap as evidence that a
 planned feature exists.
 
-### Planned evidence layers
+### Planned evidence layers (M9–M16)
 
-- **M8 — Candidate/reference nucleotide homology:** compare exact candidate
-  sequences with declared, role-separated reference panels. Competing matches
-  remain evidence, not classification; no-hit is limited to the searched
-  references and method. A valid candidate sequence is not gated on a minimum
-  upstream support category or arbitrary biological length; existing evidence
-  states remain visible and unchanged.
 - **M9 — Translated and protein evidence:** evaluate ORF hypotheses, translated
   similarity, protein/domain and profile-HMM matches, and remote homology as
   predictions, not demonstrated expression or function.
@@ -154,9 +154,10 @@ planned feature exists.
   validation.
 
 The [M8 homology specification](docs/M8_REFERENCE_AND_HOMOLOGY_SPEC.md) and
-[M8 benchmark fixture design](docs/M8_BENCHMARK_FIXTURE_DESIGN.md) are design
-documents, not implementations or approved biological thresholds. Historical
-proposals are linked from the [roadmap](docs/ROADMAP.md).
+[M8 benchmark fixture design](docs/M8_BENCHMARK_FIXTURE_DESIGN.md) document the
+software scope, synthetic validation, and evidence boundaries; they do not
+establish biological thresholds or biological validation. Historical proposals
+are linked from the [roadmap](docs/ROADMAP.md).
 
 ## Installation
 
