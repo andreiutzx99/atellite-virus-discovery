@@ -1,7 +1,7 @@
 # Milestone roadmap and evidence boundaries
 
-This is the current milestone register for the source tree after M7. It
-supersedes older roadmap snapshots where their status differs. M1–M7 are
+This is the current milestone register for the source tree after M8. It
+supersedes older roadmap snapshots where their status differs. M1–M8 are
 implemented as scoped software milestones; M9–M16 remain planned. A milestone
 marked implemented describes software behavior, not biological validation.
 
@@ -20,7 +20,7 @@ marked implemented describes software behavior, not biological validation.
 
 ## M9–M16 — planned, not implemented
 
-No M9–M16 functionality was started by the post-M7 consolidation.
+No M9–M16 functionality has been started.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
