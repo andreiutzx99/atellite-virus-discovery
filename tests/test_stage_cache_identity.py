@@ -96,7 +96,8 @@ class StageCacheIdentityTests(unittest.TestCase):
         registry_before = build_default_registry()
         registry_after = self._registry_with_m9_probe("m9-source-v2")
         with tempfile.TemporaryDirectory() as folder:
-            output = Path(folder)
+            # Match run() before checking resolved cached-output containment.
+            output = Path(folder).resolve()
             for kind in ("residual_evidence", "independent_recurrence", "m8_homology"):
                 cached = output / (kind + "-cached")
                 cached.mkdir()
