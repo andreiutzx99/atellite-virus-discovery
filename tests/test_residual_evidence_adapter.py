@@ -7,7 +7,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from satellite_discovery.external_tool import DependencyMissingError
-from satellite_discovery.artifact_workflow import build_default_registry
+from satellite_discovery.artifact_workflow import (
+    build_default_registry, run as run_artifact_workflow,
+    validate as validate_artifact_workflow,
+)
 from satellite_discovery.residual_evidence_adapter import ResidualEvidenceAdapter
 from satellite_discovery.artifact_stage_handlers import workflow_report
 from satellite_discovery.sequence_downloader import checksum
@@ -518,6 +521,410 @@ class ResidualEvidenceAdapterTests(unittest.TestCase):
                     {"read1": read, "reference": reference, "roles": roles,
                      "qc_manifest": qc, "dvg_evidence": dvg, "dvg_summary": summary},
                     root / "out", config,
+                )
+
+    def test_complete_m6_bundles_handoff_to_m7_through_workflow(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            sequence = "ACGT" * 25
+            near_match = sequence[:-1] + "A"
+            support_sequences = [sequence, near_match]
+            specification = {"schema": "artifact-workflow-v1", "stages": []}
+            observations = []
+            m7_inputs = {}
+
+            for index, sample_id in enumerate(
+                    ("sample-1", "sample-2", "sample-unsupported"), start=1):
+                input_dir = root / f"input-{index}"
+                input_dir.mkdir()
+                read, reference, roles, qc = self._inputs_for_sequences(
+                    input_dir, support_sequences,
+                )
+                read_records = "".join(
+                    f"@sample{index}_r{number}\n{read_sequence}\n+\n"
+                    f"{'I' * len(read_sequence)}\n"
+                    for number, read_sequence in enumerate(support_sequences, start=1)
+                )
+                _gzip(read, read_records)
+                qc_record = json.loads(qc.read_text(encoding="utf-8"))
+                qc_record["output_sha256"]["clean_single.fastq.gz"] = checksum(read)
+                qc.write_text(json.dumps(qc_record), encoding="utf-8")
+
+                stage_id = f"m6_{index}"
+                specification["stages"].append({
+                    "id": stage_id,
+                    "kind": "residual_evidence",
+                    "inputs": {
+                        "read1": {
+                            "path": str(read),
+                            "artifact_type": "qc_fastq",
+                        },
+                        "reference": {
+                            "path": str(reference),
+                            "artifact_type": "raw_fasta",
+                        },
+                        "roles": {
+                            "path": str(roles),
+                            "artifact_type": "reference_roles",
+                        },
+                        "qc_manifest": {
+                            "path": str(qc),
+                            "artifact_type": "qc_manifest",
+                        },
+                    },
+                    "config": {
+                        "sample_id": sample_id,
+                        "layout": "single-end",
+                        "triage": {"min_read_length": 50},
+                        "assembly_enabled": index < 3,
+                    },
+                })
+
+                evidence_input = f"evidence{index}"
+                residual_input = f"residual{index}"
+                observation = {
+                    "observation_id": f"obs{index}",
+                    "candidate_id": f"candidate{index}",
+                    "sample_id": sample_id,
+                    "sequencing_run_id": f"run-{index}" if index == 1 else None,
+                    "study_id": "study-1" if index == 1 else None,
+                    "source_artifact_id": f"source-{index}",
+                    "m6_state": "available",
+                    "molecule_type": "DNA",
+                    "evidence_input": evidence_input,
+                    "residual_manifest_input": residual_input,
+                }
+                m7_inputs[evidence_input] = {
+                    "stage": stage_id,
+                    "artifact": "reconstruction_evidence.json",
+                }
+                m7_inputs[residual_input] = {
+                    "stage": stage_id,
+                    "artifact": "residual_manifest.json",
+                }
+                if index < 3:
+                    contigs_input = f"contigs{index}"
+                    observation["contigs_input"] = contigs_input
+                    m7_inputs[contigs_input] = {
+                        "stage": stage_id,
+                        "artifact": "supported_contigs.fasta",
+                    }
+                observations.append(observation)
+
+            specification["stages"].append({
+                "id": "m7",
+                "kind": "independent_recurrence",
+                "inputs": m7_inputs,
+                "config": {
+                    "orientation_policy": "forward_only",
+                    "observations": observations,
+                },
+            })
+            spec_path = root / "workflow.json"
+            spec_path.write_text(json.dumps(specification), encoding="utf-8")
+
+            dependency = {
+                "status": "available",
+                "dependencies": [{
+                    "tool": "minimap2",
+                    "path": "/bin/minimap2",
+                    "version": "artificial",
+                    "sha256": "a" * 64,
+                }],
+                "assembly": {
+                    "status": "available",
+                    "dependencies": [{
+                        "tool": "artificial-assembler",
+                        "path": "/bin/assembler",
+                        "version": "1",
+                        "sha256": "b" * 64,
+                    }],
+                },
+            }
+
+            def support_mapper(_executable, _reference, reads, output, _config):
+                lines = gzip.decompress(Path(reads[0]).read_bytes()).decode(
+                    "ascii"
+                ).splitlines()
+                support_records = [
+                    (lines[offset][1:].split()[0], lines[offset + 1])
+                    for offset in range(0, len(lines), 4)
+                ]
+                self.assertEqual(len(support_records), 2)
+                with Path(output).open("w", encoding="ascii") as sam:
+                    sam.write("@HD\tVN:1.6\n@SQ\tSN:c\tLN:100\n")
+                    for query_id, read_sequence in support_records:
+                        mismatches = sum(
+                            left != right
+                            for left, right in zip(read_sequence, sequence)
+                        )
+                        sam.write(
+                            f"{query_id}\t0\tc\t1\t60\t100M\t*\t0\t0\t"
+                            f"{read_sequence}\t{'I' * len(read_sequence)}"
+                            f"\tNM:i:{mismatches}\n"
+                        )
+
+            with patch.object(
+                    ResidualEvidenceAdapter,
+                    "inspect_dependency_for_config",
+                    return_value=dependency,
+            ), patch(
+                    "satellite_discovery.external_tool.bounded_process.run_captured",
+                    side_effect=self._mock_primary_process(support_sequences),
+            ) as primary_mapper:
+                registry = build_default_registry()
+                residual_definition = registry.get("residual_evidence")
+                adapter = residual_definition.handler
+                assembly = FakeAssembly(sequence)
+                adapter.assembly_adapter = assembly
+
+                invalid = json.loads(json.dumps(specification))
+                invalid["stages"][-1]["inputs"]["contigs1"]["artifact"] = (
+                    "assembly/contigs.fasta"
+                )
+                with self.assertRaises(ValueError):
+                    validate_artifact_workflow(invalid, registry)
+                validate_artifact_workflow(specification, registry)
+
+                workflow_output = root / "workflow-output"
+                with patch.object(
+                        assembly, "execute", wraps=assembly.execute,
+                ) as assembly_calls, patch.object(
+                        adapter, "_run_mapper", side_effect=support_mapper,
+                ) as support_calls:
+                    run_artifact_workflow(spec_path, workflow_output, registry)
+                    first_report = json.loads(
+                        (workflow_output / "workflow.json").read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    self.assertEqual(first_report["status"], "complete")
+                    first_stages = {
+                        row["id"]: row for row in first_report["stages"]
+                    }
+                    self.assertEqual(
+                        [first_stages[f"m6_{index}"]["status"]
+                         for index in (1, 2, 3)],
+                        ["complete", "complete", "complete"],
+                    )
+                    self.assertEqual(first_stages["m7"]["status"], "complete")
+                    self.assertEqual(primary_mapper.call_count, 3)
+                    self.assertEqual(support_calls.call_count, 2)
+                    self.assertEqual(assembly_calls.call_count, 2)
+
+                    m6_outputs = {}
+                    for index in (1, 2, 3):
+                        stage = first_stages[f"m6_{index}"]
+                        stage_dir = workflow_output / stage["output_path"]
+                        m6_outputs[index] = stage_dir
+                        m6_manifest = json.loads(
+                            (stage_dir / "manifest.json").read_text(
+                                encoding="utf-8"
+                            )
+                        )
+                        self.assertEqual(m6_manifest["status"], "complete")
+                        for name, digest in m6_manifest["output_sha256"].items():
+                            artifact = stage_dir / name
+                            self.assertTrue(artifact.is_file(), name)
+                            self.assertEqual(checksum(artifact), digest, name)
+                        self.assertTrue(
+                            (stage_dir / "reconstruction_evidence.json").is_file()
+                        )
+                        self.assertTrue(
+                            (stage_dir / "residual_manifest.json").is_file()
+                        )
+                        if index < 3:
+                            self.assertTrue(
+                                (stage_dir / "supported_contigs.fasta").is_file()
+                            )
+                        else:
+                            self.assertFalse(
+                                (stage_dir / "supported_contigs.fasta").exists()
+                            )
+
+                    m7_dir = workflow_output / first_stages["m7"]["output_path"]
+                    m7_input_types = {
+                        item["artifact_type"]
+                        for item in first_stages["m7"]["inputs"].values()
+                    }
+                    self.assertEqual(m7_input_types, {
+                        "canonical_contig_fasta",
+                        "reconstruction_evidence",
+                        "residual_read_manifest",
+                    })
+                    observation_data = json.loads(
+                        (m7_dir / "observations.json").read_text(encoding="utf-8")
+                    )
+                    observation_rows = {
+                        row["observation_id"]: row
+                        for row in observation_data["observations"]
+                    }
+                    first = observation_rows["obs1"]
+                    second = observation_rows["obs2"]
+                    unsupported = observation_rows["obs3"]
+
+                    self.assertEqual(first["m6_status"], "READ_SUPPORTED_ASSEMBLY")
+                    self.assertEqual(first["sample_id"], "sample-1")
+                    self.assertEqual(first["sequencing_run_id"], "run-1")
+                    self.assertEqual(first["study_id"], "study-1")
+                    self.assertEqual(
+                        first["contigs"][0]["sequence_sha256"],
+                        hashlib.sha256(sequence.encode("ascii")).hexdigest(),
+                    )
+                    first_manifest = m6_outputs[1] / "manifest.json"
+                    first_residual = json.loads(
+                        (m6_outputs[1] / "residual_manifest.json").read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    self.assertEqual(
+                        first["upstream_manifest_sha256"], checksum(first_manifest)
+                    )
+                    self.assertEqual(
+                        first["source_read_sha256"],
+                        {
+                            role: item["sha256"]
+                            for role, item in first_residual["source_reads"].items()
+                        },
+                    )
+                    for input_name, filename in (
+                            ("evidence1", "reconstruction_evidence.json"),
+                            ("residual1", "residual_manifest.json"),
+                            ("contigs1", "supported_contigs.fasta")):
+                        self.assertEqual(
+                            first["source_artifacts"][input_name]["sha256"],
+                            checksum(m6_outputs[1] / filename),
+                        )
+
+                    self.assertEqual(second["sample_id"], "sample-2")
+                    self.assertIsNone(second["sequencing_run_id"])
+                    self.assertIsNone(second["study_id"])
+                    self.assertIn("sequencing_run_id", second["metadata_missing"])
+                    self.assertIn("study_id", second["metadata_missing"])
+                    self.assertNotEqual(
+                        first["source_dataset_fingerprint"],
+                        second["source_dataset_fingerprint"],
+                    )
+                    self.assertNotEqual(
+                        first["source_read_sha256"]["read1"],
+                        second["source_read_sha256"]["read1"],
+                    )
+
+                    self.assertEqual(
+                        unsupported["m6_status"], "ASSEMBLY_NOT_ATTEMPTED"
+                    )
+                    self.assertEqual(unsupported["contigs"], [])
+                    self.assertIn("study_id", unsupported["metadata_missing"])
+                    recurrence = json.loads(
+                        (m7_dir / "exact_recurrence.json").read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    self.assertEqual(observation_data["sequence_observation_count"], 2)
+                    self.assertEqual(len(recurrence["groups"]), 1)
+                    group = recurrence["groups"][0]
+                    self.assertEqual(group["sequence_observation_count"], 2)
+                    self.assertEqual(group["source_dataset_count"], 2)
+                    self.assertEqual(
+                        group["recurrence_categories"],
+                        ["RECURRENT_ACROSS_SAMPLES"],
+                    )
+                    recurrence_before_reuse = (
+                        m7_dir / "exact_recurrence.json"
+                    ).read_bytes()
+                    m7_manifest_before_reuse = json.loads(
+                        (m7_dir / "manifest.json").read_text(encoding="utf-8")
+                    )
+
+                    run_artifact_workflow(spec_path, workflow_output, registry)
+                    reused_report = json.loads(
+                        (workflow_output / "workflow.json").read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    reused_stages = {
+                        row["id"]: row for row in reused_report["stages"]
+                    }
+                    self.assertTrue(all(
+                        reused_stages[f"m6_{index}"]["execution"]
+                        == "verified_reuse"
+                        for index in (1, 2, 3)
+                    ))
+                    self.assertEqual(
+                        reused_stages["m7"]["execution"], "verified_reuse"
+                    )
+                    self.assertEqual(
+                        (m7_dir / "exact_recurrence.json").read_bytes(),
+                        recurrence_before_reuse,
+                    )
+                    self.assertEqual(
+                        json.loads(
+                            (m7_dir / "manifest.json").read_text(encoding="utf-8")
+                        )["output_sha256"],
+                        m7_manifest_before_reuse["output_sha256"],
+                    )
+                    self.assertEqual(primary_mapper.call_count, 3)
+                    self.assertEqual(support_calls.call_count, 2)
+                    self.assertEqual(assembly_calls.call_count, 2)
+
+                corrupted = m6_outputs[1] / "supported_contigs.fasta"
+                original_fasta = corrupted.read_bytes()
+                tampered_sequence = sequence[:-1] + (
+                    "A" if sequence[-1] != "A" else "C"
+                )
+                corrupted.write_text(
+                    f">c\n{tampered_sequence}\n", encoding="ascii"
+                )
+                direct_inputs = {
+                    "evidence1": {
+                        "path": str(m6_outputs[1] / "reconstruction_evidence.json"),
+                        "artifact_type": "reconstruction_evidence",
+                    },
+                    "residual1": {
+                        "path": str(m6_outputs[1] / "residual_manifest.json"),
+                        "artifact_type": "residual_read_manifest",
+                    },
+                    "contigs1": {
+                        "path": str(corrupted),
+                        "artifact_type": "canonical_contig_fasta",
+                    },
+                }
+                corruption_spec = {
+                    "schema": "artifact-workflow-v1",
+                    "stages": [{
+                        "id": "m7_corruption_check",
+                        "kind": "independent_recurrence",
+                        "inputs": direct_inputs,
+                        "config": {
+                            "orientation_policy": "forward_only",
+                            "observations": [observations[0]],
+                        },
+                    }],
+                }
+                corruption_path = root / "corruption-workflow.json"
+                corruption_path.write_text(
+                    json.dumps(corruption_spec), encoding="utf-8"
+                )
+                corruption_output = root / "corruption-output"
+                try:
+                    with self.assertRaisesRegex(
+                            ValueError,
+                            "not bound to its adjacent stage manifest",
+                    ):
+                        run_artifact_workflow(
+                            corruption_path, corruption_output, registry
+                        )
+                finally:
+                    corrupted.write_bytes(original_fasta)
+                corruption_report = json.loads(
+                    (corruption_output / "workflow.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(corruption_report["status"], "failed")
+                self.assertIn(
+                    "not bound to its adjacent stage manifest",
+                    corruption_report["failure"]["error"],
                 )
 
 
