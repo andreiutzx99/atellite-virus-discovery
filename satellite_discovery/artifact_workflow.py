@@ -593,6 +593,35 @@ def _resolve_stage_input(manifest,output,result,stage,definition,key,value,regis
     return path,descriptor
 
 
+WORKFLOW_CACHE_SEMANTICS_VERSION = '1'
+
+
+def _cache_contract_mapping(contracts):
+    normalized={}
+    for name,value in sorted((contracts or {}).items()):
+        if isinstance(value,(set,frozenset)):
+            value=sorted(value)
+        elif isinstance(value,(tuple,list)):
+            value=list(value)
+        normalized[name]=value
+    return normalized
+
+
+def _stage_cache_registration_identity(definition):
+    """Describe one stage registration, not the complete workflow registry."""
+    return {
+        'kind':definition.kind,
+        'version':definition.version,
+        'input_fields':sorted(definition.input_fields or ()),
+        'optional_input_fields':sorted(definition.optional_input_fields),
+        'dynamic_inputs':definition.dynamic_inputs,
+        'external_tool':definition.external_tool,
+        'module_name':definition.module_name,
+        'input_contracts':_cache_contract_mapping(definition.input_contracts),
+        'output_contracts':_cache_contract_mapping(definition.output_contracts),
+    }
+
+
 def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependency):
     scoped_identity=getattr(definition.handler,'cache_implementation_identity',None)
     identity={
@@ -610,6 +639,9 @@ def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependenc
         'dependency':dependency,
     }
     if callable(scoped_identity):
+        identity['key_schema']='artifact-stage-cache-v2'
+        identity['workflow_cache_semantics_version']=WORKFLOW_CACHE_SEMANTICS_VERSION
+        identity['stage_registration']=_stage_cache_registration_identity(definition)
         identity['implementation']=scoped_identity()
     return hashlib.sha256(
         json.dumps(identity,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')

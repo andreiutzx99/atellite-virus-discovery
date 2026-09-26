@@ -18,6 +18,7 @@ from .sequence_downloader import checksum
 
 SCHEMA = 'artifact-contract-v1'
 CONTRACT_VERSION = '1'
+VALIDATOR_SEMANTIC_VERSION = '1'
 
 # The names are stable identifiers used by the trusted workflow registry.
 _CONTRACTS = {
@@ -81,6 +82,34 @@ _CONTRACTS = {
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
+_CONTRACT_SEMANTIC_VERSIONS = {}
+
+
+def semantic_identity(artifact_types):
+    """Return only the shared validator and named contract semantics in use.
+
+    Increment VALIDATOR_SEMANTIC_VERSION when common validation behavior
+    changes. For an individual contract, increment its entry in
+    _CONTRACT_SEMANTIC_VERSIONS. Adding an unrelated contract does not alter
+    the identity of existing stages.
+    """
+    if isinstance(artifact_types, str):
+        artifact_types = (artifact_types,)
+    try:
+        names = sorted(set(artifact_types))
+    except TypeError as error:
+        raise ValueError('Artifact contract types must be an iterable of names') from error
+    if not names or any(not known_contract(name) for name in names):
+        raise ValueError('Artifact contract identity contains an unknown or empty type set')
+    return {
+        'schema': 'artifact-contract-semantic-identity-v1',
+        'validator_semantic_version': VALIDATOR_SEMANTIC_VERSION,
+        'contract_schema_version': CONTRACT_VERSION,
+        'contracts': {
+            name: _CONTRACT_SEMANTIC_VERSIONS.get(name, CONTRACT_VERSION)
+            for name in names
+        },
+    }
 
 
 def known_contract(name):

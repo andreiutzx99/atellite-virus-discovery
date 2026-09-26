@@ -688,18 +688,24 @@ def _build_exact_groups(sequence_rows, orientation_policy):
     return groups
 
 
+def _artifact_contract_semantics():
+    return artifact_contracts.semantic_identity(
+        set(INPUT_TYPES.values()) | set(OUTPUT_CONTRACTS.values()))
+
+
 def _implementation_identity():
     files = {
         "independent_recurrence.py": Path(__file__),
-        "artifact_contracts.py": Path(artifact_contracts.__file__),
         "sequence_catalogue.py": Path(sequence_catalogue.__file__),
         "sequence_downloader.py": Path(sequence_downloader.__file__),
         "stage_lock.py": Path(stage_lock.__file__),
         "portable_paths.py": Path(__file__).with_name("portable_paths.py"),
     }
     return {
+        "identity_schema": "m7-implementation-identity-v2",
         "stage_version": STAGE_VERSION,
         "algorithm": "m7-exact-sequence-recurrence-v1",
+        "artifact_contract_semantics": _artifact_contract_semantics(),
         "source_sha256": {
             name: checksum(path) for name, path in sorted(files.items())
         },
@@ -986,7 +992,7 @@ def _produce(paths, output, config, input_types):
 def _stage_identity(config, inputs):
     implementation = _implementation_identity()
     return {
-        "schema": "m7-stage-identity-v1",
+        "schema": "m7-stage-identity-v2",
         "stage_version": STAGE_VERSION,
         "configuration": config,
         "inputs": {
@@ -1108,8 +1114,10 @@ def _cache_implementation_identity():
         "portable_paths.py": Path(__file__).with_name("portable_paths.py"),
     }
     return {
+        "identity_schema": "m7-cache-implementation-v2",
         "stage": "m7-independent-recurrence",
         "stage_version": STAGE_VERSION,
+        "artifact_contract_semantics": _artifact_contract_semantics(),
         "implementation_sha256": {
             name: checksum(path) for name, path in sorted(files.items())
         },
