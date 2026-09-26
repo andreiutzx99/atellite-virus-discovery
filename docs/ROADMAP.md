@@ -2,10 +2,10 @@
 
 This is the current milestone register for the source tree after M7. It
 supersedes older roadmap snapshots where their status differs. M1–M7 are
-implemented as scoped software milestones; M8–M16 remain planned. A milestone
+implemented as scoped software milestones; M9–M16 remain planned. A milestone
 marked implemented describes software behavior, not biological validation.
 
-## M1–M7 — implemented
+## M1–M8 — implemented
 
 | Milestone | Status | Implemented evidence layer | Boundary |
 | --- | --- | --- | --- |
@@ -16,14 +16,14 @@ marked implemented describes software behavior, not biological validation.
 | M5 — DVG evidence | **IMPLEMENTED** | Optional ViReMa caller-specific junction parsing, completion/accounting checks, scoped statuses, and provenance. | A zero-event status is not evidence that a sample or sequence is biologically non-DVG. |
 | M6 — Residual assembly support | **IMPLEMENTED** | Reference-scoped primary-mapping accounting, residual triage, optional assembly, and separate read-back alignment. | Read-back uses the same eligible reads as assembly; results are technical and run-scoped. |
 | M7 — Independent recurrence | **IMPLEMENTED** | Typed M6 evidence handoff and exact recurrence groups over individually read-supported contigs; declared source-read checksums and sample/run/study metadata remain visible. | Exact recurrence only; declared independence metadata is unverified, and there is no pooling, co-assembly, related-sequence clustering, or biological classification. |
+| M8 — Candidate/reference nucleotide homology | **IMPLEMENTED (SOFTWARE)** | Typed candidate and snapshot inputs, role-scoped local BLASTN evidence, separate masking branches, raw outputs, and explicit incomplete/unavailable/truncated states; validated with synthetic fixtures. | Reference payloads and indexes are caller-supplied and remain external. No candidate dataset was searched during implementation. Similarity is not identity or classification; no-hit is scoped to the completed snapshot and method. |
 
-## M8–M16 — planned, not implemented
+## M9–M16 — planned, not implemented
 
-No M8–M16 functionality was started by the post-M7 consolidation.
+No M9–M16 functionality was started by the post-M7 consolidation.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
-| M8 — Candidate/reference nucleotide homology | **PLANNED** | What nucleotide-level relationships or competing reference explanations are supported for a typed candidate sequence? | Use frozen, role-separated panels and retain competing evidence. Similarity is not identity or classification; no-hit is scoped to the searched snapshot and method. |
 | M9 — Translated and protein evidence | **PLANNED** | What ORF hypotheses, translated similarities, protein/domain/profile-HMM matches, or remote-homology leads are supported? | Record methods and assumptions. Predictions and model matches are not expression, function, or biological classification. |
 | M10 — Genome architecture and topology | **PLANNED** | What architecture, termini, completeness limits, and topology signals can be described? | Preserve alternative explanations and uncertainty. Computational topology signals do not confirm circularity or a complete genome. |
 | M11 — RNA structure and ribozyme evidence | **PLANNED** | What RNA folds, structural models, or ribozyme-family similarities are predicted? | Predictions and model matches are hypotheses, not evidence of catalytic function or activity. |
