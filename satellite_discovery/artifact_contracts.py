@@ -70,6 +70,7 @@ _CONTRACTS = {
     'm7_independence_summary': 'Descriptive recurrence and metadata-based independence summaries.',
     'm7_validation_report': 'Validation and completeness state for an M7 recurrence evaluation.',
     'm7_provenance_manifest': 'M7 input, configuration, implementation and output provenance.',
+    'm8_candidate_sequence_set': 'Producer-declared M6 candidate sequences with byte availability and provenance.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -689,6 +690,9 @@ def validate_artifact(path, artifact_type):
         rows = _csv_rows(path, ('catalogue_dir', 'sample_id', 'study_id', 'condition',
                                 'sample_type', 'library_molecule'))
         details['record_count'] = len(rows)
+    elif artifact_type == 'm8_candidate_sequence_set':
+        from .m8_candidate_handoff import validate_candidate_sequence_set
+        details.update(validate_candidate_sequence_set(path))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')

@@ -13,10 +13,12 @@ import math
 from pathlib import Path
 import re
 import shutil
+from urllib.parse import quote
 
 from . import artifact_contracts, bounded_process, residual_reads, read_support
 from .assembly_adapters import AssemblyWorkflowAdapter
 from .sequence_catalogue import read_fasta
+from .m8_candidate_handoff import fasta_record_metadata
 from .external_tool import (
     DependencyMissingError, ExternalToolAdapter, ExternalToolExitError,
 )
@@ -41,6 +43,7 @@ _ROOT_OUTPUTS = (
     "unresolved_read1.fastq.gz", "unresolved_read2.fastq.gz",
     "read_triage.csv", "support_alignments.sam", "read_support.csv",
     "read_support.json", "residual_manifest.json", "reconstruction_evidence.json",
+    "candidate_sequence_set.json",
 )
 
 
@@ -83,7 +86,7 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
     kind = "residual_evidence"
     module_name = "residual_evidence"
     adapter_name = "minimap2-residual-evidence"
-    adapter_version = "1.0"
+    adapter_version = "1.1"
     tool_name = "minimap2 short-read residual screening"
     input_fields = frozenset({"read1", "reference", "roles", "qc_manifest"})
     optional_input_fields = frozenset({"read2", "dvg_evidence", "dvg_summary"})
@@ -95,7 +98,8 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
     }
     output_contracts = {
         name: (
-            "residual_read_manifest" if name == "residual_manifest.json"
+            "m8_candidate_sequence_set" if name == "candidate_sequence_set.json"
+            else "residual_read_manifest" if name == "residual_manifest.json"
             else "reconstruction_evidence" if name == "reconstruction_evidence.json"
             else "read_alignment_sam" if name in {"reference_screen.sam", "support_alignments.sam"}
             else "residual_fastq" if name.startswith("residual_")
@@ -112,6 +116,7 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
         for name in _ROOT_OUTPUTS
     }
     output_contracts["supported_contigs.fasta"] = "canonical_contig_fasta"
+    output_contracts["candidate_sequences.fasta"] = "canonical_contig_fasta"
 
     def __init__(self, *, assembly_adapter=None, timeout=180,
                  max_bytes=400_000_000):
@@ -266,6 +271,24 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
         identity["optional_assembler_dependency"] = dependency.get("assembly")
         return identity
 
+    def cache_implementation_identity(self):
+        """Keep M6 reuse scoped to code that can change its own artifacts."""
+        source_files = (
+            "residual_evidence_adapter.py", "residual_reads.py",
+            "read_support.py", "quality_control.py", "artifact_contracts.py",
+            "sequence_catalogue.py", "external_tool.py", "bounded_process.py",
+            "assembly_adapters.py",
+            "m8_candidate_handoff.py",
+        )
+        return {
+            "stage": "m6-residual-evidence",
+            "adapter_version": self.adapter_version,
+            "implementation_sha256": {
+                name: checksum(Path(__file__).with_name(name))
+                for name in source_files
+            },
+        }
+
     def _run_mapper(self, executable, reference, reads, output, config):
         command = [executable, "-a", "-x", "sr", "--secondary=no", "-t",
                    str(config["threads"]), "-o", str(output), str(reference),
@@ -327,6 +350,11 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
         }
         status = "ASSEMBLY_NOT_ATTEMPTED"
         assembly_info = {}
+        candidate_record_metadata = []
+        candidate_source_path = None
+        candidate_source_identity = None
+        candidate_unavailable_reason = "ASSEMBLY_NOT_ATTEMPTED"
+        candidate_availability_state = "UPSTREAM_UNAVAILABLE"
         if config["assembly_enabled"] and eligible_ids:
             assembly_dir = output / "assembly"
             assembly_inputs = {"read1": work / "triage" / "eligible_read1.fastq.gz"}
@@ -338,15 +366,24 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
                     context={"stage_id": manifest.get("stage_id")})
             except DependencyMissingError:
                 status = "DEPENDENCY_UNAVAILABLE"
+                candidate_unavailable_reason = "DEPENDENCY_UNAVAILABLE"
             except ExternalToolExitError:
                 status = "EXECUTION_FAILED"
+                candidate_unavailable_reason = "EXECUTION_FAILED"
             except (KeyboardInterrupt, SystemExit):
                 raise
             except (OSError, ValueError):
                 status = "INVALID_OUTPUT"
+                candidate_availability_state = "INVALID_OUTPUT"
+                candidate_unavailable_reason = "INVALID_ASSEMBLY_OUTPUT"
             else:
                 contigs = assembly_dir / "contigs.fasta"
                 assembly_manifest = assembly_dir / "assembly_manifest.json"
+                if contigs.is_file() and not contigs.is_symlink():
+                    candidate_source_identity = {
+                        "path": "assembly/contigs.fasta",
+                        "sha256": _digest_file(contigs),
+                    }
                 assembly_info = {
                     "assembler": config["assembler"], "assembly_path": "assembly/",
                     "manifest_sha256": _digest_file(assembly_manifest)
@@ -365,35 +402,58 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
                         })
                     except (OSError, ValueError):
                         assembly_info["version"] = None
-                normalized = residual_reads.prepare_normalized_fastqs(
-                    inputs["read1"], inputs.get("read2"), work / "support-normalized",
-                    include_fragment_ids=triage["eligible_fragment_ids"])
-                support_reads = [normalized["read1"]]
-                if paired:
-                    support_reads.append(normalized["read2"])
-                support_metadata = {
-                    key: value for key, value in triage["read_metadata"].items()
-                    if key[0] in eligible_ids
-                }
                 try:
-                    self._run_mapper(
-                        manifest["dependency_report"]["dependencies"][0]["path"],
-                        contigs, support_reads, output / "support_alignments.sam", config)
-                    support_result.update(read_support.assess_read_support(
-                        output / "support_alignments.sam", contigs, support_metadata,
-                        paired=paired,
-                        thresholds=config["support"]))
-                    status = support_result["status"]
-                    if status == "READ_SUPPORTED_ASSEMBLY":
-                        shutil.copyfile(contigs, output / "supported_contigs.fasta")
-                except ExternalToolExitError:
-                    status = "READ_SUPPORT_FAILED"
-                    support_result["status"] = status
-                except (ValueError, OSError):
-                    status = "INVALID_SUPPORT_OUTPUT"
-                    support_result["status"] = status
+                    if contigs.is_symlink():
+                        raise ValueError("assembly contig FASTA must not be a symlink")
+                    artifact_contracts.validate_artifact(
+                        contigs, "canonical_contig_fasta")
+                    candidate_record_metadata = fasta_record_metadata(contigs)
+                    shutil.copyfile(contigs, output / "candidate_sequences.fasta")
+                    candidate_source_path = contigs
+                    candidate_availability_state = "AVAILABLE"
+                    candidate_unavailable_reason = None
+                except (OSError, ValueError):
+                    status = "INVALID_OUTPUT"
+                    candidate_availability_state = "INVALID_OUTPUT"
+                    candidate_unavailable_reason = "INVALID_ASSEMBLY_SEQUENCE_BYTES"
+                    candidate_record_metadata = []
+                    (output / "candidate_sequences.fasta").unlink(missing_ok=True)
+
+                if candidate_source_path is not None:
+                    normalized = residual_reads.prepare_normalized_fastqs(
+                        inputs["read1"], inputs.get("read2"),
+                        work / "support-normalized",
+                        include_fragment_ids=triage["eligible_fragment_ids"])
+                    support_reads = [normalized["read1"]]
+                    if paired:
+                        support_reads.append(normalized["read2"])
+                    support_metadata = {
+                        key: value for key, value in triage["read_metadata"].items()
+                        if key[0] in eligible_ids
+                    }
+                    try:
+                        self._run_mapper(
+                            manifest["dependency_report"]["dependencies"][0]["path"],
+                            contigs, support_reads,
+                            output / "support_alignments.sam", config)
+                        support_result.update(read_support.assess_read_support(
+                            output / "support_alignments.sam", contigs,
+                            support_metadata, paired=paired,
+                            thresholds=config["support"]))
+                        status = support_result["status"]
+                        if status == "READ_SUPPORTED_ASSEMBLY":
+                            shutil.copyfile(contigs, output / "supported_contigs.fasta")
+                    except ExternalToolExitError:
+                        status = "READ_SUPPORT_FAILED"
+                        support_result["status"] = status
+                    except (ValueError, OSError):
+                        status = "INVALID_SUPPORT_OUTPUT"
+                        support_result["status"] = status
         elif config["assembly_enabled"]:
             status = "NO_SUPPORTED_ASSEMBLY"
+            candidate_unavailable_reason = "NO_ELIGIBLE_READS_FOR_ASSEMBLY"
+        else:
+            candidate_unavailable_reason = "ASSEMBLY_DISABLED"
         resolved = set(support_result.get("resolved_fragment_ids", []))
         unresolved = set(residual_ids) - resolved
         for mate in (1, 2):
@@ -472,6 +532,91 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
                 "Only triage-eligible residual fragments can support an assembly; retained-unassembled fragments remain unresolved.",
             ],
         })
+        stage_id = manifest.get("stage_id")
+        if not isinstance(stage_id, str) or not stage_id:
+            stage_id = (
+                f"standalone-{quote(config['sample_id'], safe='')}-"
+                f"{_digest_file(inputs['read1'])[:16]}"
+            )
+        support_by_id = {
+            row["contig_id"]: row.get("status", "NOT_EVALUATED")
+            for row in support_result.get("contigs", [])
+            if isinstance(row, dict) and isinstance(row.get("contig_id"), str)
+        }
+        candidate_rows = []
+        source_hash = (
+            candidate_source_identity["sha256"]
+            if candidate_source_identity is not None else None
+        )
+        for metadata in candidate_record_metadata:
+            fasta_id = metadata["fasta_record_id"]
+            stage_token = quote(stage_id, safe="")
+            record_token = quote(fasta_id, safe="")
+            candidate_rows.append({
+                "candidate_id": f"m6-candidate/{stage_token}/{record_token}",
+                "sequence_id": f"m6-sequence/{stage_token}/{record_token}",
+                "fasta_record_id": fasta_id,
+                "sequence_sha256": metadata["sequence_sha256"],
+                "sequence_length": metadata["sequence_length"],
+                "sequence_bytes_available": True,
+                "sequence_unavailable_reason": None,
+                "molecule_type": None,
+                "sequence_alphabet": "IUPAC_NUCLEOTIDE",
+                "completeness_state": "UNKNOWN",
+                "source_artifact_id": "assembly/contigs.fasta",
+                "source_artifact_sha256": source_hash,
+                "m6_support_status": support_by_id.get(fasta_id, "NOT_EVALUATED"),
+                "m7_context": None,
+            })
+        reconstruction_path = output / "reconstruction_evidence.json"
+        assembly_manifest_path = output / "assembly" / "assembly_manifest.json"
+        fasta_output = output / "candidate_sequences.fasta"
+        fasta_artifact = None
+        if candidate_rows and fasta_output.is_file():
+            fasta_artifact = {
+                "path": "candidate_sequences.fasta",
+                "sha256": _digest_file(fasta_output),
+            }
+        if not candidate_rows and candidate_availability_state == "AVAILABLE":
+            candidate_availability_state = "INVALID_OUTPUT"
+            candidate_unavailable_reason = "ASSEMBLY_CONTAINED_NO_SEQUENCE_RECORDS"
+            candidate_availability_state = "INVALID_OUTPUT"
+            fasta_artifact = None
+            fasta_output.unlink(missing_ok=True)
+        candidate_set = {
+            "schema": "m8-candidate-sequence-set-v1",
+            "producer": {
+                "stage_kind": "residual_evidence",
+                "stage_id": stage_id,
+                "adapter_name": self.adapter_name,
+                "adapter_version": self.adapter_version,
+            },
+            "source_artifact": candidate_source_identity,
+            "assembly_manifest": (
+                {
+                    "path": "assembly/assembly_manifest.json",
+                    "sha256": _digest_file(assembly_manifest_path),
+                }
+                if assembly_manifest_path.is_file() else None
+            ),
+            "m6_evidence": {
+                "reconstruction_status": status,
+                "support_status": support_result.get("status", "NOT_EVALUATED"),
+                "artifact": {
+                    "path": "reconstruction_evidence.json",
+                    "sha256": _digest_file(reconstruction_path),
+                },
+            },
+            "m7_context": None,
+            "availability": {
+                "state": candidate_availability_state,
+                "reason": candidate_unavailable_reason,
+                "fasta_artifact": fasta_artifact,
+                "record_count": len(candidate_rows),
+            },
+            "records": candidate_rows,
+        }
+        write_json(output / "candidate_sequence_set.json", candidate_set)
         shutil.rmtree(work, ignore_errors=True)
 
     def validate_outputs(self, output, config):
@@ -482,9 +627,16 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
         optional = output / "supported_contigs.fasta"
         if optional.exists():
             artifact_contracts.validate_artifact(optional, "canonical_contig_fasta")
+        candidate_fasta = output / "candidate_sequences.fasta"
+        if candidate_fasta.exists():
+            artifact_contracts.validate_artifact(
+                candidate_fasta, "canonical_contig_fasta")
         contracts = {name: self.output_contracts[name] for name in _ROOT_OUTPUTS}
         if optional.exists():
             contracts["supported_contigs.fasta"] = self.output_contracts["supported_contigs.fasta"]
+        if candidate_fasta.exists():
+            contracts["candidate_sequences.fasta"] = self.output_contracts[
+                "candidate_sequences.fasta"]
         return contracts
 
     def record_failure(self, output, state, error):
@@ -496,6 +648,7 @@ class ResidualEvidenceAdapter(ExternalToolAdapter):
             "unresolved_read1.fastq.gz", "unresolved_read2.fastq.gz",
             "read_triage.csv", "read_support.csv", "read_support.json",
             "residual_manifest.json", "reconstruction_evidence.json",
-            "supported_contigs.fasta",
+            "supported_contigs.fasta", "candidate_sequence_set.json",
+            "candidate_sequences.fasta",
         ):
             (Path(output) / name).unlink(missing_ok=True)

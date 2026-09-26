@@ -37,7 +37,12 @@ class FakeAssembly:
         output.mkdir(parents=True, exist_ok=True)
         (output / "contigs.fasta").write_text(f">c\n{self.sequence}\n", encoding="ascii")
         (output / "assembly_manifest.json").write_text(json.dumps({
-            "status": "complete", "external_tool_version": "fake-1",
+            "schema": "assembly-manifest-v1",
+            "status": "complete",
+            "workflow_status": "complete",
+            "contig_count": 1,
+            "assembler": "fake-assembler",
+            "external_tool_version": "fake-1",
             "parameters": config,
         }), encoding="utf-8")
 
@@ -53,6 +58,8 @@ class ResidualEvidenceAdapterTests(unittest.TestCase):
                          ("residual_read_manifest",))
         self.assertEqual(residual.output_contracts["read_support.json"],
                          ("read_support_evidence",))
+        self.assertEqual(residual.output_contracts["candidate_sequence_set.json"],
+                         ("m8_candidate_sequence_set",))
         self.assertEqual(qc.output_contracts["qc.json"], ("qc_manifest",))
 
     def test_config_is_strict_and_uses_registered_assembly_validation(self):
@@ -257,6 +264,15 @@ class ResidualEvidenceAdapterTests(unittest.TestCase):
             evidence = json.loads((root / "out" / "reconstruction_evidence.json").read_text())
             self.assertEqual(evidence["status"], "INVALID_SUPPORT_OUTPUT")
             self.assertFalse((root / "out" / "supported_contigs.fasta").exists())
+            candidate_set = json.loads(
+                (root / "out" / "candidate_sequence_set.json").read_text())
+            self.assertEqual(candidate_set["availability"]["state"], "AVAILABLE")
+            self.assertEqual(candidate_set["m6_evidence"]["support_status"],
+                             "INVALID_SUPPORT_OUTPUT")
+            self.assertEqual(len(candidate_set["records"]), 1)
+            self.assertEqual(candidate_set["records"][0]["m6_support_status"],
+                             "NOT_EVALUATED")
+            self.assertTrue((root / "out" / "candidate_sequences.fasta").is_file())
 
     def test_disabled_assembly_preserves_unresolved_reads(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -284,6 +300,13 @@ class ResidualEvidenceAdapterTests(unittest.TestCase):
             support_mapper.assert_not_called()
             evidence = json.loads((root / "out" / "reconstruction_evidence.json").read_text())
             self.assertEqual(evidence["status"], "ASSEMBLY_NOT_ATTEMPTED")
+            candidate_set = json.loads(
+                (root / "out" / "candidate_sequence_set.json").read_text())
+            self.assertEqual(candidate_set["availability"]["state"],
+                             "UPSTREAM_UNAVAILABLE")
+            self.assertEqual(candidate_set["availability"]["reason"],
+                             "ASSEMBLY_DISABLED")
+            self.assertIsNone(candidate_set["availability"]["fasta_artifact"])
             self.assertEqual(
                 gzip.decompress((root / "out" / "unresolved_read1.fastq.gz").read_bytes()),
                 gzip.decompress(read.read_bytes()),
@@ -454,6 +477,12 @@ class ResidualEvidenceAdapterTests(unittest.TestCase):
             support = json.loads((root / "out" / "read_support.json").read_text())
             self.assertEqual(evidence["status"], "DEPENDENCY_UNAVAILABLE")
             self.assertEqual(support["status"], "NOT_EVALUATED")
+            candidate_set = json.loads(
+                (root / "out" / "candidate_sequence_set.json").read_text())
+            self.assertEqual(candidate_set["availability"]["state"],
+                             "UPSTREAM_UNAVAILABLE")
+            self.assertEqual(candidate_set["availability"]["reason"],
+                             "DEPENDENCY_UNAVAILABLE")
             self.assertEqual(
                 gzip.decompress((root / "out" / "unresolved_read1.fastq.gz").read_bytes()),
                 gzip.decompress(read.read_bytes()),

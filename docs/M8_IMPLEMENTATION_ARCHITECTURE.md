@@ -109,7 +109,7 @@ optional context, not as its candidate list or an eligibility condition.
   biological interpretation. Synthetic M8 software fixtures must remain
   separate from later blinded biological validation.
 
-## 2. Proposed M7→M8 handoff
+## 2. Frozen M6 candidate and optional M7 input contract
 
 The present M7 output cannot be the sole M8 input: M7 deliberately receives only
 supported contigs and does not emit their sequence bytes. M8 should receive:
@@ -128,13 +128,13 @@ supported contigs and does not emit their sequence bytes. M8 should receive:
    assembly was not attempted or failed and no sequence bytes exist, M8 must
    preserve that upstream state; it must not invent an empty candidate set or a
    completed no-hit.
-3. **Optional M7 context:** attach matching
-   `m7_observation_table`, `m7_exact_recurrence_table`, and
-   `m7_provenance_manifest` records when available. Link by explicit candidate
-   and sequence IDs plus sequence hash; preserve the original M7 records and
-   their artifact digests. A missing M7 record means “no M7 link available,”
-   not “no recurrence.” Recurrence cannot qualify an unsupported sequence or
-   upgrade its M6 support state.
+3. **Optional M7 context:** supply matching `m7_observation_table`,
+   `m7_exact_recurrence_table`, and `m7_provenance_manifest` as separate typed
+   M8 inputs when available. The M6 candidate-set artifact cannot embed M7
+   context. Link by explicit candidate and sequence IDs plus sequence hash;
+   preserve the original M7 records and their artifact digests. A missing M7
+   input means “no M7 link available,” not “no recurrence.” Recurrence cannot
+   qualify an unsupported sequence or upgrade its M6 support state.
 4. **Declared metadata:** carry `sample_id`, `sequencing_run_id`, and
    `study_id` only when present in the source artifacts. Keep missing or
    conflicting values explicitly unresolved. Do not infer a run from a sample,
