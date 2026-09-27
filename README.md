@@ -6,19 +6,21 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M9 software provides
+sequencing-derived candidates. The implemented M1–M10 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence,
 reference-scoped residual-read and read-back analysis, exact recurrence
-reporting, scoped nucleotide homology, and protein-level ORF and local BLASTP
-evidence.
+reporting, scoped nucleotide homology, protein-level ORF and local BLASTP
+evidence, and exact-first sequence-architecture analysis.
 
-M1–M9 implement technical software stages. M9 provides protein-level
+M1–M10 implement scoped technical software stages. M9 provides protein-level
 computational evidence only; it does **not** classify satellites, establish
 novelty or helper dependence, or prove expression or biological function. No
 biological candidate dataset or biological protein database was searched or
-bundled as part of the M9 implementation milestone. This is not an autonomous,
-biologically validated discovery pipeline.
+bundled as part of the M9 implementation milestone. M10 reports exact repeat
+patterns under its frozen policy; it does not establish topology, circularity,
+or biological function. This is not an autonomous, biologically validated
+discovery pipeline.
 
 ## Scientific problem
 
@@ -102,9 +104,12 @@ sequencing reads and declared references
                   M8 scoped nucleotide homology on typed candidates
                     (optional M7 context; supplied references)
                                ↓
-                  M9 ORF/translation and local BLASTP evidence
+                   M9 ORF/translation and local BLASTP evidence
                                 ↓
-                   planned evidence layers M10–M16
+                   M10 exact-first sequence architecture
+                    (repeat patterns, not topology)
+                                 ↓
+                    planned evidence layers M11–M16
 ```
 
 In paired data, a primary mapping for either mate excludes the whole fragment
@@ -123,23 +128,23 @@ contig.
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
 | Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M9 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M10 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M9: IMPLEMENTED** as scoped software milestones.
-- **M10–M16: PLANNED**, not implemented.
+- **M1–M10: IMPLEMENTED** as scoped software milestones.
+- **M11–M16: PLANNED**, not implemented.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
-M9 is limited to protein-level computational evidence; the planned M10–M16
-features are not implemented.
+M9 is limited to protein-level computational evidence. M10 implements exact
+direct/inverted terminal and maximal internal repeat reporting under a frozen,
+synthetic/offline policy; it does not infer biological topology. See the
+[M10 contract freeze](docs/M10_CONTRACT_FREEZE.md). Planned M11–M16 features
+are not implemented.
 
-### Planned evidence layers (M10–M16)
+### Planned evidence layers (M11–M16)
 
-- **M10 — Genome architecture and topology:** describe architecture, termini,
-  completeness limits, and guarded topology signals; a computational signal is
-  not confirmed circularity.
 - **M11 — RNA structure and ribozyme evidence:** retain predicted folds and
   model matches as hypotheses, not proof of a functional ribozyme.
 - **M12 — Read-origin and technical-artifact review:** assess source reads,

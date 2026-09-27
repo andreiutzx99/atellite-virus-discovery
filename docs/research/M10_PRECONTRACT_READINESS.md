@@ -9,18 +9,18 @@ change normalized evidence, status, and cache identity. No biological
 validation, external reference panel, read evidence, or M9 result is needed to
 resolve them.
 
-This is a pre-contract review only. M10 remains planned and unimplemented. It
-does not approve production use, alter another milestone, or classify any
-candidate.
+This is a historical pre-contract review only. At the time it was prepared,
+M10 remained planned and unimplemented. It does not approve production use,
+alter another milestone, or classify any candidate.
 
 ## 1. Scope and current authority
 
-The current [roadmap](../ROADMAP.md) is authoritative: M1–M8 are implemented
-software, while M9–M16 remain planned. The
-[M9 contract freeze](../M9_CONTRACT_FREEZE.md) records approval of a
-synthetic/offline M9 software baseline, not an M9 implementation. The
-[module-interface inventory](../MODULE_INTERFACES.md) warns that proposed
-interfaces are not released workflow stages.
+At the time of this review, the [roadmap](../ROADMAP.md) described M1–M8 as
+implemented software and M9–M16 as planned. The roadmap now records current
+milestone status. The [M9 contract freeze](../M9_CONTRACT_FREEZE.md) records
+approval of a synthetic/offline M9 software baseline; that historical approval
+was not itself an M9 implementation. The [module-interface inventory](../MODULE_INTERFACES.md)
+warned that proposed interfaces were not released workflow stages.
 
 The [M10 architecture research](M10_ARCHITECTURE_DESIGN_RESEARCH.md) and
 [M10 synthetic validation plan](M10_EMPIRICAL_VALIDATION_PLAN.md) are design
