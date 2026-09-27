@@ -21,7 +21,7 @@ from .residual_evidence_adapter import ResidualEvidenceAdapter
 from . import (
     artifact_contracts, artifact_stage_handlers, dvg_evidence,
     independent_recurrence, local_comparison, m8_homology,
-    m9_blastp_stage, m9_orf_stage,
+    m9_blastp_stage, m9_orf_stage, m10_stage,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -263,6 +263,31 @@ def build_default_registry():
         description=(
             'Runs pinned local ordinary BLASTP against one explicitly supplied '
             'and checksum-validated protein snapshot; does not retrieve references.'
+        ),
+    )
+    registry.register(
+        'm10_exact_first', None, m10_stage.run_stage,
+        version=m10_stage.STAGE_VERSION, dynamic_inputs=True,
+        config_validator=m10_stage.validate_config,
+        input_contracts={
+            '*': tuple(sorted({
+                'm8_candidate_sequence_set',
+                'm7_observation_table', 'm7_exact_recurrence_table',
+                'm7_independence_summary', 'm7_validation_report',
+                'm7_provenance_manifest',
+                'm8_query_status', 'm8_match_evidence', 'm8_summary',
+                'm8_search_commands', 'm8_raw_blast_output',
+                'm9_orf_results', 'm9_protein_fasta', 'm9_orf_bundle',
+                'm9_protein_search_status', 'm9_protein_match_evidence',
+                'm9_protein_summary', 'm9_search_commands',
+                'm9_output_bundle', 'm9_raw_blast_output',
+            })),
+        },
+        output_contracts=m10_stage._OUTPUT_TYPES,
+        description=(
+            'Runs the dependency-free exact M10 sequence-architecture baseline '
+            'over the validated M6 candidate handoff and preserves optional '
+            'M7–M9 context without biological classification.'
         ),
     )
     registry.register(
@@ -696,6 +721,23 @@ def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependenc
         identity['workflow_cache_semantics_version']=WORKFLOW_CACHE_SEMANTICS_VERSION
         identity['stage_registration']=_stage_cache_registration_identity(definition)
         identity['implementation']=scoped_identity()
+        if getattr(definition.handler,'cache_input_contract_semantics',False):
+            contract_semantics_version=getattr(
+                definition.handler,'cache_input_contract_semantics_version',None
+            )
+            if not isinstance(contract_semantics_version,str) or not contract_semantics_version:
+                raise ValueError(
+                    'Scoped input-contract cache semantics require a version'
+                )
+            identity['input_contract_semantics_version']=contract_semantics_version
+            contract_types=sorted({
+                row.get('artifact_type')
+                for row in input_descriptors.values()
+                if row.get('artifact_type')
+            })
+            if contract_types:
+                identity['input_contract_semantics']=artifact_contracts.semantic_identity(
+                    contract_types)
     return hashlib.sha256(
         json.dumps(identity,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')
     ).hexdigest()

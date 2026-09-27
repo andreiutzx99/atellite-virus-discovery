@@ -90,6 +90,9 @@ _CONTRACTS = {
     'm9_search_commands': 'Ordinary local BLASTP command and profile provenance.',
     'm9_output_bundle': 'M9 protein-search input and local output integrity manifest.',
     'm9_raw_blast_output': 'Bounded UTF-8 raw output or log from local M9 BLASTP execution.',
+    'm10_candidate_accounting': 'M10 per-candidate input, branch, status, and cap accounting.',
+    'm10_repeat_evidence': 'Normalized exact M10 terminal and internal repeat evidence.',
+    'm10_result_bundle': 'M10 result bundle binding candidate accounting and evidence outputs.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -310,7 +313,7 @@ def validate_artifact(path, artifact_type):
     info = path.stat()
     if info.st_size <= 0 and artifact_type not in {
         'blast_hit_table', 'dvg_raw_output', 'm8_raw_blast_output',
-        'm9_protein_fasta', 'm9_raw_blast_output',
+        'm9_protein_fasta', 'm9_raw_blast_output', 'm10_repeat_evidence',
     }:
         raise ValueError('Artifact is empty')
 
@@ -772,6 +775,17 @@ def validate_artifact(path, artifact_type):
             'm9_search_commands': m9_contracts.validate_search_commands,
             'm9_output_bundle': m9_contracts.validate_bundle,
             'm9_raw_blast_output': m9_contracts.validate_raw_output,
+        }
+        validator = validators.get(artifact_type)
+        if validator is None:
+            raise ValueError(f'No validator is registered for {artifact_type!r}')
+        details.update(validator(path))
+    elif artifact_type.startswith('m10_'):
+        from . import m10_contracts
+        validators = {
+            'm10_candidate_accounting': m10_contracts.validate_candidate_accounting,
+            'm10_repeat_evidence': m10_contracts.validate_repeat_evidence,
+            'm10_result_bundle': m10_contracts.validate_bundle,
         }
         validator = validators.get(artifact_type)
         if validator is None:
