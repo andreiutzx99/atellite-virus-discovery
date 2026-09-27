@@ -6,21 +6,23 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M10 software provides
+sequencing-derived candidates. The implemented M1–M11 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence,
 reference-scoped residual-read and read-back analysis, exact recurrence
 reporting, scoped nucleotide homology, protein-level ORF and local BLASTP
-evidence, and exact-first sequence-architecture analysis.
+evidence, exact-first sequence-architecture analysis, and optional RNA
+minimum-free-energy structure predictions.
 
-M1–M10 implement scoped technical software stages. M9 provides protein-level
+M1–M11 implement scoped technical software stages. M9 provides protein-level
 computational evidence only; it does **not** classify satellites, establish
 novelty or helper dependence, or prove expression or biological function. No
 biological candidate dataset or biological protein database was searched or
 bundled as part of the M9 implementation milestone. M10 reports exact repeat
 patterns under its frozen policy; it does not establish topology, circularity,
-or biological function. This is not an autonomous, biologically validated
-discovery pipeline.
+or biological function. M11 reports model-dependent RNA-fold predictions, not
+observed structures, ribozyme activity, or biological function. This is not an
+autonomous, biologically validated discovery pipeline.
 
 ## Scientific problem
 
@@ -50,7 +52,7 @@ do not validate this software's output or technical defaults. See
 - Project-specific defaults are technical settings, not biologically
   validated thresholds.
 
-## Implemented workflow — M1 to M9
+## Implemented workflow — M1 to M11
 
 | Milestone | Implemented software capability | Evidence boundary |
 | --- | --- | --- |
@@ -63,6 +65,8 @@ do not validate this software's output or technical defaults. See
 | M7 — Independent recurrence | Typed M6 handoffs and exact grouping of individually supported contigs, with declared sample/run/study categories and source-read checksum deduplication. | Exact recurrence within declared observations only; metadata labels are not verified, and recurrence is not biological validation. |
 | M8 — Candidate/reference nucleotide homology | Role-scoped BLASTN comparisons of typed candidate sequences against caller-supplied, versioned reference snapshots, with separate masking branches and explicit incomplete/unavailable/truncated states. | Scoped sequence-similarity evidence only; no classification, novelty, helper dependence, or source attribution. Reference payloads and indexes remain external. |
 | M9 — Translated and protein evidence | Deterministic six-frame ORF hypotheses under the approved table-1/ATG-only policy, preserving nested, overlapping, and partial hypotheses; ordinary local BLASTP against an explicitly supplied typed protein snapshot; typed no-ORF/no-hit/failure/incomplete states; provenance, integrity, and stage-scoped cache/reuse; synthetic/offline validation. | Protein-level computational evidence only; no satellite classification, novelty, helper dependence, expression, or biological function. No biological candidate dataset or protein database was searched for this milestone. |
+| M10 — Genome architecture and topology (exact-first baseline) | Exact-first reporting of direct/inverted terminal and maximal internal repeats, with source-linked evidence and explicit statuses. | Repeat patterns do not confirm topology, circularity, completeness, classification, or function. |
+| M11 — RNA minimum-free-energy structure baseline | Optional, pinned ViennaRNA 2.7.2 predictions for validated whole-sequence or explicitly requested regions, with provenance and per-request accounting. | Model-dependent predictions are not observed structures or evidence of ribozyme activity/function; ribozyme-family matching is not implemented. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
@@ -72,6 +76,9 @@ Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M8 reference and homology specification](docs/M8_REFERENCE_AND_HOMOLOGY_SPEC.md).
 The [M1–M6 scientific audit](docs/M1_M6_SCIENTIFIC_AUDIT.md) and
 [M6 workflow audit](docs/M6_AUDIT.md) explain the evidence limits.
+See the [M10 contract freeze](docs/M10_CONTRACT_FREEZE.md), [M11 frozen
+contract](docs/M11_CONTRACT_FREEZE.md), and [M11 implementation
+notes](docs/M11_IMPLEMENTATION.md) for the later-stage policies and limits.
 
 ## Pipeline architecture
 
@@ -109,7 +116,9 @@ sequencing reads and declared references
                    M10 exact-first sequence architecture
                     (repeat patterns, not topology)
                                  ↓
-                    planned evidence layers M11–M16
+                    optional M11 RNA-fold predictions
+                                 ↓
+                    planned evidence layers M12–M16
 ```
 
 In paired data, a primary mapping for either mate excludes the whole fragment
@@ -128,25 +137,26 @@ contig.
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
 | Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M10 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M11 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M10: IMPLEMENTED** as scoped software milestones.
-- **M11–M16: PLANNED**, not implemented.
+- **M1–M11: IMPLEMENTED** as scoped software milestones.
+- **M12–M16: PLANNED**, not implemented.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
 M9 is limited to protein-level computational evidence. M10 implements exact
 direct/inverted terminal and maximal internal repeat reporting under a frozen,
 synthetic/offline policy; it does not infer biological topology. See the
-[M10 contract freeze](docs/M10_CONTRACT_FREEZE.md). Planned M11–M16 features
-are not implemented.
+[M10 contract freeze](docs/M10_CONTRACT_FREEZE.md). M11 is an optional pinned
+RNA-fold prediction baseline; see its [frozen
+contract](docs/M11_CONTRACT_FREEZE.md) and [implementation
+notes](docs/M11_IMPLEMENTATION.md). Planned M12–M16 features are not
+implemented.
 
-### Planned evidence layers (M11–M16)
+### Planned evidence layers (M12–M16)
 
-- **M11 — RNA structure and ribozyme evidence:** retain predicted folds and
-  model matches as hypotheses, not proof of a functional ribozyme.
 - **M12 — Read-origin and technical-artifact review:** assess source reads,
   controls, contamination, batches, and reconstruction alternatives. Sequence
   similarity alone does not establish origin.
@@ -240,6 +250,10 @@ is distinct from the dependency-free matrix.
   establishes satellite identity, novelty, helper dependence, expression, or
   biological function. No biological candidate dataset or protein database
   was searched for the M9 implementation milestone.
+- **M11 folds are predictions, not observed structures:** the optional,
+  pinned ViennaRNA MFE baseline reports model-dependent hypotheses. It does
+  not establish ribozyme activity or function, and it does not implement
+  ribozyme-family matching.
 - **No demonstrated helper dependence or validated satellite classification.**
 - **No established sensitivity, specificity, or false-positive rate for novel
   satellite discovery.**
