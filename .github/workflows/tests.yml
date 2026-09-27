@@ -19,6 +19,25 @@ jobs:
         run: sh Run-reviews.sh --help
       - run: python -m unittest discover -s tests -v
 
+  m11-pinned-runtime:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install .
+      - name: Provision hash-locked ViennaRNA 2.7.2
+        run: python scripts/install_m11_runtime.py
+      - name: Verify pinned runtime and bounded synthetic MFE
+        run: python -m unittest tests.test_m11_runtime_smoke -v
+        env:
+          M11_REQUIRE_RUNTIME: '1'
+
   optional-tools:
     runs-on: ubuntu-latest
     steps:

@@ -93,6 +93,11 @@ _CONTRACTS = {
     'm10_candidate_accounting': 'M10 per-candidate input, branch, status, and cap accounting.',
     'm10_repeat_evidence': 'Normalized exact M10 terminal and internal repeat evidence.',
     'm10_result_bundle': 'M10 result bundle binding candidate accounting and evidence outputs.',
+    'm11_candidate_accounting': 'M11 immutable candidate identity and source-byte accounting.',
+    'm11_fold_accounting': 'M11 terminal input, applicability, execution, evidence, and branch status for every requested fold.',
+    'm11_rna_structure_evidence': 'Typed source-bound predicted RNA secondary-structure evidence from the frozen ViennaRNA MFE profile.',
+    'm11_mfe_raw_results': 'Deterministic envelopes of the raw ViennaRNA Python MFE return values.',
+    'm11_result_bundle': 'M11 run manifest binding fold accounting, typed structure evidence, raw result envelopes, and hashes.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -314,6 +319,8 @@ def validate_artifact(path, artifact_type):
     if info.st_size <= 0 and artifact_type not in {
         'blast_hit_table', 'dvg_raw_output', 'm8_raw_blast_output',
         'm9_protein_fasta', 'm9_raw_blast_output', 'm10_repeat_evidence',
+        'm11_fold_accounting', 'm11_rna_structure_evidence',
+        'm11_mfe_raw_results',
     }:
         raise ValueError('Artifact is empty')
 
@@ -786,6 +793,19 @@ def validate_artifact(path, artifact_type):
             'm10_candidate_accounting': m10_contracts.validate_candidate_accounting,
             'm10_repeat_evidence': m10_contracts.validate_repeat_evidence,
             'm10_result_bundle': m10_contracts.validate_bundle,
+        }
+        validator = validators.get(artifact_type)
+        if validator is None:
+            raise ValueError(f'No validator is registered for {artifact_type!r}')
+        details.update(validator(path))
+    elif artifact_type.startswith('m11_'):
+        from . import m11_contracts
+        validators = {
+            'm11_candidate_accounting': m11_contracts.validate_candidate_accounting,
+            'm11_fold_accounting': m11_contracts.validate_fold_accounting,
+            'm11_rna_structure_evidence': m11_contracts.validate_structure_evidence,
+            'm11_mfe_raw_results': m11_contracts.validate_raw_results,
+            'm11_result_bundle': m11_contracts.validate_bundle,
         }
         validator = validators.get(artifact_type)
         if validator is None:
