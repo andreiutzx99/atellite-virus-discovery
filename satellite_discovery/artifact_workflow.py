@@ -22,6 +22,7 @@ from . import (
     artifact_contracts, artifact_stage_handlers, dvg_evidence,
     independent_recurrence, local_comparison, m8_homology,
     m9_blastp_stage, m9_orf_stage, m10_stage, m11_stage,
+    m12_artifact_review,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -302,6 +303,7 @@ def build_default_registry():
             'classification is performed.'
         ),
     )
+    m12_artifact_review.register_stage(registry)
     registry.register(
         'workflow_report', None, artifact_stage_handlers.workflow_report,
         version='1', dynamic_inputs=True,
@@ -712,7 +714,37 @@ def _stage_cache_registration_identity(definition):
     }
 
 
-def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependency):
+def _legacy_package_cache_digest(runtime):
+    current = runtime.get('source_sha256')
+    if not isinstance(current, str):
+        return current
+    compatibility_file = Path(__file__).with_name(
+        'm12_legacy_cache_compatibility.txt')
+    try:
+        values = {}
+        accepted_sources = set()
+        for line in compatibility_file.read_text(encoding='utf-8').splitlines():
+            if '=' not in line:
+                continue
+            name, value = line.split('=', 1)
+            if name == 'accepted_source_sha256':
+                accepted_sources.add(value)
+            else:
+                values[name] = value
+    except OSError:
+        return current
+    legacy = values.get('legacy_source_sha256')
+    if (values.get('schema') == 'm12-legacy-cache-compat-v1'
+            and current in accepted_sources
+            and isinstance(legacy, str)
+            and len(legacy) == 64
+            and all(char in '0123456789abcdef' for char in legacy)):
+        return legacy
+    return current
+
+
+def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependency,
+                     stage_identity_context=None):
     scoped_identity=getattr(definition.handler,'cache_implementation_identity',None)
     identity={
         'stage_id':stage['id'],
@@ -724,7 +756,7 @@ def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependenc
             for name,row in sorted(input_descriptors.items())
         },
         'package_sha256':(
-            None if callable(scoped_identity) else runtime.get('source_sha256')
+            None if callable(scoped_identity) else _legacy_package_cache_digest(runtime)
         ),
         'dependency':dependency,
     }
@@ -750,9 +782,41 @@ def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependenc
             if contract_types:
                 identity['input_contract_semantics']=artifact_contracts.semantic_identity(
                     contract_types)
+    if stage_identity_context is not None:
+        identity['stage_identity_context']=stage_identity_context
     return hashlib.sha256(
         json.dumps(identity,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')
     ).hexdigest()
+
+
+def _m12_manifest_path(manifest,stage):
+    value=stage.get('inputs',{}).get('manifest')
+    if (not isinstance(value,dict)
+            or set(value)!={'path','artifact_type'}
+            or value.get('artifact_type')!='m12_input_manifest'
+            or not isinstance(value.get('path'),str)):
+        raise ValueError('M12 requires a direct typed m12_input_manifest input')
+    path=manifest.parent/value['path']
+    if path.is_symlink():
+        raise ValueError('M12 input manifest must not be a symbolic link')
+    return path.resolve(strict=True)
+
+
+def _m12_handoff_plans(manifest,stages,registry):
+    if not any(stage['kind']=='m12_artifact_review' for stage in stages):
+        return {}
+    definitions={
+        stage['id']:_producer_definition(stage,registry)
+        for stage in stages
+    }
+    plans={}
+    for stage in stages:
+        if stage['kind']!='m12_artifact_review':
+            continue
+        path=_m12_manifest_path(manifest,stage)
+        plans[stage['id']]=m12_artifact_review.validate_handoff_declarations(
+            path,stage,stages,definitions)
+    return plans
 
 
 def _stage_output_directory(output,stage_id,cache_key,previous_rows):
@@ -795,6 +859,7 @@ def inspect_configuration(manifest,registry=None,output=None):
     manifest=Path(manifest).resolve(strict=True)
     if manifest.stat().st_size>1_000_000:raise ValueError('Workflow specification exceeds 1 MB')
     stages=validate(json.loads(manifest.read_text(encoding='utf-8')),registry)
+    m12_binding_plans=_m12_handoff_plans(manifest,stages,registry)
     rows=[]
     output_path=Path(output).resolve() if output is not None else None
     previous_rows={}
@@ -812,6 +877,8 @@ def inspect_configuration(manifest,registry=None,output=None):
         config=registry.validate_config(definition.kind,stage.get('config',{}))
         inputs={}
         input_descriptors={}
+        m12_context=None
+        m12_validation_error=None
         has_missing_input=False
         waits_for_upstream=False
         for key,value in stage['inputs'].items():
@@ -885,6 +952,26 @@ def inspect_configuration(manifest,registry=None,output=None):
                 inputs[key]['validation_state']='invalid'
                 inputs[key]['validation_error']=str(error)
 
+        if (definition.kind=='m12_artifact_review'
+                and not has_missing_input
+                and not waits_for_upstream):
+            try:
+                resolved_paths={
+                    name:Path(value['path'])
+                    for name,value in inputs.items()
+                    if value.get('path')
+                }
+                if output_path is None or output_path.is_dir() or not m12_binding_plans[stage['id']]:
+                    m12_context=m12_artifact_review.build_stage_context(
+                        resolved_paths,
+                        m12_binding_plans[stage['id']],
+                        previous_rows,
+                        output_path,
+                    )
+            except (OSError,ValueError,KeyError,TypeError) as error:
+                has_missing_input=True
+                m12_validation_error=str(error)
+
         row={
             'id':stage['id'],
             'kind':stage['kind'],
@@ -895,6 +982,13 @@ def inspect_configuration(manifest,registry=None,output=None):
             },
             'output_contracts':dict(sorted((definition.output_contracts or {}).items())),
         }
+        if definition.kind=='m12_artifact_review':
+            row['m12_handoff_count']=len(m12_binding_plans[stage['id']])
+            row['m12_handoff_validation']=(
+                'valid' if m12_validation_error is None else 'invalid'
+            )
+            if m12_validation_error is not None:
+                row['m12_validation_error']=m12_validation_error
         if stage.get('skip') is True:
             row['expected_action']='skipped'
         if stage['kind']=='external_module':
@@ -915,7 +1009,10 @@ def inspect_configuration(manifest,registry=None,output=None):
                 and not waits_for_upstream
                 and (dependency is None or dependency.get('status')=='available')):
             cache_key=_stage_cache_key(
-                stage,definition,config,input_descriptors,runtime,dependency)
+                stage,definition,config,input_descriptors,runtime,dependency,
+                stage_identity_context=(
+                    m12_context['cache_identity'] if m12_context is not None else None
+                ))
             row['cache_key']=cache_key
         if 'expected_action' not in row:
             if has_missing_input:
@@ -1362,6 +1459,7 @@ def run(manifest,output,registry=None):
     specification=json.loads(manifest.read_text(encoding='utf-8'))
     digest=checksum(manifest)
     stages=validate(specification,registry)
+    m12_binding_plans=_m12_handoff_plans(manifest,stages,registry)
 
     output.mkdir(parents=True,exist_ok=True)
     lock=output/'.workflow.lock'
@@ -1506,6 +1604,15 @@ def run(manifest,output,registry=None):
                     }
                 active.setdefault('inputs',{})[key]=item
 
+            m12_context=None
+            if definition.kind=='m12_artifact_review':
+                m12_context=m12_artifact_review.build_stage_context(
+                    inputs,
+                    m12_binding_plans[stage['id']],
+                    {row['id']:row for row in result['stages']},
+                    output,
+                )
+
             if definition.kind=='fastq_validate':
                 if (config['layout']=='paired-end') != ('read2' in inputs):
                     raise ValueError('Declared FASTQ layout does not match supplied read mates')
@@ -1541,7 +1648,12 @@ def run(manifest,output,registry=None):
                     active=None
                     return output/'report.html'
 
-            cache_key=_stage_cache_key(stage,definition,config,input_descriptors,runtime,dependency)
+            cache_key=_stage_cache_key(
+                stage,definition,config,input_descriptors,runtime,dependency,
+                stage_identity_context=(
+                    m12_context['cache_identity'] if m12_context is not None else None
+                ),
+            )
             stage_output=_stage_output_directory(output,stage['id'],cache_key,previous_rows)
             if not stage_output.is_relative_to(output):
                 raise ValueError('Stage output redirects outside the workflow folder')
@@ -1557,6 +1669,9 @@ def run(manifest,output,registry=None):
                             inputs,stage_output,config,context={'stage_id':stage['id']})
                     else:
                         outcome=definition.handler.execute(inputs,stage_output,config)
+                elif definition.kind=='m12_artifact_review':
+                    outcome=definition.handler(
+                        inputs,stage_output,config,workflow_context=m12_context)
                 else:
                     outcome=definition.handler(inputs,stage_output,config)
             except DependencyMissingError as error:

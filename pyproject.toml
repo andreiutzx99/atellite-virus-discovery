@@ -17,7 +17,11 @@ satellite-reviews = "satellite_discovery.review_ui:main"
 include = ["satellite_discovery*"]
 
 [tool.setuptools.package-data]
-satellite_discovery = ["helpers.json", "model_scope.json"]
+satellite_discovery = [
+    "helpers.json",
+    "model_scope.json",
+    "m12_legacy_cache_compatibility.txt",
+]
 
 [project.optional-dependencies]
 alignment = ["pysam==0.24.1"]

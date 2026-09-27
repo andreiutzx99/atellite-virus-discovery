@@ -98,6 +98,10 @@ _CONTRACTS = {
     'm11_rna_structure_evidence': 'Typed source-bound predicted RNA secondary-structure evidence from the frozen ViennaRNA MFE profile.',
     'm11_mfe_raw_results': 'Deterministic envelopes of the raw ViennaRNA Python MFE return values.',
     'm11_result_bundle': 'M11 run manifest binding fold accounting, typed structure evidence, raw result envelopes, and hashes.',
+    'm12_input_manifest': 'Caller-declared, checksum-bound M5/M6 artifact review inputs.',
+    'm12_artifact_review_table': 'M12 artifact-bounded review rows preserving producer-scoped results.',
+    'm12_summary': 'M12 review completeness, supplied-evidence states, and unassessed dimensions.',
+    'm12_result_bundle': 'M12 input, producer, output, and implementation provenance manifest.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -811,6 +815,14 @@ def validate_artifact(path, artifact_type):
         if validator is None:
             raise ValueError(f'No validator is registered for {artifact_type!r}')
         details.update(validator(path))
+    elif artifact_type == 'm12_input_manifest':
+        from . import m12_contracts
+        details.update(m12_contracts.validate_input_manifest_file(path))
+    elif artifact_type in {
+        'm12_artifact_review_table', 'm12_summary', 'm12_result_bundle',
+    }:
+        from . import m12_contracts
+        details.update(m12_contracts.validate_output_file(path, artifact_type))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')
