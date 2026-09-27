@@ -2,17 +2,17 @@
 
 **Status: APPROVED FOR SYNTHETIC/OFFLINE BASELINE IMPLEMENTATION.**
 
-M10 remains **PLANNED / NOT IMPLEMENTED**. This contract authorizes only the
-minimal deterministic exact-first software scope below, exercised with
-synthetic fixtures. It does not authorize biological sequence searches,
-reference retrieval, biological validation, or biological conclusions. No
-released M10 stage interface is implied until implementation and integration
-are separately completed.
+At the time of this freeze, M10 was **PLANNED / NOT IMPLEMENTED**. This
+contract authorized only the minimal deterministic exact-first software scope
+below, exercised with synthetic fixtures. The M10 stage and workflow have since
+been integrated according to this contract. The implementation does not
+authorize biological sequence searches, reference retrieval, biological
+validation, or biological conclusions.
 
-The current [roadmap](ROADMAP.md) is authoritative for milestone status: M1–M9
-are implemented and M10–M16 remain planned. M9 evidence remains optional
-context and its status does not affect M10 eligibility. M10 is independent of
-M9.
+The current [roadmap](ROADMAP.md) is authoritative for milestone status:
+M1–M10 are implemented as scoped software milestones and M11–M16 remain
+planned. M9 evidence remains optional context and its status does not affect
+M10 eligibility. M10 is independent of M9.
 
 Normative terms **MUST**, **MUST NOT**, and **MAY** specify the frozen software
 behavior. The [blocker-resolution policy](research/M10_BLOCKER_RESOLUTION.md)

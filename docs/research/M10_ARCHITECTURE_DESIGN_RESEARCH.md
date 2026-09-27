@@ -7,13 +7,14 @@ proposes a conservative, sequence-first evidence layer; it does not create a
 released interface, biological classification, or claim of circularity,
 completeness, replication, or function.
 
-The current [roadmap](../ROADMAP.md) is authoritative for milestone ownership
-and status: M1–M8 are implemented as scoped software; M9–M16 remain planned.
-The older [combined M10/M11 report](M10_M11_DESIGN_RESEARCH.md) preserves an
-earlier numbering conflict and is historical research, not the current M10
-contract. The [post-M7 reconciliation](../POST_M7_ROADMAP_RECONCILIATION.md)
-records the later adopted milestone ownership but is also proposed design
-material, not a released interface.
+At the time this research was prepared, the roadmap described M1–M8 as
+implemented and M9–M16 as planned. The current [roadmap](../ROADMAP.md) is
+authoritative for present milestone ownership and status. The older [combined
+M10/M11 report](M10_M11_DESIGN_RESEARCH.md) preserves an earlier numbering
+conflict and is historical research, not the current M10 contract. The
+[post-M7 reconciliation](../POST_M7_ROADMAP_RECONCILIATION.md) records the
+later adopted milestone ownership but is also proposed design material, not a
+released interface.
 
 This report distinguishes:
 

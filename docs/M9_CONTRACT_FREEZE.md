@@ -25,11 +25,13 @@ is not a noncoding call; and a completed no-hit is not novelty. Do not emit a
 biological winner, class, or uncalibrated confidence score. Preserve competing
 matches and unresolved explanations.
 
-The current [roadmap](ROADMAP.md) and [README](../README.md) govern milestone
-status: M1–M8 are implemented software and M9–M16 are planned. M8 owns nucleotide
-homology; M9 owns translated and protein evidence. M10 topology, M11 RNA
-predictions, M12 read-origin review, M13 differential evidence, M14 helper
-dependence, and M16 biological validation remain outside M9.
+At the time this M9 contract freeze was prepared, the roadmap and README
+described M1–M8 as implemented and M9–M16 as planned. The current
+[roadmap](ROADMAP.md) and [README](../README.md) govern present milestone
+status. M8 owns nucleotide homology; M9 owns translated and protein evidence.
+M10 architecture, M11 RNA predictions, M12 read-origin review, M13
+differential evidence, M14 helper dependence, and M16 biological validation
+remain outside M9.
 
 The [empirical method validation](M9_EMPIRICAL_METHOD_VALIDATION.md) is the
 source for observed synthetic behavior and method limitations. The
