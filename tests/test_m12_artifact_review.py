@@ -101,11 +101,17 @@ class M12ArtifactReviewTests(unittest.TestCase):
         actual_key = artifact_workflow._stage_cache_key(
             stage, definition, {}, {}, runtime, None
         )
+        legacy_digest = artifact_workflow._legacy_package_cache_digest(runtime)
+        self.assertIn(
+            legacy_digest,
+            {
+                "9242e7b8cbba0c0e912ad6317241628541dafcde2815c7f2786f2ce06f0770ed",
+                "4a7da5c1d54b22cf610bda933bcb9ca340a4a8d69fed031d52254a7f63c57312",
+            },
+        )
         legacy_runtime = {
             **runtime,
-            "source_sha256": (
-                "9242e7b8cbba0c0e912ad6317241628541dafcde2815c7f2786f2ce06f0770ed"
-            ),
+            "source_sha256": legacy_digest,
         }
         expected_legacy_key = artifact_workflow._stage_cache_key(
             stage, definition, {}, {}, legacy_runtime, None

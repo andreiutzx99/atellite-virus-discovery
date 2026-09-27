@@ -722,24 +722,23 @@ def _legacy_package_cache_digest(runtime):
         'm12_legacy_cache_compatibility.txt')
     try:
         values = {}
-        accepted_sources = set()
         for line in compatibility_file.read_text(encoding='utf-8').splitlines():
             if '=' not in line:
                 continue
             name, value = line.split('=', 1)
-            if name == 'accepted_source_sha256':
-                accepted_sources.add(value)
-            else:
-                values[name] = value
+            values[name] = value
     except OSError:
         return current
-    legacy = values.get('legacy_source_sha256')
-    if (values.get('schema') == 'm12-legacy-cache-compat-v1'
-            and current in accepted_sources
-            and isinstance(legacy, str)
-            and len(legacy) == 64
-            and all(char in '0123456789abcdef' for char in legacy)):
-        return legacy
+    if values.get('schema') != 'm12-legacy-cache-compat-v1':
+        return current
+    for suffix in ('', '_crlf'):
+        accepted = values.get(f'accepted_source_sha256{suffix}')
+        legacy = values.get(f'legacy_source_sha256{suffix}')
+        if (current == accepted
+                and isinstance(legacy, str)
+                and len(legacy) == 64
+                and all(char in '0123456789abcdef' for char in legacy)):
+            return legacy
     return current
 
 
