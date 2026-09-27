@@ -21,7 +21,7 @@ from .residual_evidence_adapter import ResidualEvidenceAdapter
 from . import (
     artifact_contracts, artifact_stage_handlers, dvg_evidence,
     independent_recurrence, local_comparison, m8_homology,
-    m9_blastp_stage, m9_orf_stage, m10_stage,
+    m9_blastp_stage, m9_orf_stage, m10_stage, m11_stage,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -288,6 +288,18 @@ def build_default_registry():
             'Runs the dependency-free exact M10 sequence-architecture baseline '
             'over the validated M6 candidate handoff and preserves optional '
             'M7–M9 context without biological classification.'
+        ),
+    )
+    registry.register(
+        'm11_rna_mfe', None, m11_stage.run_stage,
+        version=m11_stage.STAGE_VERSION, dynamic_inputs=True,
+        config_validator=m11_stage.validate_config,
+        input_contracts={'*': ('m8_candidate_sequence_set',)},
+        output_contracts=m11_stage._OUTPUT_TYPES,
+        description=(
+            'Optionally predicts one single-sequence ViennaRNA MFE structure '
+            'from the immutable M6 candidate handoff; no biological search or '
+            'classification is performed.'
         ),
     )
     registry.register(
