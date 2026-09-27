@@ -110,6 +110,8 @@ def runtime_identity():
         receipt = json.loads(_receipt_path().read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return unavailable_identity("PINNED_WHEEL_RECEIPT_MISSING_OR_INVALID")
+    if not isinstance(receipt, dict):
+        return unavailable_identity("PINNED_WHEEL_RECEIPT_MISSING_OR_INVALID")
     if (
         receipt.get("schema") != "satellite-discovery-m11-runtime-v1"
         or receipt.get("wheel_filename") != expected_filename
@@ -126,6 +128,13 @@ def runtime_identity():
         return unavailable_identity("NATIVE_INTERFACE_UNAVAILABLE")
     if getattr(module, "__version__", None) != "2.7.2":
         return unavailable_identity("INTERFACE_VERSION_MISMATCH")
+    native_digest = _file_sha256(native.__file__)
+    installed_digest = _installed_tree_digest(distribution)
+    if (
+        receipt.get("native_library_sha256") != native_digest
+        or receipt.get("installed_files_sha256") != installed_digest
+    ):
+        return unavailable_identity("PINNED_RUNTIME_CONTENT_MISMATCH")
     return {
         "status": "available",
         "reason_code": None,
@@ -133,8 +142,8 @@ def runtime_identity():
         "version": version,
         "wheel_filename": expected_filename,
         "wheel_sha256": expected_sha256,
-        "native_library_sha256": _file_sha256(native.__file__),
-        "installed_files_sha256": _installed_tree_digest(distribution),
+        "native_library_sha256": native_digest,
+        "installed_files_sha256": installed_digest,
         "python_implementation": platform.python_implementation(),
         "python_version": platform.python_version(),
         "python_abi": sys.implementation.cache_tag,
@@ -154,7 +163,7 @@ def write_runtime_receipt():
     distribution = importlib.metadata.distribution("ViennaRNA")
     if distribution.version != "2.7.2":
         raise RuntimeError("Installed ViennaRNA version is not 2.7.2")
-    importlib.import_module("RNA._RNA")
+    native = importlib.import_module("RNA._RNA")
     receipt = {
         "schema": "satellite-discovery-m11-runtime-v1",
         "wheel_filename": filename,
@@ -162,6 +171,8 @@ def write_runtime_receipt():
         "target_python": target[1],
         "operating_system": target[0],
         "architecture": platform.machine(),
+        "native_library_sha256": _file_sha256(native.__file__),
+        "installed_files_sha256": _installed_tree_digest(distribution),
     }
     path = _receipt_path()
     path.parent.mkdir(parents=True, exist_ok=True)

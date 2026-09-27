@@ -100,6 +100,9 @@ def validate_candidate_accounting(path):
         raise ValueError("M11 candidate-accounting header is invalid")
     if type(header.get("candidate_count")) is not int or header["candidate_count"] < 0:
         raise ValueError("M11 candidate count is invalid")
+    for field in ("expected_fold_count", "accounted_fold_count"):
+        if type(header.get(field)) is not int or header[field] < 0:
+            raise ValueError(f"M11 candidate-accounting {field} is invalid")
     if len(candidates) != header["candidate_count"]:
         raise ValueError("M11 candidate count does not match its records")
     candidate_set = header.get("candidate_set")
@@ -177,13 +180,16 @@ def validate_candidate_accounting(path):
                 or candidate["input_status"] not in {"INPUT_VALID", "INPUT_INVALID"}
             ):
                 raise ValueError("M11 candidate source identity is inconsistent")
-        elif source is not None or candidate["input_status"] != "SEQUENCE_UNAVAILABLE":
+        elif source is not None or candidate["input_status"] not in {
+            "SEQUENCE_UNAVAILABLE", "INPUT_INVALID",
+        }:
             raise ValueError("M11 unavailable source is inconsistently recorded")
+        elif candidate.get("source_sha256") is not None:
+            _require_hash(candidate["source_sha256"], "source_sha256")
         source_artifact = candidate.get("source_artifact")
         if not isinstance(source_artifact, dict) or not source_artifact.get("artifact_id"):
             raise ValueError("M11 source-artifact identity is missing")
-        if source_artifact.get("sha256") is not None:
-            _require_hash(source_artifact["sha256"], "source_artifact.sha256")
+        _require_hash(source_artifact.get("sha256"), "source_artifact.sha256")
         source_ref = candidate_set.get("source_artifact")
         if isinstance(source_ref, dict) and (
             source_artifact.get("artifact_id") != source_ref.get("path")
@@ -196,6 +202,11 @@ def validate_candidate_accounting(path):
     ]
     if sort_keys != sorted(sort_keys):
         raise ValueError("M11 candidate accounting records are not canonically ordered")
+    ordinals = [row.get("manifest_ordinal") for row in candidates]
+    if any(type(value) is not int for value in ordinals) or sorted(ordinals) != list(
+        range(len(candidates))
+    ):
+        raise ValueError("M11 candidate manifest ordinals are missing or duplicated")
     return {
         "schema": ACCOUNTING_SCHEMA,
         "candidate_count": len(candidates),
@@ -365,6 +376,31 @@ def validate_structure_evidence(path):
             or model.get("parameter_set") != "TURNER_2004_BUILTIN"
         ):
             raise ValueError("M11 effective model details do not match the frozen profile")
+        source_artifact = row.get("source_artifact")
+        if not isinstance(source_artifact, dict) or not source_artifact.get("artifact_id"):
+            raise ValueError("M11 evidence source-artifact identity is missing")
+        _require_hash(source_artifact.get("sha256"), "source_artifact.sha256")
+        limits = row.get("effective_limits")
+        if not isinstance(limits, dict) or any(
+            type(limits.get(name)) is not int or limits[name] <= 0
+            for name in (
+                "max_fold_symbols", "max_folds_per_run", "memory_bytes_per_fold",
+            )
+        ):
+            raise ValueError("M11 evidence resource limits are invalid")
+        timeout = limits.get("timeout_seconds_per_fold")
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout)
+            or timeout <= 0
+            or row.get("resource_enforcement_policy") not in {
+                "POSIX_RLIMIT_AS_AND_CHILD_PROCESS_TIMEOUT",
+                "WINDOWS_JOB_OBJECT_PROCESS_MEMORY_AND_CHILD_PROCESS_TIMEOUT",
+            }
+        ):
+            raise ValueError("M11 evidence timeout or enforcement policy is invalid")
+        _require_hash(row.get("run_identity"), "run_identity")
         runtime = row.get("runtime_identity")
         if not isinstance(runtime, dict) or runtime.get("status") != "available":
             raise ValueError("M11 evidence lacks an available pinned runtime identity")
@@ -442,9 +478,13 @@ def validate_bundle(path):
     )
     if not isinstance(source, dict) or source.get("validation_state") != "valid" or (
         source.get("artifact_type") != "m8_candidate_sequence_set"
+        or not isinstance(source.get("artifact_id"), str)
+        or type(source.get("size_bytes")) is not int
+        or source["size_bytes"] <= 0
     ):
         raise ValueError("M11 result bundle lacks validated candidate provenance")
     _require_hash(source.get("sha256"), "candidate_sequence_set.sha256")
+    _require_hash(bundle.get("run_identity"), "run_identity")
     outputs = bundle.get("outputs")
     if not isinstance(outputs, dict) or set(outputs) != set(_OUTPUT_TYPES):
         raise ValueError("M11 result bundle output list is incomplete")
@@ -480,17 +520,121 @@ def validate_bundle(path):
         or header.get("run_identity") != bundle.get("run_identity")
     ):
         raise ValueError("M11 bundle and candidate-accounting identities disagree")
+    candidate_ref = header.get("candidate_set")
+    if not isinstance(candidate_ref, dict) or (
+        any(
+            source.get(field) != candidate_ref.get(field)
+            for field in ("artifact_id", "artifact_type", "sha256", "size_bytes")
+        )
+        or bundle.get("configuration") != header.get("configuration")
+        or bundle.get("configuration_sha256")
+        != header.get("configuration_sha256")
+        or bundle.get("implementation") != header.get("implementation")
+        or bundle.get("policy_ids") != POLICY_IDS
+        or bundle.get("method_id") != METHOD_ID
+        or bundle.get("profile_id") != PROFILE_ID
+    ):
+        raise ValueError("M11 bundle provenance or effective configuration is inconsistent")
+    expected_requests = {}
+    candidate_records = candidate_rows[1:]
+    explicit = {}
+    for region in header.get("configuration", {}).get("region_requests", []):
+        key = (region["candidate_id"], region["sequence_id"])
+        explicit.setdefault(key, []).append(region)
+    for candidate in candidate_records:
+        key = (candidate["candidate_id"], candidate["sequence_id"])
+        regions = explicit.pop(key, None)
+        if not regions:
+            known_length = candidate["source_length"]
+            regions = [{
+                "start": 0 if type(known_length) is int else None,
+                "end": known_length if type(known_length) is int else None,
+                "request_ordinal": -1,
+            }]
+        source_digest = candidate["source_sha256"]
+        for region in regions:
+            request_id = stable_request_id(
+                candidate["candidate_id"], candidate["sequence_id"],
+                source_digest, region["start"], region["end"],
+            )
+            expected_requests[request_id] = (
+                candidate["candidate_id"], candidate["sequence_id"],
+                source_digest, region["start"], region["end"],
+                candidate["manifest_ordinal"], region["request_ordinal"],
+            )
+    for (candidate_id, sequence_id), regions in explicit.items():
+        for region in regions:
+            request_id = stable_request_id(
+                candidate_id, sequence_id, None, region["start"], region["end"])
+            expected_requests[request_id] = (
+                candidate_id, sequence_id, None, region["start"], region["end"],
+                len(candidate_records), region["request_ordinal"],
+            )
+    observed_requests = {}
+    for row in fold_rows:
+        region = row.get("source_region")
+        observed_requests[row["request_id"]] = (
+            row["candidate_id"], row["sequence_id"], row.get("source_sha256"),
+            region.get("start") if region else None,
+            region.get("end") if region else None,
+            row["candidate_ordinal"], row["request_ordinal"],
+        )
+    if observed_requests != expected_requests:
+        raise ValueError("M11 fold accounting does not cover each requested candidate/region")
+    expected_limits = {
+        key: header["configuration"][key]
+        for key in (
+            "max_fold_symbols",
+            "max_folds_per_run",
+            "timeout_seconds_per_fold",
+            "memory_bytes_per_fold",
+        )
+    }
+    expected_enforcement = header["configuration"]["resource_enforcement_policy"]
+    if any(
+        row.get("effective_limits") != expected_limits
+        or row.get("resource_enforcement_policy") != expected_enforcement
+        for row in fold_rows
+    ):
+        raise ValueError(
+            "M11 fold accounting limits disagree with normalized configuration"
+        )
+    fold_sort_keys = [
+        (
+            row["candidate_id"],
+            row["sequence_id"],
+            (row.get("source_region") or {}).get("start", -1),
+            (row.get("source_region") or {}).get("end", -1),
+            row["candidate_ordinal"],
+            row["request_ordinal"],
+        )
+        for row in fold_rows
+    ]
+    if fold_sort_keys != sorted(fold_sort_keys):
+        raise ValueError("M11 fold requests are not in canonical order")
+    if any(row.get("run_identity") != bundle["run_identity"] for row in fold_rows):
+        raise ValueError("M11 fold request run identities disagree with the bundle")
     if (
-        type(bundle.get("expected_fold_count")) is not int
+        any(
+            type(bundle.get(field)) is not int
+            for field in (
+                "candidate_count", "expected_fold_count", "accounted_fold_count",
+            )
+        )
         or bundle["expected_fold_count"] != len(fold_rows)
         or bundle.get("accounted_fold_count") != len(fold_rows)
         or header.get("expected_fold_count") != len(fold_rows)
         or header.get("accounted_fold_count") != len(fold_rows)
-        or bundle.get("candidate_count") != len(candidate_rows) - 1
+        or bundle["candidate_count"] != len(candidate_rows) - 1
     ):
         raise ValueError("M11 bundle count accounting is inconsistent")
     evidence_by_request = {row["request_id"]: row for row in evidence_rows}
     raw_by_request = {row["request_id"]: row for row in raw_rows}
+    candidate_by_key = {
+        (row["candidate_id"], row["sequence_id"]): row
+        for row in candidate_records
+    }
+    effective_limits = expected_limits
     predictions = {
         row["request_id"] for row in fold_rows
         if row["branch_status"] == "PREDICTION_REPORTED"
@@ -501,17 +645,44 @@ def validate_bundle(path):
         if row["branch_status"] == "PREDICTION_REPORTED":
             evidence = evidence_by_request[row["request_id"]]
             raw = raw_by_request[row["request_id"]]
+            candidate = candidate_by_key.get(
+                (row["candidate_id"], row["sequence_id"])
+            )
+            region = row.get("source_region")
             if (
-                evidence["evidence_id"] != row.get("evidence_id")
+                candidate is None
+                or evidence["evidence_id"] != row.get("evidence_id")
+                or evidence.get("run_identity") != bundle["run_identity"]
+                or evidence.get("candidate_set_sha256") != source["sha256"]
+                or evidence.get("source_sha256") != row.get("source_sha256")
+                or evidence.get("source_sequence") != candidate.get("source_sequence")
+                or evidence.get("source_sequence_length")
+                != candidate.get("source_length")
+                or evidence.get("source_artifact") != candidate.get("source_artifact")
+                or evidence.get("molecule_type") != candidate.get("molecule_type")
+                or evidence.get("completeness_state")
+                != candidate.get("completeness_state")
+                or evidence.get("source_region") != region
+                or evidence.get("effective_limits") != effective_limits
+                or evidence.get("resource_enforcement_policy")
+                != header["configuration"].get("resource_enforcement_policy")
                 or evidence["raw_engine_result_sha256"] != row.get(
                     "raw_engine_result_sha256")
                 or raw["raw_engine_result_sha256"] != row.get(
                     "raw_engine_result_sha256")
+                or evidence.get("raw_result_artifact") != {
+                    "path": "mfe_raw_results.jsonl",
+                    "row": row.get("raw_result_row"),
+                }
                 or row.get("raw_result_row") != next(
                     i for i, item in enumerate(raw_rows, 1)
                     if item["request_id"] == row["request_id"])
                 or evidence["candidate_id"] != row["candidate_id"]
                 or evidence["sequence_id"] != row["sequence_id"]
+                or raw["raw_engine_result"].get("dot_bracket")
+                != evidence["mfe_structure_dot_bracket"]
+                or raw["raw_engine_result"].get("energy_hex")
+                != evidence["mfe_energy_hex"]
             ):
                 raise ValueError("M11 fold record is not bound to its evidence")
     empty_ok = (

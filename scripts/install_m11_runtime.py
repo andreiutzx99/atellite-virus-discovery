@@ -15,7 +15,7 @@ def main():
     subprocess.run(
         [
             sys.executable, "-m", "pip", "install",
-            "--only-binary=:all:", "--require-hashes",
+            "--only-binary=:all:", "--require-hashes", "--force-reinstall",
             "-r", str(ROOT / "requirements-m11.lock"),
         ],
         check=True,

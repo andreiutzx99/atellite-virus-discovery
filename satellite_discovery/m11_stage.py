@@ -296,9 +296,13 @@ def _request_plan(records, sequences, config):
         if selected:
             regions = selected
         else:
+            known_length = (
+                len(sequence) if sequence is not None
+                else record.get("sequence_length")
+            )
             regions = [{
-                "start": 0 if sequence is not None else None,
-                "end": len(sequence) if sequence is not None else None,
+                "start": 0 if type(known_length) is int else None,
+                "end": known_length if type(known_length) is int else None,
                 "request_ordinal": -1,
             }]
         for region in regions:
@@ -312,9 +316,7 @@ def _request_plan(records, sequences, config):
                 "sequence": sequence,
                 "start": start,
                 "end": end,
-                "source_sha256": (
-                    record.get("sequence_sha256") if sequence is not None else None
-                ),
+                "source_sha256": record.get("sequence_sha256"),
                 "known_candidate": True,
             })
     for (candidate_id, sequence_id), rows in explicit.items():
@@ -352,7 +354,11 @@ def _branch_record(request, request_id, run_identity, config, runtime, status,
         "candidate_ordinal": request["candidate_ordinal"],
         "request_ordinal": request["request_ordinal"],
         "source_sha256": request["source_sha256"],
-        "source_length": len(request["sequence"]) if request["sequence"] is not None else None,
+        "source_length": (
+            len(request["sequence"]) if request["sequence"] is not None
+            else request["record"].get("sequence_length")
+            if request["record"] is not None else None
+        ),
         "source_region": (
             {"start": request["start"], "end": request["end"]}
             if request["start"] is not None and request["end"] is not None
@@ -369,6 +375,7 @@ def _branch_record(request, request_id, run_identity, config, runtime, status,
             "timeout_seconds_per_fold": config["timeout_seconds_per_fold"],
             "memory_bytes_per_fold": config["memory_bytes_per_fold"],
         },
+        "resource_enforcement_policy": config["resource_enforcement_policy"],
         "runtime_identity": runtime,
         "run_identity": run_identity,
         "view": view,
@@ -564,6 +571,10 @@ def run_stage(inputs, output, config):
                                 "source_sha256": request["source_sha256"],
                                 "source_sequence_length": len(request["sequence"]),
                                 "source_sequence": request["sequence"],
+                                "source_artifact": {
+                                    "artifact_id": record["source_artifact_id"],
+                                    "sha256": record.get("source_artifact_sha256"),
+                                },
                                 "molecule_type": record["molecule_type"],
                                 "completeness_state": record["completeness_state"],
                                 "source_region": view["source_region"],
@@ -586,6 +597,9 @@ def run_stage(inputs, output, config):
                                     "timeout_seconds_per_fold": config["timeout_seconds_per_fold"],
                                     "memory_bytes_per_fold": config["memory_bytes_per_fold"],
                                 },
+                                "resource_enforcement_policy": config[
+                                    "resource_enforcement_policy"
+                                ],
                                 "mfe_structure_dot_bracket": structure,
                                 "mfe_energy_kcal_mol": normalized_energy,
                                 "mfe_energy_hex": energy.hex(),
