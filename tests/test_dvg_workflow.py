@@ -1,4 +1,5 @@
 """Synthetic end-to-end workflow handoffs and DVG evaluation states."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -83,6 +84,14 @@ class DVGWorkflowTests(unittest.TestCase):
                              dvg_evidence.DVG_EVIDENCE_DETECTED)
             self.assertEqual(result['dvg_evaluations']['dvg']['event_count'], 1)
             self.assertEqual(result['dvg_evaluations']['dvg']['caller_version'], '0.25')
+            outcome = json.loads(
+                (output / 'execution-outcomes/dvg.json').read_text(encoding='utf-8')
+            )
+            self.assertEqual(outcome['outcome_code'], 'COMPLETED_EVENTS')
+            self.assertEqual(
+                outcome['workflow_manifest_sha256'],
+                hashlib.sha256((output / 'workflow.json').read_bytes()).hexdigest(),
+            )
             evidence = json.loads((output / 'dvg/evidence.json').read_text(encoding='utf-8'))
             event = evidence['events'][0]
             self.assertEqual(result['dvg_evaluations']['dvg']['event_references'],
@@ -119,6 +128,10 @@ class DVGWorkflowTests(unittest.TestCase):
             self.assertEqual(result['dvg_evaluations']['dvg']['status'],
                              dvg_evidence.NO_DVG_EVIDENCE_DETECTED)
             self.assertEqual(result['dvg_evaluations']['dvg']['event_count'], 0)
+            outcome = json.loads(
+                (output / 'execution-outcomes/dvg.json').read_text(encoding='utf-8')
+            )
+            self.assertEqual(outcome['outcome_code'], 'COMPLETED_ZERO')
             self.assertEqual(json.loads((output / 'dvg/evidence.json').read_text())['events'], [])
             for report in (output / 'report.html', output / 'dvg/report.html',
                            output / 'consolidated/report.html'):
@@ -145,6 +158,10 @@ class DVGWorkflowTests(unittest.TestCase):
             self.assertEqual(result['dvg_evaluations']['dvg']['status'],
                              dvg_evidence.ANALYSIS_UNAVAILABLE)
             self.assertEqual(result['dvg_evaluations']['dvg']['event_count'], None)
+            outcome = json.loads(
+                (output / 'execution-outcomes/dvg.json').read_text(encoding='utf-8')
+            )
+            self.assertEqual(outcome['outcome_code'], 'UNAVAILABLE')
             self.assertFalse((output / 'dvg/evidence.json').exists())
             self.assertIn('analysis was not performed because the dependency was unavailable',
                           (output / 'report.html').read_text(encoding='utf-8'))
@@ -160,6 +177,10 @@ class DVGWorkflowTests(unittest.TestCase):
             self.assertEqual(result['stages'][-1]['status'], 'skipped')
             self.assertEqual(result['dvg_evaluations']['dvg']['status'],
                              dvg_evidence.NOT_EVALUATED)
+            outcome = json.loads(
+                (output / 'execution-outcomes/dvg.json').read_text(encoding='utf-8')
+            )
+            self.assertEqual(outcome['outcome_code'], 'NOT_STARTED')
 
         for behavior, expected in (
                 ('malformed', dvg_evidence.INVALID_RESULT),
@@ -175,6 +196,15 @@ class DVGWorkflowTests(unittest.TestCase):
                 self.assertEqual(result['status'], 'failed')
                 self.assertEqual(result['dvg_evaluations']['dvg']['status'], expected)
                 self.assertFalse((output / 'dvg/evidence.json').exists())
+                outcome = json.loads(
+                    (output / 'execution-outcomes/dvg.json').read_text(
+                        encoding='utf-8'
+                    )
+                )
+                self.assertEqual(
+                    outcome['outcome_code'],
+                    'INVALID_OUTPUT' if behavior == 'malformed' else 'FAILED',
+                )
 
     def test_verified_reuse_and_reference_change_invalidate_evidence(self):
         with scratch_directory() as directory:

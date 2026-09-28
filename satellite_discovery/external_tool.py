@@ -27,6 +27,16 @@ class ExternalToolExitError(RuntimeError):
         self.returncode = returncode
 
 
+class ExternalToolOutputError(ValueError):
+    """An external-tool result cannot be trusted or reused."""
+
+    def __init__(self, message, failure_kind='corrupt_output'):
+        if failure_kind not in {'corrupt_output', 'incompatible_contract'}:
+            raise ValueError(f'Unsupported external-tool failure kind: {failure_kind!r}')
+        super().__init__(message)
+        self.failure_kind = failure_kind
+
+
 @dataclass(frozen=True)
 class ExternalToolExecution:
     execution: str
@@ -62,21 +72,21 @@ def _inventory(directory):
             path = base_path/name
             info = path.lstat()
             if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
-                raise ValueError('External-tool output contains a link: '+str(path))
+                raise ExternalToolOutputError('External-tool output contains a link: '+str(path))
             if not stat.S_ISDIR(info.st_mode):
-                raise ValueError('External-tool output contains a special file: '+str(path))
+                raise ExternalToolOutputError('External-tool output contains a special file: '+str(path))
         for name in files:
             path = base_path/name
             info = path.lstat()
             if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
-                raise ValueError('External-tool output contains a link: '+str(path))
+                raise ExternalToolOutputError('External-tool output contains a link: '+str(path))
             if not stat.S_ISREG(info.st_mode):
-                raise ValueError('External-tool output contains a special file: '+str(path))
+                raise ExternalToolOutputError('External-tool output contains a special file: '+str(path))
             relative = path.relative_to(directory).as_posix()
             if relative in {'manifest.json', '.external-tool.lock'}:
                 continue
             if not _safe_relative_path(relative):
-                raise ValueError('External-tool output has an unsafe path: '+relative)
+                raise ExternalToolOutputError('External-tool output has an unsafe path: '+relative)
             rows.append({'path': relative, 'bytes': info.st_size, 'sha256': checksum(path)})
     return sorted(rows, key=lambda row: row['path'])
 
@@ -261,19 +271,35 @@ class ExternalToolAdapter:
 
     def _verify_reuse(self, output, identity, previous):
         if previous.get('schema') != 'external-tool-stage-v1' or previous.get('status') != 'complete':
-            raise ValueError('Existing external-tool stage is not a completed reusable result')
+            raise ExternalToolOutputError(
+                'Existing external-tool stage is not a completed reusable result'
+            )
         if previous.get('identity') != identity:
-            raise ValueError('External-tool inputs, configuration, adapter or executable changed; use a new output folder')
+            raise ExternalToolOutputError(
+                'External-tool inputs, configuration, adapter or executable changed; use a new output folder',
+                failure_kind='incompatible_contract',
+            )
         expected = previous.get('output_inventory')
         if not isinstance(expected, list):
-            raise ValueError('External-tool output inventory is malformed')
-        actual = _inventory(output)
+            raise ExternalToolOutputError('External-tool output inventory is malformed')
+        try:
+            actual = _inventory(output)
+        except ExternalToolOutputError:
+            raise
+        except (OSError, ValueError) as error:
+            raise ExternalToolOutputError(
+                'External-tool output inventory is malformed'
+            ) from error
         if actual != expected:
-            raise ValueError('External-tool output integrity failure; existing files preserved')
+            raise ExternalToolOutputError(
+                'External-tool output integrity failure; existing files preserved'
+            )
         for row in expected:
             path = (output/row['path']).resolve(strict=True)
             if not path.is_relative_to(output) or not path.is_file():
-                raise ValueError('External-tool output path is invalid; existing files preserved')
+                raise ExternalToolOutputError(
+                    'External-tool output path is invalid; existing files preserved'
+                )
         return ExternalToolExecution(
             execution='verified_reuse',
             adapter=previous['adapter'],
@@ -301,21 +327,47 @@ class ExternalToolAdapter:
         manifest = None
         started = None
         try:
-            if marker.exists():
+            try:
+                marker_info = marker.lstat()
+            except FileNotFoundError:
+                marker_info = None
+            except OSError as error:
+                raise ExternalToolOutputError(
+                    'External-tool manifest is unreadable; existing files preserved'
+                ) from error
+            if marker_info is not None and (
+                stat.S_ISLNK(marker_info.st_mode)
+                or not stat.S_ISREG(marker_info.st_mode)
+            ):
+                raise ExternalToolOutputError(
+                    'External-tool manifest must be a regular non-symlink file'
+                )
+            if marker_info is not None:
                 try:
                     previous = json.loads(marker.read_text(encoding='utf-8'))
                 except (OSError, ValueError) as error:
-                    raise ValueError('External-tool manifest is malformed; existing files preserved') from error
+                    raise ExternalToolOutputError(
+                        'External-tool manifest is malformed; existing files preserved'
+                    ) from error
+                if not isinstance(previous, dict):
+                    raise ExternalToolOutputError(
+                        'External-tool manifest is malformed; existing files preserved'
+                    )
                 environment = reproducibility.environment()
                 command = self.build_command(executables, paths, output, config)
                 safe_command = self._safe_command(command, paths, output)
                 identity = self._identity(config, paths, dependency, safe_command, environment, context)
                 contract = self.validate_outputs(output, config)
                 if previous.get('output_contract') != contract:
-                    raise ValueError('External-tool output contract changed; existing files preserved')
+                    raise ExternalToolOutputError(
+                        'External-tool output contract changed; existing files preserved',
+                        failure_kind='incompatible_contract',
+                    )
                 return self._verify_reuse(output, identity, previous)
             if any(path != lock for path in output.iterdir()):
-                raise ValueError('External-tool output folder is nonempty without a matching manifest')
+                raise ExternalToolOutputError(
+                    'External-tool output folder is nonempty without a matching manifest'
+                )
 
             environment = reproducibility.environment()
             command = self.build_command(executables, paths, output, config)

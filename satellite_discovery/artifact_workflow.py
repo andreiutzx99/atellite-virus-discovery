@@ -7,6 +7,7 @@ from importlib import import_module
 import json
 from pathlib import Path
 import re
+import sys
 import tempfile
 import uuid
 from .sequence_downloader import checksum,write_json
@@ -19,7 +20,7 @@ from .assembly_adapters import AssemblyWorkflowAdapter
 from .virema_adapter import ViReMaDVGAdapter
 from .residual_evidence_adapter import ResidualEvidenceAdapter
 from . import (
-    artifact_contracts, artifact_stage_handlers, dvg_evidence,
+    artifact_contracts, artifact_stage_handlers, dvg_evidence, execution_outcome,
     independent_recurrence, local_comparison, m8_homology,
     m9_blastp_stage, m9_orf_stage, m10_stage, m11_stage,
     m12_artifact_review,
@@ -1045,7 +1046,7 @@ def inspect_configuration(manifest,registry=None,output=None):
             'note':'Read-only configuration, path, contract and dependency inspection. No stage was executed.'}
 
 
-def write_status(output, result):
+def write_status(output, result, execution_outcome_failure_codes=None):
     """Write a useful report even when a stage cannot start or is interrupted."""
     result['final_report_paths']=['report.html','workflow.json','reproducibility.json']
     result['stage_statuses']={}
@@ -1073,19 +1074,30 @@ def write_status(output, result):
                     if stage.get('error_type') == 'InvalidDVGResultError'
                     else dvg_evidence.ANALYSIS_FAILED
                 )
+                if status == dvg_evidence.INVALID_RESULT:
+                    failure_code = (
+                        (execution_outcome_failure_codes or {}).get(stage['id'])
+                        or dvg_evidence.UNCLASSIFIED_INVALID_RESULT
+                    )
             elif state == 'complete':
                 try:
                     record = stage['output_files']['summary.json']
                     path = output / stage['output_path'] / 'summary.json'
                     if checksum(path) != record['sha256']:
-                        raise ValueError('DVG summary changed after output verification')
+                        raise dvg_evidence.InvalidDVGResultError(
+                            'DVG summary changed after output verification',
+                            failure_code=dvg_evidence.CORRUPT_OUTPUT,
+                        )
                     summary = json.loads(path.read_text(encoding='utf-8'))
                     dvg_evidence.validate_summary(summary)
                     if summary['status'] not in {
                         dvg_evidence.DVG_EVIDENCE_DETECTED,
                         dvg_evidence.NO_DVG_EVIDENCE_DETECTED,
                     }:
-                        raise ValueError('Completed DVG stage has no completed evaluation')
+                        raise dvg_evidence.InvalidDVGResultError(
+                            'Completed DVG stage has no completed evaluation',
+                            failure_code=dvg_evidence.INVALID_M5_CONTRACT,
+                        )
                     status = summary['status']
                     count = summary['event_count']
                     raw = summary.get('raw_output')
@@ -1097,8 +1109,21 @@ def write_status(output, result):
                     event_references = references[:25]
                     remaining_event_references = max(0, len(references) - 25)
                     evidence_file = summary.get('evidence_file')
+                except dvg_evidence.InvalidDVGResultError as error:
+                    status = dvg_evidence.INVALID_RESULT
+                    failure_code = error.failure_code
                 except (OSError, ValueError, TypeError, KeyError):
                     status = dvg_evidence.INVALID_RESULT
+                    failure_code = dvg_evidence.UNCLASSIFIED_INVALID_RESULT
+            if execution_outcome_failure_codes is not None:
+                if status == dvg_evidence.INVALID_RESULT:
+                    execution_outcome_failure_codes[stage['id']] = (
+                        failure_code
+                        if failure_code in dvg_evidence.M5_FAILURE_CODES
+                        else dvg_evidence.UNCLASSIFIED_INVALID_RESULT
+                    )
+                else:
+                    execution_outcome_failure_codes.pop(stage['id'], None)
             stage['dvg_evidence'] = {
                 'caller': caller, 'caller_version': caller_version, 'status': status,
                 'event_count': count, 'raw_output': raw,
@@ -1459,6 +1484,10 @@ def run(manifest,output,registry=None):
     digest=checksum(manifest)
     stages=validate(specification,registry)
     m12_binding_plans=_m12_handoff_plans(manifest,stages,registry)
+    dvg_module_names = {
+        name for name in registry.module_names()
+        if getattr(registry.get_module(name).handler, 'evidence_family', None) == 'dvg'
+    }
 
     output.mkdir(parents=True,exist_ok=True)
     lock=output/'.workflow.lock'
@@ -1466,6 +1495,7 @@ def run(manifest,output,registry=None):
     marker=output/'workflow.json'
     result=None
     active=None
+    execution_outcome_failure_codes={}
     try:
         runtime=reproducibility.environment()
         identity={
@@ -1538,14 +1568,14 @@ def run(manifest,output,registry=None):
         }
         transition(result,'running',WORKFLOW_TRANSITIONS,
                    started_utc=datetime.now(timezone.utc).isoformat())
-        write_status(output,result)
+        write_status(output,result,execution_outcome_failure_codes)
 
         for stage,active in zip(stages,result['stages']):
             if stage.get('skip') is True:
                 transition(active,'skipped',STAGE_TRANSITIONS,
                            reason='Explicitly skipped by workflow configuration.',
                            finished_utc=datetime.now(timezone.utc).isoformat())
-                write_status(output,result)
+                write_status(output,result,execution_outcome_failure_codes)
                 active=None
                 continue
 
@@ -1563,7 +1593,7 @@ def run(manifest,output,registry=None):
                                reason=reason,finished_utc=datetime.now(timezone.utc).isoformat())
                     transition(result,'external_module_required',WORKFLOW_TRANSITIONS,
                                reason=reason,finished_utc=datetime.now(timezone.utc).isoformat())
-                    write_status(output,result)
+                    write_status(output,result,execution_outcome_failure_codes)
                     active=None
                     return output/'report.html'
                 config=registry.validate_config(definition.kind,stage.get('config',{}))
@@ -1643,7 +1673,7 @@ def run(manifest,output,registry=None):
                                reason=reason,finished_utc=datetime.now(timezone.utc).isoformat())
                     transition(result,'dependency_missing',WORKFLOW_TRANSITIONS,
                                reason=reason,finished_utc=datetime.now(timezone.utc).isoformat())
-                    write_status(output,result)
+                    write_status(output,result,execution_outcome_failure_codes)
                     active=None
                     return output/'report.html'
 
@@ -1658,7 +1688,7 @@ def run(manifest,output,registry=None):
                 raise ValueError('Stage output redirects outside the workflow folder')
             active['cache_key']=cache_key
             active['output_path']=stage_output.relative_to(output).as_posix()
-            write_status(output,result)
+            write_status(output,result,execution_outcome_failure_codes)
             stage_marker=stage_output/'manifest.json'
             before=checksum(stage_marker) if stage_marker.is_file() else None
             try:
@@ -1689,7 +1719,7 @@ def run(manifest,output,registry=None):
                            reason=reason,finished_utc=datetime.now(timezone.utc).isoformat())
                 transition(result,'dependency_missing',WORKFLOW_TRANSITIONS,
                            reason=reason,finished_utc=datetime.now(timezone.utc).isoformat())
-                write_status(output,result)
+                write_status(output,result,execution_outcome_failure_codes)
                 active=None
                 return output/'report.html'
 
@@ -1750,7 +1780,7 @@ def run(manifest,output,registry=None):
                     active['comparison_result']='no match found under the configured comparison'
             transition(active,'complete',STAGE_TRANSITIONS,
                        finished_utc=datetime.now(timezone.utc).isoformat())
-            write_status(output,result)
+            write_status(output,result,execution_outcome_failure_codes)
             active=None
 
         if checksum(manifest)!=digest:
@@ -1758,7 +1788,7 @@ def run(manifest,output,registry=None):
         final_status=aggregate_stage_status(result['stages'])
         transition(result,final_status,WORKFLOW_TRANSITIONS,
                    finished_utc=datetime.now(timezone.utc).isoformat())
-        write_status(output,result)
+        write_status(output,result,execution_outcome_failure_codes)
         return output/'report.html'
     except BaseException as exc:
         if result is not None:
@@ -1773,14 +1803,37 @@ def run(manifest,output,registry=None):
                 'status':status,
                 **failure,
             }
+            if (
+                active is not None
+                and active.get('evidence_family') == 'dvg'
+                and getattr(exc, 'failure_code', None) in dvg_evidence.M5_FAILURE_CODES
+            ):
+                execution_outcome_failure_codes[active['id']] = exc.failure_code
             if active is not None and active.get('status')=='running':
                 transition(active,status,STAGE_TRANSITIONS,**failure)
             if result.get('status')=='running':
                 transition(result,status,WORKFLOW_TRANSITIONS,**failure)
-            write_status(output,result)
+            write_status(output,result,execution_outcome_failure_codes)
         raise
     finally:
-        stage_lock.release(lock,lock_token)
+        active_exception = sys.exception()
+        try:
+            if result is not None:
+                try:
+                    execution_outcome.write_final_outcomes(
+                        output,
+                        dvg_module_names,
+                        execution_outcome_failure_codes,
+                    )
+                except Exception as error:
+                    if active_exception is None:
+                        raise
+                    active_exception.add_note(
+                        'Failed to write M5 execution outcome sidecar: '
+                        + (str(error) or type(error).__name__)
+                    )
+        finally:
+            stage_lock.release(lock,lock_token)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description='Run or preflight a validated artifact workflow.')

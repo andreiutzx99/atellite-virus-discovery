@@ -167,8 +167,10 @@ such tools are run.
 
 Changing an M5 run, event artifact, hypothesis definition, or M13
 implementation invalidates M13 only. Do not rerun or invalidate M5. Generated
-timestamps and host-specific paths are excluded. Reuse requires exact identity
-and output hash validation.
+timestamps and host-specific absolute paths are not copied as M13 fields.
+Exact producer-manifest SHA-256 values remain opaque run-identity inputs and
+may change when the producer record changes. Reuse requires exact identity and
+output hash validation.
 
 ## 7. Synthetic acceptance fixtures
 
@@ -185,10 +187,50 @@ and output hash validation.
 
 ## 8. Compatibility and claim boundary
 
-M13 depends only on M5 artifacts `dvg_parameters`, `dvg_evidence_summary`,
-`dvg_evidence`, and optional `dvg_raw_output` in
+M13's scientific evidence inputs are only the M5 artifacts `dvg_parameters`,
+`dvg_evidence_summary`, `dvg_evidence`, and optional `dvg_raw_output` in
 [`artifact_contracts.py`](../satellite_discovery/artifact_contracts.py).
+The non-scientific execution record in section 9 verifies noncompleted-run
+state; it is not an M5 evidence artifact.
 There is no required change to M5 semantics, event fields, or ViReMa
 provisioning. A later M4 allowlist/producer registration is additive. M13
 records caller observations and hypotheses; it does not establish DVG
 identity, satellite status, interference, helper dependence, or function.
+
+## 9. Normative noncompleted-run handoff addendum
+
+This pre-implementation addendum supplements sections 3, 5, and 6. The
+`m13-input-v1` contract has not been implemented or released; this addendum
+freezes its handoff requirements before implementation.
+
+A noncompleted M5 `M5RunRef` must include explicit `producer_workflow_ref` and
+`execution_record_ref` objects. The first names the exact `workflow.json` by
+normalized relative path, expected SHA-256, and workflow ID. The second names
+the exact `m5-execution-outcome-v1` sidecar by normalized relative path and
+expected SHA-256 and schema. Resolve both paths only relative to the M13 input
+manifest. Do not search directories, infer roots, follow symlinks, or trust a
+caller-supplied status without validating both referenced records. The
+sidecar's `workflow_manifest_sha256` must match the computed digest of the
+referenced `workflow.json`.
+
+The shared workflow runner must emit a versioned, non-scientific
+`m5-execution-outcome-v1` sidecar for each M5 DVG stage, including a stable
+failure code that distinguishes incomplete/truncated output from
+malformed/corrupt output. The sidecar preserves the raw M1 stage state and raw
+M5 evidence status separately; M13 output preserves them as
+`producer_execution_status_raw` and `producer_status_raw`, respectively. It
+creates no placeholder scientific artifacts and is not part of the M5
+scientific output inventory. Noncompleted M5 runs remain non-importable until
+M13 validates the explicit workflow and execution-record references; caller-
+asserted hashes/statuses and M1 manifest v2 error text are insufficient. See the
+[handoff gap resolution](research/M13_HANDOFF_GAP_RESOLUTION.md) for the
+normative state mapping, cache requirements, and the shared handoff's
+implementation status.
+
+For completed runs, the existing verified M5 stage-manifest and typed
+artifacts remain authoritative; the new execution record is not a reason to
+rerun M5. For noncompleted runs, a missing stage-manifest digest is permitted
+only when the explicit workflow reference and versioned execution record
+verify the exact M5 stage and run snapshot. Bind both record digests and the
+outcome-record version into M13's scoped cache identity only. Do not invalidate
+or rewrite existing M1–M12 scientific outputs or alter M5 scientific semantics.

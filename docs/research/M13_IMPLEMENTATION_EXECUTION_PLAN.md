@@ -27,9 +27,10 @@ python -m satellite_discovery.artifact_workflow \
 
 There is no M13-specific CLI, external-caller invocation, arbitrary importer,
 or dynamic module loader. Implementation requires additive M4 workflow
-registration and additive artifact contracts; it must not change M5 behavior
-([M13 contract](../M13_CONTRACT_FREEZE.md), lines 24–36;
-[M13 readiness](M13_PRECONTRACT_READINESS.md), lines 144–152).
+registration and additive artifact contracts; it must not change M5 scientific
+behavior. The metadata-only execution-outcome prerequisite is defined in
+section 12, the [M13 contract](../M13_CONTRACT_FREEZE.md), and the
+[M13 readiness audit](M13_FINAL_IMPLEMENTATION_READINESS.md).
 
 The input manifest is `m13-input-v1` with an opaque `candidate_id`, at least
 one ordered `m5_runs` entry, and optional `hypotheses`. Each run carries the
@@ -92,9 +93,12 @@ entry point.
 - `tests/test_stage_cache_identity.py` (additive regression assertions only)
   - Verify M13 changes invalidate M13 identity only and do not change M5–M10
     identities.
-- Existing M5 implementation modules should not be edited:
-  `satellite_discovery/dvg_evidence.py`,
-  `satellite_discovery/virema_adapter.py`, and any M5 workflow adapter.
+- Do not change M5 event parsing, accepted event semantics, scientific status
+  values, or output schemas. If stable failure codes require a narrow change at
+  an M5 parser/adapter error boundary, it is metadata-only, must be reviewed as
+  part of the shared handoff prerequisite, and must preserve successful M5
+  cache identities. See the
+  [handoff gap resolution](M13_HANDOFF_GAP_RESOLUTION.md).
 
 `stage_registry.py` and `workflow_states.py` should not require semantic
 changes. The existing registry supports typed dynamic inputs, handlers,
@@ -245,8 +249,11 @@ Required contract-derived fixtures:
 2. **Completed caller zero:** valid empty evidence and
    `NO_DVG_EVIDENCE_DETECTED`; assert `IMPORTED_COMPLETED_ZERO`, no biological
    negative, and no invented hypothesis.
-3. **Noncompleted runs:** failed, interrupted, incomplete, unavailable, and
-   non-produced states; preserve exact raw status and emit no inferred event.
+3. **Noncompleted runs:** separately cover not-started, unavailable,
+   runtime-failed, interrupted, truncated/incomplete, and malformed/corrupt
+   M5 outcomes. Preserve both raw M1 and M5 states and emit no inferred event.
+   Use the handoff record and exact expectations in the
+   [handoff gap resolution](M13_HANDOFF_GAP_RESOLUTION.md).
 4. **Two same-shaped runs:** matching-looking events retain two distinct
    identities; no merge, vote, or agreement row.
 5. **Hypotheses absent:** event index may be populated, but hypothesis matrix
@@ -306,7 +313,9 @@ The implementation must preserve:
 - **M5:** caller-specific event fields, raw status, completion/accounting
   semantics, zero-event meaning, parser version, and provenance. Do not call
   `dvg_evidence.aggregate_evaluations`, because M13 does not normalize
-  multi-caller classifications.
+  multi-caller classifications. The shared handoff may add failure-reason
+  metadata only; it must not change those scientific behaviors or status
+  values.
 - **M6:** no M6-derived event input is accepted and no read-back evidence is
   silently counted as an M5 event.
 - **M7–M10:** no upstream rerun or interpretation is introduced; these
@@ -355,11 +364,13 @@ failure, interruption, and verified reuse
    deterministic workflow tests.
 8. Run the complete existing regression suite and required offline CI matrix.
 
-M13 can be implemented independently and in parallel with M12 and M14 because
-its core consumes only existing M5 artifacts. M15 may design its envelope in
-parallel but should integrate M13 only after these output schemas and artifact
-identities are stable. M16’s generic fixture mechanics can also proceed
-independently; its final integration waits for frozen upstream result bundles.
+After the shared handoff prerequisite in section 12 is met, M13 can proceed
+independently of M12 and M14. It consumes existing M5 scientific artifacts
+plus the non-scientific M5 outcome record, not M12 outputs. M15 may design its
+envelope in parallel but should integrate M13 only after these output schemas
+and artifact identities are stable. M16’s generic fixture mechanics can also
+proceed independently; its final integration waits for frozen upstream result
+bundles.
 See the [cross-milestone fixture matrix](M12_M16_FIXTURE_MATRIX.md) and
 [parallelization plan](M12_M16_PARALLELIZATION_PLAN.md).
 
@@ -392,4 +403,17 @@ absence. Those claims remain outside this baseline
 ([M13 contract](../M13_CONTRACT_FREEZE.md), lines 113–119, 181–189;
 [M13 readiness](M13_PRECONTRACT_READINESS.md), lines 118–142).
 
-M13 implementation execution plan: READY FOR IMPLEMENTATION PLANNING
+## 12. Shared handoff prerequisite
+
+The shared workflow runner now emits the versioned `m5-execution-outcome-v1`
+record and stable failure codes described in the
+[handoff gap resolution](M13_HANDOFF_GAP_RESOLUTION.md). Existing M1
+`workflow.json` records remain unchanged; the sidecar preserves raw lifecycle
+state and distinguishes truncated/incomplete output from malformed/corrupt
+output without free-text parsing or filesystem search.
+
+The shared metadata change and its cache-isolation tests are complete. M1–M12
+scientific artifacts and M5 event semantics remain unchanged. The readiness
+audit still needs reconciliation before any M13 code is started.
+
+M13 implementation execution plan: SHARED HANDOFF PREREQUISITE COMPLETE — M13 NOT IMPLEMENTED
