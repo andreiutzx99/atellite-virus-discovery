@@ -14,6 +14,22 @@ ANALYSIS_UNAVAILABLE = 'ANALYSIS_UNAVAILABLE'
 ANALYSIS_FAILED = 'ANALYSIS_FAILED'
 INVALID_RESULT = 'INVALID_RESULT'
 
+TRUNCATED_OUTPUT = 'TRUNCATED_OUTPUT'
+INCOMPLETE_ACCOUNTING = 'INCOMPLETE_ACCOUNTING'
+MALFORMED_OUTPUT = 'MALFORMED_OUTPUT'
+CORRUPT_OUTPUT = 'CORRUPT_OUTPUT'
+INVALID_M5_CONTRACT = 'INVALID_M5_CONTRACT'
+UNCLASSIFIED_INVALID_RESULT = 'UNCLASSIFIED_INVALID_RESULT'
+
+M5_FAILURE_CODES = frozenset({
+    TRUNCATED_OUTPUT,
+    INCOMPLETE_ACCOUNTING,
+    MALFORMED_OUTPUT,
+    CORRUPT_OUTPUT,
+    INVALID_M5_CONTRACT,
+    UNCLASSIFIED_INVALID_RESULT,
+})
+
 _STATUSES = {
     DVG_EVIDENCE_DETECTED,
     NO_DVG_EVIDENCE_DETECTED,
@@ -32,28 +48,55 @@ _ENTRY = re.compile(r'^([1-9][0-9]*)_to_([1-9][0-9]*)_#_([1-9][0-9]*)$')
 class InvalidDVGResultError(ValueError):
     """Raised when native or normalized evidence is incomplete or invalid."""
 
+    def __init__(self, message, failure_code=UNCLASSIFIED_INVALID_RESULT):
+        if failure_code not in M5_FAILURE_CODES:
+            raise ValueError(f'Unsupported M5 failure code: {failure_code!r}')
+        super().__init__(message)
+        self.failure_code = failure_code
+
 
 def _read_bounded_utf8(path, limit, label, *, allow_empty=False):
     path = Path(path)
     try:
         info = path.lstat()
     except OSError as error:
-        raise InvalidDVGResultError(f'{label} is missing or unreadable') from error
+        raise InvalidDVGResultError(
+            f'{label} is missing or unreadable',
+            failure_code=TRUNCATED_OUTPUT,
+        ) from error
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
-        raise InvalidDVGResultError(f'{label} must be a regular non-symlink file')
+        raise InvalidDVGResultError(
+            f'{label} must be a regular non-symlink file',
+            failure_code=CORRUPT_OUTPUT,
+        )
     if info.st_size > limit:
-        raise InvalidDVGResultError(f'{label} exceeds the {limit}-byte limit')
+        raise InvalidDVGResultError(
+            f'{label} exceeds the {limit}-byte limit',
+            failure_code=MALFORMED_OUTPUT,
+        )
     try:
         data = path.read_bytes()
         if len(data) > limit:
-            raise InvalidDVGResultError(f'{label} exceeds the {limit}-byte limit')
+            raise InvalidDVGResultError(
+                f'{label} exceeds the {limit}-byte limit',
+                failure_code=MALFORMED_OUTPUT,
+            )
         text = data.decode('utf-8', errors='strict')
     except (OSError, UnicodeDecodeError) as error:
-        raise InvalidDVGResultError(f'{label} is unreadable or not valid UTF-8') from error
+        raise InvalidDVGResultError(
+            f'{label} is unreadable or not valid UTF-8',
+            failure_code=MALFORMED_OUTPUT,
+        ) from error
     if not text and not allow_empty:
-        raise InvalidDVGResultError(f'{label} is empty')
+        raise InvalidDVGResultError(
+            f'{label} is empty',
+            failure_code=INCOMPLETE_ACCOUNTING,
+        )
     if '\x00' in text:
-        raise InvalidDVGResultError(f'{label} contains a NUL byte')
+        raise InvalidDVGResultError(
+            f'{label} contains a NUL byte',
+            failure_code=MALFORMED_OUTPUT,
+        )
     return text
 
 
@@ -87,11 +130,17 @@ def parse_virema_results(path, references: dict[str, int], stdout_path, *,
             or any(not isinstance(name, str) or not name or name.endswith('_RevStrand')
                    or not isinstance(length, int) or isinstance(length, bool) or length < 1
                    for name, length in references.items())):
-        raise InvalidDVGResultError('Reference identifiers and positive lengths are required')
+        raise InvalidDVGResultError(
+            'Reference identifiers and positive lengths are required',
+            failure_code=INVALID_M5_CONTRACT,
+        )
     if (expected_read_count is not None
             and (not isinstance(expected_read_count, int) or isinstance(expected_read_count, bool)
                  or expected_read_count < 1)):
-        raise InvalidDVGResultError('expected_read_count must be a positive integer')
+        raise InvalidDVGResultError(
+            'expected_read_count must be a positive integer',
+            failure_code=INVALID_M5_CONTRACT,
+        )
     # Native suffix aliases are generated from the declared forward reference.
     native = _read_bounded_utf8(path, _MAX_NATIVE_BYTES, 'ViReMa result',
                                 allow_empty=True)
@@ -109,23 +158,38 @@ def parse_virema_results(path, references: dict[str, int], stdout_path, *,
     if (len(analyzed) != 1 or len(recombinations) != 1
             or len(completion_lines) != 1 or not nonempty_stdout_lines
             or not completion_marker.fullmatch(nonempty_stdout_lines[-1])):
-        raise InvalidDVGResultError('ViReMa stdout is missing or duplicates required count markers')
+        raise InvalidDVGResultError(
+            'ViReMa stdout is missing or duplicates required count markers',
+            failure_code=INCOMPLETE_ACCOUNTING,
+        )
     if (expected_read_count is not None
             and int(analyzed[0]) != expected_read_count):
-        raise InvalidDVGResultError('ViReMa analysed-read count does not match expected_read_count')
+        raise InvalidDVGResultError(
+            'ViReMa analysed-read count does not match expected_read_count',
+            failure_code=INCOMPLETE_ACCOUNTING,
+        )
 
     if native == '':
         if int(recombinations[0][0]) != 0:
-            raise InvalidDVGResultError('Empty result conflicts with positive stdout recombination count')
+            raise InvalidDVGResultError(
+                'Empty result conflicts with positive stdout recombination count',
+                failure_code=INCOMPLETE_ACCOUNTING,
+            )
         return []
     if not native.endswith('\n'):
-        raise InvalidDVGResultError('Non-empty ViReMa result is truncated without its final newline')
+        raise InvalidDVGResultError(
+            'Non-empty ViReMa result is truncated without its final newline',
+            failure_code=TRUNCATED_OUTPUT,
+        )
 
     # Keep native line endings out of token values while retaining the exact
     # human-visible output line for provenance.
     lines = native.splitlines()
     if any(not line for line in lines):
-        raise InvalidDVGResultError('ViReMa result contains an unexpected blank line')
+        raise InvalidDVGResultError(
+            'ViReMa result contains an unexpected blank line',
+            failure_code=MALFORMED_OUTPUT,
+        )
     events = []
     seen_libraries = set()
     seen_entries = set()
@@ -136,32 +200,56 @@ def parse_virema_results(path, references: dict[str, int], stdout_path, *,
         match = re.fullmatch(
             r'@NewLibrary: ([A-Za-z0-9_.:|+-]+_to_[A-Za-z0-9_.:|+-]+)', header)
         if not match:
-            raise InvalidDVGResultError(f'Unexpected or malformed ViReMa section header at line {index + 1}')
+            raise InvalidDVGResultError(
+                f'Unexpected or malformed ViReMa section header at line {index + 1}',
+                failure_code=MALFORMED_OUTPUT,
+            )
         library = match.group(1)
         if library in seen_libraries:
-            raise InvalidDVGResultError(f'Duplicate ViReMa library section: {library}')
+            raise InvalidDVGResultError(
+                f'Duplicate ViReMa library section: {library}',
+                failure_code=MALFORMED_OUTPUT,
+            )
         seen_libraries.add(library)
         if index + 2 >= len(lines) or lines[index + 2] != '@EndofLibrary':
-            raise InvalidDVGResultError(f'Truncated ViReMa section for {library}')
+            raise InvalidDVGResultError(
+                f'Truncated ViReMa section for {library}',
+                failure_code=TRUNCATED_OUTPUT,
+            )
         output_line = lines[index + 1]
         if output_line.startswith('@') or not output_line or not output_line.endswith('\t'):
-            raise InvalidDVGResultError(f'Missing event line for {library}')
+            raise InvalidDVGResultError(
+                f'Missing event line for {library}',
+                failure_code=MALFORMED_OUTPUT,
+            )
         donor, acceptor, donor_orientation, acceptor_orientation = _library_parts(
             library, references)
         entries = output_line.split('\t')
         entries.pop()  # Exactly one terminal tab is part of the native format.
         if not entries or any(not entry for entry in entries):
-            raise InvalidDVGResultError(f'Malformed event list for {library}')
+            raise InvalidDVGResultError(
+                f'Malformed event list for {library}',
+                failure_code=MALFORMED_OUTPUT,
+            )
         for entry in entries:
             parsed = _ENTRY.fullmatch(entry)
             if not parsed:
-                raise InvalidDVGResultError(f'Malformed ViReMa event token: {entry!r}')
+                raise InvalidDVGResultError(
+                    f'Malformed ViReMa event token: {entry!r}',
+                    failure_code=MALFORMED_OUTPUT,
+                )
             breakpoint_1, breakpoint_2, support = map(int, parsed.groups())
             if breakpoint_1 > references[donor] or breakpoint_2 > references[acceptor]:
-                raise InvalidDVGResultError(f'ViReMa event coordinate exceeds reference bounds: {entry!r}')
+                raise InvalidDVGResultError(
+                    f'ViReMa event coordinate exceeds reference bounds: {entry!r}',
+                    failure_code=MALFORMED_OUTPUT,
+                )
             duplicate_key = (library, entry)
             if duplicate_key in seen_entries:
-                raise InvalidDVGResultError(f'Duplicate ViReMa event token: {entry!r}')
+                raise InvalidDVGResultError(
+                    f'Duplicate ViReMa event token: {entry!r}',
+                    failure_code=MALFORMED_OUTPUT,
+                )
             seen_entries.add(duplicate_key)
             supporting_reads += support
             events.append({
@@ -181,13 +269,21 @@ def parse_virema_results(path, references: dict[str, int], stdout_path, *,
                 'event_type': 'virus-virus_junction',
             })
             if len(events) > _MAX_EVENTS:
-                raise InvalidDVGResultError('ViReMa result exceeds the event limit')
+                raise InvalidDVGResultError(
+                    'ViReMa result exceeds the event limit',
+                    failure_code=MALFORMED_OUTPUT,
+                )
         index += 3
     if not events:
-        raise InvalidDVGResultError('Non-empty ViReMa result contains no events')
+        raise InvalidDVGResultError(
+            'Non-empty ViReMa result contains no events',
+            failure_code=MALFORMED_OUTPUT,
+        )
     if supporting_reads != int(recombinations[0][0]):
         raise InvalidDVGResultError(
-            'Summed event support does not match ViReMa stdout recombination count')
+            'Summed event support does not match ViReMa stdout recombination count',
+            failure_code=INCOMPLETE_ACCOUNTING,
+        )
     return events
 
 

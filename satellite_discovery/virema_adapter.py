@@ -16,7 +16,7 @@ import sys
 from . import dvg_evidence, sequence_catalogue
 from .assembly_adapters import _read_fastq
 from .dependency_review import inspect_executable
-from .external_tool import ExternalToolAdapter
+from .external_tool import ExternalToolAdapter, ExternalToolOutputError
 from .sequence_downloader import checksum, write_json
 
 
@@ -49,14 +49,57 @@ def _sha(path):
     return checksum(path)
 
 
+def _compatible_m5_source_hashes(actual_hashes, compatibility_text=None):
+    """Alias only an exact reviewed metadata-only source tuple to its predecessor."""
+    if compatibility_text is None:
+        path = Path(__file__).with_name(
+            'm5_execution_outcome_cache_compatibility.txt'
+        )
+        try:
+            compatibility_text = path.read_text(encoding='utf-8')
+        except OSError:
+            return actual_hashes
+    lines = compatibility_text.splitlines()
+    if not lines or lines[0] != 'schema=m5-execution-outcome-cache-compat-v1':
+        return actual_hashes
+
+    entries = {}
+    for line in lines[1:]:
+        if not line or line.startswith('#'):
+            continue
+        if not line.startswith('entry='):
+            return actual_hashes
+        parts = line[len('entry='):].split(';')
+        if len(parts) != 2:
+            return actual_hashes
+        groups = [group.split(',') for group in parts]
+        if any(
+            len(group) != 3
+            or any(not re.fullmatch(r'[0-9a-f]{64}', item) for item in group)
+            for group in groups
+        ):
+            return actual_hashes
+        current, previous = tuple(groups[0]), tuple(groups[1])
+        if current in entries and entries[current] != previous:
+            return actual_hashes
+        entries[current] = previous
+    return entries.get(tuple(actual_hashes), actual_hashes)
+
+
 def _regular_file(path, label):
     path = Path(path)
     try:
         info = path.lstat()
     except OSError as error:
-        raise ValueError(f'{label} is missing or unreadable') from error
+        raise dvg_evidence.InvalidDVGResultError(
+            f'{label} is missing or unreadable',
+            failure_code=dvg_evidence.TRUNCATED_OUTPUT,
+        ) from error
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
-        raise ValueError(f'{label} must be a regular non-symlink file')
+        raise dvg_evidence.InvalidDVGResultError(
+            f'{label} must be a regular non-symlink file',
+            failure_code=dvg_evidence.CORRUPT_OUTPUT,
+        )
     return path
 
 
@@ -144,26 +187,19 @@ class ViReMaDVGAdapter(ExternalToolAdapter):
     def execute(self, inputs, output, config, context=None):
         try:
             return super().execute(inputs, output, config, context=context)
+        except ExternalToolOutputError as error:
+            failure_code = (
+                dvg_evidence.INVALID_M5_CONTRACT
+                if error.failure_kind == 'incompatible_contract'
+                else dvg_evidence.CORRUPT_OUTPUT
+            )
+            raise dvg_evidence.InvalidDVGResultError(
+                'Saved ViReMa result failed integrity verification: ' + str(error),
+                failure_code=failure_code,
+            ) from error
         except ValueError as error:
             if isinstance(error, dvg_evidence.InvalidDVGResultError):
                 raise
-            # The shared executor also handles unrelated execution/configuration
-            # errors. Only failed integrity checks of a saved result mean that
-            # the DVG result itself is invalid rather than an execution failure.
-            if str(error).startswith((
-                'External-tool manifest is malformed;',
-                'External-tool output contract changed;',
-                'Existing external-tool stage is not a completed reusable result',
-                'External-tool output inventory is malformed',
-                'External-tool output integrity failure;',
-                'External-tool output path is invalid;',
-                'External-tool output contains a link:',
-                'External-tool output contains a special file:',
-                'External-tool output has an unsafe path:',
-            )):
-                raise dvg_evidence.InvalidDVGResultError(
-                    'Saved ViReMa result failed integrity verification: ' + str(error)
-                ) from error
             raise
 
     @property
@@ -516,7 +552,8 @@ class ViReMaDVGAdapter(ExternalToolAdapter):
             raise
         except (ValueError, OSError, TypeError, KeyError) as error:
             raise dvg_evidence.InvalidDVGResultError(
-                'ViReMa output validation failed: ' + (str(error) or type(error).__name__)
+                'ViReMa output validation failed: ' + (str(error) or type(error).__name__),
+                failure_code=dvg_evidence.INVALID_M5_CONTRACT,
             ) from error
 
     def _validate_outputs(self, output, config):
@@ -605,15 +642,23 @@ class ViReMaDVGAdapter(ExternalToolAdapter):
         source = Path(__file__).resolve()
         parser_source = Path(dvg_evidence.__file__).resolve()
         executor_source = Path(inspect.getsourcefile(ExternalToolAdapter)).resolve()
+        actual_hashes = (
+            _sha(source),
+            _sha(executor_source),
+            _sha(parser_source),
+        )
+        adapter_hash, executor_hash, parser_hash = _compatible_m5_source_hashes(
+            actual_hashes
+        )
         return {
-            'adapter_source_sha256': _sha(source),
-            'executor_source_sha256': _sha(executor_source),
+            'adapter_source_sha256': adapter_hash,
+            'executor_source_sha256': executor_hash,
             'caller': self.caller_name,
             'caller_version': CALLER_VERSION,
             'upstream_commit': UPSTREAM_COMMIT,
             'source_sha256': dict(SOURCE_HASHES),
             'parser_version': dvg_evidence.PARSER_VERSION,
-            'parser_source_sha256': _sha(parser_source),
+            'parser_source_sha256': parser_hash,
         }
 
     def _identity(self, config, inputs, dependency, command, environment, context=None):
@@ -629,7 +674,12 @@ class ViReMaDVGAdapter(ExternalToolAdapter):
         identity['environment'] = {
             key: environment.get(key) for key in ('python', 'platform')
         }
-        identity['implementation'] = self.cache_implementation_identity()
+        implementation = self.cache_implementation_identity()
+        if type(self) is ViReMaDVGAdapter:
+            identity['adapter']['source_sha256'] = implementation[
+                'adapter_source_sha256'
+            ]
+        identity['implementation'] = implementation
         identity['caller_source'] = dependency.get('source_sha256', {})
         return identity
 
