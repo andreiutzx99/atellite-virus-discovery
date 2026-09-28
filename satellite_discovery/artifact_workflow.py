@@ -23,7 +23,7 @@ from . import (
     artifact_contracts, artifact_stage_handlers, dvg_evidence, execution_outcome,
     independent_recurrence, local_comparison, m8_homology,
     m9_blastp_stage, m9_orf_stage, m10_stage, m11_stage,
-    m12_artifact_review,
+    m12_artifact_review, m13_contracts, m13_stage,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -305,6 +305,7 @@ def build_default_registry():
         ),
     )
     m12_artifact_review.register_stage(registry)
+    m13_stage.register_stage(registry)
     registry.register(
         'workflow_report', None, artifact_stage_handlers.workflow_report,
         version='1', dynamic_inputs=True,
@@ -819,6 +820,161 @@ def _m12_handoff_plans(manifest,stages,registry):
     return plans
 
 
+def _m13_manifest_path(manifest, stage):
+    value = stage.get('inputs', {}).get('manifest')
+    if (not isinstance(value, dict)
+            or set(value) != {'path', 'artifact_type'}
+            or value.get('artifact_type') != 'm13_input_manifest'
+            or not isinstance(value.get('path'), str)):
+        raise ValueError('M13 requires a direct typed m13_input_manifest input')
+    relative = Path(value['path'])
+    if (relative.is_absolute() or '\\' in value['path']
+            or any(part in {'', '.', '..'} for part in value['path'].split('/'))):
+        raise ValueError('M13 input manifest path must be normalized and relative')
+    path = manifest.parent / value['path']
+    current = manifest.parent
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError('M13 input manifest path must not contain symbolic links')
+    return path.resolve(strict=True)
+
+
+def _m13_handoff_plans(manifest, stages, registry):
+    if not any(stage['kind'] == m13_stage.STAGE_KIND for stage in stages):
+        return {}
+    definitions = {
+        stage['id']: _producer_definition(stage, registry)
+        for stage in stages
+    }
+    plans = {}
+    for stage in stages:
+        if stage['kind'] != m13_stage.STAGE_KIND:
+            continue
+        input_manifest_path = _m13_manifest_path(manifest, stage)
+        manifest_value = m13_contracts.load_input_manifest(input_manifest_path)
+        expected = {}
+        bindings = []
+        for run_index, run in enumerate(manifest_value['m5_runs']):
+            for ref in run['artifacts']:
+                name = m13_contracts.artifact_input_name(
+                    run_index, ref['artifact_type'])
+                expected[name] = ref
+                supplied = stage['inputs'].get(name)
+                if supplied is None:
+                    bindings.append({
+                        'input_name': name,
+                        'run_index': run_index,
+                        'artifact_ref': ref,
+                        'declared': False,
+                    })
+                    continue
+                if (isinstance(supplied, dict)
+                        and set(supplied) == {'path', 'artifact_type'}):
+                    if supplied['artifact_type'] != ref['artifact_type']:
+                        bindings.append({
+                            'input_name': name,
+                            'run_index': run_index,
+                            'artifact_ref': ref,
+                            'declared': True,
+                            'static_failure': 'INVALID',
+                        })
+                        continue
+                    path_value = supplied['path']
+                    relative = Path(path_value) if isinstance(path_value, str) else None
+                    if (relative is None or relative.is_absolute()
+                            or '\\' in path_value
+                            or any(part in {'', '.', '..'} for part in path_value.split('/'))):
+                        bindings.append({
+                            'input_name': name,
+                            'run_index': run_index,
+                            'artifact_ref': ref,
+                            'declared': True,
+                            'static_failure': 'INVALID',
+                        })
+                    else:
+                        current = manifest.parent
+                        for part in relative.parts:
+                            current = current / part
+                            if current.is_symlink():
+                                bindings.append({
+                                    'input_name': name,
+                                    'run_index': run_index,
+                                    'artifact_ref': ref,
+                                    'declared': True,
+                                    'static_failure': 'INVALID',
+                                })
+                                break
+                        else:
+                            bindings.append({
+                                'input_name': name,
+                                'run_index': run_index,
+                                'artifact_ref': ref,
+                                'declared': True,
+                            })
+                elif (isinstance(supplied, dict)
+                      and set(supplied) == {'stage', 'artifact'}):
+                    producer_id = supplied['stage']
+                    producer_stage = next(
+                        (item for item in stages if item['id'] == producer_id), None)
+                    producer_definition = definitions.get(producer_id)
+                    position = {item['id']: index for index, item in enumerate(stages)}
+                    if (producer_stage is None or producer_definition is None
+                            or position[producer_id] >= position[stage['id']]
+                            or producer_id != ref['producer_stage_id']
+                            or supplied['artifact'] != ref['relative_path']):
+                        bindings.append({
+                            'input_name': name,
+                            'run_index': run_index,
+                            'artifact_ref': ref,
+                            'declared': True,
+                            'static_failure': 'INVALID',
+                        })
+                        continue
+                    produced = _output_contract(
+                        producer_definition, supplied['artifact'])
+                    handler = producer_definition.handler
+                    if (produced != (ref['artifact_type'],)
+                            or getattr(handler, 'evidence_family', None) != 'dvg'):
+                        bindings.append({
+                            'input_name': name,
+                            'run_index': run_index,
+                            'artifact_ref': ref,
+                            'declared': True,
+                            'static_failure': 'INVALID',
+                        })
+                        continue
+                    bindings.append({
+                        'input_name': name,
+                        'run_index': run_index,
+                        'artifact_ref': ref,
+                        'declared': True,
+                    })
+                else:
+                    bindings.append({
+                        'input_name': name,
+                        'run_index': run_index,
+                        'artifact_ref': ref,
+                        'declared': True,
+                        'static_failure': 'INVALID',
+                    })
+
+        extra = set(stage['inputs']) - {'manifest'} - set(expected)
+        if extra:
+            raise ValueError('M13 workflow declares unlisted M5 artifact inputs')
+        static_failures = {
+            row['input_name']: row['static_failure']
+            for row in bindings
+            if row.get('static_failure') is not None
+        }
+        plans[stage['id']] = {
+            'manifest_path': str(input_manifest_path),
+            'bindings': bindings,
+            'static_input_failures': static_failures,
+        }
+    return plans
+
+
 def _stage_output_directory(output,stage_id,cache_key,previous_rows):
     prior=previous_rows.get(stage_id,{})
     if prior.get('cache_key')==cache_key and isinstance(prior.get('output_path'),str):
@@ -860,6 +1016,7 @@ def inspect_configuration(manifest,registry=None,output=None):
     if manifest.stat().st_size>1_000_000:raise ValueError('Workflow specification exceeds 1 MB')
     stages=validate(json.loads(manifest.read_text(encoding='utf-8')),registry)
     m12_binding_plans=_m12_handoff_plans(manifest,stages,registry)
+    m13_binding_plans=_m13_handoff_plans(manifest,stages,registry)
     rows=[]
     output_path=Path(output).resolve() if output is not None else None
     previous_rows={}
@@ -879,6 +1036,13 @@ def inspect_configuration(manifest,registry=None,output=None):
         input_descriptors={}
         m12_context=None
         m12_validation_error=None
+        m13_context=None
+        m13_validation_error=None
+        m13_plan=m13_binding_plans.get(stage['id'])
+        m13_input_failures=(
+            dict(m13_plan.get('static_input_failures',{}))
+            if m13_plan is not None else {}
+        )
         has_missing_input=False
         waits_for_upstream=False
         for key,value in stage['inputs'].items():
@@ -916,8 +1080,20 @@ def inspect_configuration(manifest,registry=None,output=None):
                     }
                 continue
 
+            if (definition.kind==m13_stage.STAGE_KIND
+                    and key!='manifest'
+                    and key in m13_input_failures):
+                inputs[key]={
+                    'status':'invalid',
+                    'artifact_type':artifact_type,
+                    'validation_state':'invalid',
+                }
+                continue
             if raw.is_symlink():
-                has_missing_input=True
+                if definition.kind==m13_stage.STAGE_KIND and key!='manifest':
+                    m13_input_failures[key]='INVALID'
+                else:
+                    has_missing_input=True
                 inputs[key]={
                     'path':str(raw),
                     'status':'invalid',
@@ -933,7 +1109,10 @@ def inspect_configuration(manifest,registry=None,output=None):
                 'accepted_contracts':list(expected),
             }
             if not path.is_file():
-                has_missing_input=True
+                if definition.kind==m13_stage.STAGE_KIND and key!='manifest':
+                    m13_input_failures[key]='UNAVAILABLE'
+                else:
+                    has_missing_input=True
                 continue
             try:
                 if artifact_type:
@@ -948,9 +1127,14 @@ def inspect_configuration(manifest,registry=None,output=None):
                 inputs[key]['sha256']=checksum(path)
                 input_descriptors[key]=descriptor
             except (OSError,ValueError,KeyError,TypeError) as error:
-                has_missing_input=True
                 inputs[key]['validation_state']='invalid'
                 inputs[key]['validation_error']=str(error)
+                if definition.kind==m13_stage.STAGE_KIND and key!='manifest':
+                    m13_input_failures[key]=(
+                        'UNAVAILABLE' if isinstance(error,OSError) else 'INVALID'
+                    )
+                else:
+                    has_missing_input=True
 
         if (definition.kind=='m12_artifact_review'
                 and not has_missing_input
@@ -972,6 +1156,24 @@ def inspect_configuration(manifest,registry=None,output=None):
                 has_missing_input=True
                 m12_validation_error=str(error)
 
+        if (definition.kind==m13_stage.STAGE_KIND
+                and not has_missing_input
+                and not waits_for_upstream):
+            try:
+                resolved_paths={
+                    name:Path(value['path'])
+                    for name,value in inputs.items()
+                    if isinstance(value,dict) and value.get('path')
+                }
+                m13_context=m13_stage.build_stage_context(
+                    resolved_paths,
+                    m13_plan,
+                    m13_input_failures,
+                )
+            except (OSError,ValueError,KeyError,TypeError) as error:
+                has_missing_input=True
+                m13_validation_error=str(error)
+
         row={
             'id':stage['id'],
             'kind':stage['kind'],
@@ -989,6 +1191,13 @@ def inspect_configuration(manifest,registry=None,output=None):
             )
             if m12_validation_error is not None:
                 row['m12_validation_error']=m12_validation_error
+        if definition.kind==m13_stage.STAGE_KIND:
+            row['m13_handoff_count']=len(m13_plan['bindings'])
+            row['m13_handoff_validation']=(
+                'valid' if m13_validation_error is None else 'invalid'
+            )
+            if m13_validation_error is not None:
+                row['m13_validation_error']=m13_validation_error
         if stage.get('skip') is True:
             row['expected_action']='skipped'
         if stage['kind']=='external_module':
@@ -1011,7 +1220,9 @@ def inspect_configuration(manifest,registry=None,output=None):
             cache_key=_stage_cache_key(
                 stage,definition,config,input_descriptors,runtime,dependency,
                 stage_identity_context=(
-                    m12_context['cache_identity'] if m12_context is not None else None
+                    m12_context['cache_identity'] if m12_context is not None
+                    else m13_context['cache_identity'] if m13_context is not None
+                    else None
                 ))
             row['cache_key']=cache_key
         if 'expected_action' not in row:
@@ -1484,6 +1695,7 @@ def run(manifest,output,registry=None):
     digest=checksum(manifest)
     stages=validate(specification,registry)
     m12_binding_plans=_m12_handoff_plans(manifest,stages,registry)
+    m13_binding_plans=_m13_handoff_plans(manifest,stages,registry)
     dvg_module_names = {
         name for name in registry.module_names()
         if getattr(registry.get_module(name).handler, 'evidence_family', None) == 'dvg'
@@ -1612,9 +1824,50 @@ def run(manifest,output,registry=None):
 
             inputs={}
             input_descriptors={}
+            m13_plan=m13_binding_plans.get(stage['id'])
+            m13_input_failures=(
+                dict(m13_plan.get('static_input_failures',{}))
+                if m13_plan is not None else {}
+            )
+            m13_artifact_input_names=(
+                {row['input_name'] for row in m13_plan['bindings']}
+                if m13_plan is not None else set()
+            )
             for key,value in stage['inputs'].items():
-                path,descriptor=_resolve_stage_input(
-                    manifest,output,result,stage,definition,key,value,registry)
+                if (definition.kind==m13_stage.STAGE_KIND
+                        and key in m13_input_failures):
+                    inputs[key]=None
+                    active.setdefault('inputs',{})[key]={
+                        'status':'invalid',
+                        'validation_state':'invalid',
+                        'artifact_type':m13_input_failures[key],
+                    }
+                    continue
+                try:
+                    path,descriptor=_resolve_stage_input(
+                        manifest,output,result,stage,definition,key,value,registry)
+                except OSError:
+                    if (definition.kind!=m13_stage.STAGE_KIND
+                            or key not in m13_artifact_input_names):
+                        raise
+                    inputs[key]=None
+                    m13_input_failures[key]='UNAVAILABLE'
+                    active.setdefault('inputs',{})[key]={
+                        'status':'unavailable',
+                        'validation_state':'unavailable',
+                    }
+                    continue
+                except (ValueError,KeyError,TypeError):
+                    if (definition.kind!=m13_stage.STAGE_KIND
+                            or key not in m13_artifact_input_names):
+                        raise
+                    inputs[key]=None
+                    m13_input_failures[key]='INVALID'
+                    active.setdefault('inputs',{})[key]={
+                        'status':'invalid',
+                        'validation_state':'invalid',
+                    }
+                    continue
                 inputs[key]=path
                 item={
                     'path':str(path),
@@ -1640,6 +1893,13 @@ def run(manifest,output,registry=None):
                     m12_binding_plans[stage['id']],
                     {row['id']:row for row in result['stages']},
                     output,
+                )
+            m13_context=None
+            if definition.kind==m13_stage.STAGE_KIND:
+                m13_context=m13_stage.build_stage_context(
+                    inputs,
+                    m13_plan,
+                    m13_input_failures,
                 )
 
             if definition.kind=='fastq_validate':
@@ -1680,7 +1940,9 @@ def run(manifest,output,registry=None):
             cache_key=_stage_cache_key(
                 stage,definition,config,input_descriptors,runtime,dependency,
                 stage_identity_context=(
-                    m12_context['cache_identity'] if m12_context is not None else None
+                    m12_context['cache_identity'] if m12_context is not None
+                    else m13_context['cache_identity'] if m13_context is not None
+                    else None
                 ),
             )
             stage_output=_stage_output_directory(output,stage['id'],cache_key,previous_rows)
@@ -1701,6 +1963,9 @@ def run(manifest,output,registry=None):
                 elif definition.kind=='m12_artifact_review':
                     outcome=definition.handler(
                         inputs,stage_output,config,workflow_context=m12_context)
+                elif definition.kind==m13_stage.STAGE_KIND:
+                    outcome=definition.handler(
+                        inputs,stage_output,config,workflow_context=m13_context)
                 else:
                     outcome=definition.handler(inputs,stage_output,config)
             except DependencyMissingError as error:
