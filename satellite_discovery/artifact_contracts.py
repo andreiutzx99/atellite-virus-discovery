@@ -102,6 +102,11 @@ _CONTRACTS = {
     'm12_artifact_review_table': 'M12 artifact-bounded review rows preserving producer-scoped results.',
     'm12_summary': 'M12 review completeness, supplied-evidence states, and unassessed dimensions.',
     'm12_result_bundle': 'M12 input, producer, output, and implementation provenance manifest.',
+    'm13_input_manifest': 'Explicit M5-only M13 input references and unresolved hypotheses.',
+    'm13_event_index': 'Caller-scoped M5 event rows with immutable source-row identity.',
+    'm13_hypothesis_matrix': 'M13 evidence links to only explicitly supplied hypotheses.',
+    'm13_summary': 'M13 per-run import states and artifact completeness.',
+    'm13_result_bundle': 'M13 input, producer, output, and implementation provenance.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -112,6 +117,8 @@ _CONTRACT_SEMANTIC_VERSIONS = {
         'm9_protein_search_status', 'm9_protein_match_evidence',
         'm9_protein_summary', 'm9_search_commands', 'm9_output_bundle',
         'm9_raw_blast_output',
+        'm13_input_manifest', 'm13_event_index', 'm13_hypothesis_matrix',
+        'm13_summary', 'm13_result_bundle',
     )
 }
 
@@ -823,6 +830,15 @@ def validate_artifact(path, artifact_type):
     }:
         from . import m12_contracts
         details.update(m12_contracts.validate_output_file(path, artifact_type))
+    elif artifact_type == 'm13_input_manifest':
+        from . import m13_contracts
+        details.update(m13_contracts.validate_input_manifest_file(path))
+    elif artifact_type in {
+        'm13_event_index', 'm13_hypothesis_matrix', 'm13_summary',
+        'm13_result_bundle',
+    }:
+        from . import m13_contracts
+        details.update(m13_contracts.validate_output_file(path, artifact_type))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')

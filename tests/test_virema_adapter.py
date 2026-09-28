@@ -61,15 +61,17 @@ class FixtureViReMaAdapter(ViReMaDVGAdapter):
             "out=Path(sys.argv[1]); mode=sys.argv[2]; "
             "time.sleep(30) if mode=='timeout' else None; "
             "sys.exit(7) if mode=='nonzero' else None; "
+            "first='@NewLibrary: REF_to_REF\\n1_to_2_#_1\\t\\n@EndofLibrary\\n'; "
+            "second='@NewLibrary: REF2_to_REF2\\n3_to_4_#_1\\t\\n@EndofLibrary\\n'; "
+            "result=(first+second if mode=='multi' else first "
+            "if mode in ('positive','malformed','partial') else ''); "
             "Path(out/'Virus_Recombination_Results.txt').write_text("
-            "('@NewLibrary: REF_to_REF\\n1_to_2_#_1\\t\\n@EndofLibrary\\n' "
-            "if mode in ('positive','malformed','partial') else ''), encoding='utf-8'); "
+            "result, encoding='utf-8'); "
             "print('Total of 0 reads have been analysed:' if mode in "
             "('partial','zero_analysed') else 'Total of 1 reads have been analysed:'); "
-            "print('of which 1 were Viral Recombinations, 0 were Host Recombinations "
-            "and 0 were Virus-to-Host Recombinations' if mode in "
-            "('positive','malformed','partial') else 'of which 0 were Viral Recombinations, "
-            "0 were Host Recombinations and 0 were Virus-to-Host Recombinations'); "
+            "print('of which %d were Viral Recombinations, 0 were Host Recombinations "
+            "and 0 were Virus-to-Host Recombinations' % (2 if mode=='multi' else "
+            "1 if mode in ('positive','malformed','partial') else 0)); "
             "print('Time to complete in seconds:  0.1')"
         )
         if behavior == 'malformed':
@@ -241,14 +243,19 @@ class ViReMaAdapterTests(unittest.TestCase):
 
     def test_nonzero_timeout_and_size_limit_record_failures(self):
         scenarios = (
-            ('nonzero', 1_000_000, ExternalToolExitError),
-            ('timeout', 1_000_000, TimeoutError),
-            ('large', 10_000, ValueError),
+            ('nonzero', 1_000_000, ExternalToolExitError, 5),
+            ('timeout', 1_000_000, TimeoutError, .15),
+            ('large', 10_000, ValueError, 5),
         )
-        for mode, budget, error_type in scenarios:
+        for mode, budget, error_type, timeout in scenarios:
             with self.subTest(mode=mode), scratch_directory() as folder:
                 root = Path(folder)
-                adapter = FixtureViReMaAdapter(mode, timeout=.15, max_bytes=budget)
+                # Only the deliberate timeout case needs a sub-second budget.
+                # The other cases test exit/size handling and should not race
+                # interpreter startup on a loaded CI or review runner.
+                adapter = FixtureViReMaAdapter(
+                    mode, timeout=timeout, max_bytes=budget
+                )
                 with self.assertRaises(error_type):
                     adapter.execute(self.fixture_inputs(root), root / 'out', self.config())
                 manifest = json.loads((root / 'out/manifest.json').read_text())

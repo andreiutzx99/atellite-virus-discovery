@@ -53,6 +53,12 @@ class ExecutionOutcomeUnavailableError(OSError):
 class ExecutionOutcomeIncompleteError(ValueError):
     """The referenced workflow is not terminal, so it has no final outcome."""
 
+    def __init__(self, message, *, workflow=None):
+        super().__init__(message)
+        # A digest- and schema-verified workflow snapshot can still establish
+        # its exact raw stage state even though no terminal outcome exists.
+        self.workflow = workflow
+
 
 class ExecutionOutcomeInvalidError(ValueError):
     """A readable outcome handoff has invalid structure, identity, or integrity."""
@@ -502,7 +508,8 @@ def verify_execution_outcome_refs(
         raise ExecutionOutcomeInvalidError('Referenced workflow status is invalid')
     if workflow.get('status') not in _TERMINAL_WORKFLOW_STATES:
         raise ExecutionOutcomeIncompleteError(
-            'Referenced workflow is not terminal; no final outcome can be accepted'
+            'Referenced workflow is not terminal; no final outcome can be accepted',
+            workflow=workflow,
         )
 
     record_bytes = _read_explicit_reference(
