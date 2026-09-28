@@ -215,10 +215,25 @@ class DVGWorkflowTests(unittest.TestCase):
             output = root / 'workflow'
             run(spec, output, registry=registry)
             first = _result(output)['stages'][-1]
+            first_output = output / first['output_path']
+            first_artifact_bytes = {
+                path.relative_to(first_output).as_posix(): path.read_bytes()
+                for path in first_output.rglob('*')
+                if path.is_file()
+            }
             run(spec, output, registry=registry)
             reused = _result(output)['stages'][-1]
             self.assertEqual(reused['execution'], 'verified_reuse')
             self.assertEqual(reused['cache_key'], first['cache_key'])
+            self.assertEqual(reused['output_path'], first['output_path'])
+            self.assertEqual(
+                {
+                    path.relative_to(first_output).as_posix(): path.read_bytes()
+                    for path in first_output.rglob('*')
+                    if path.is_file()
+                },
+                first_artifact_bytes,
+            )
             (root / 'reference.fasta').write_text('>REF\nACGTACGA\n', encoding='ascii')
             run(spec, output, registry=registry)
             changed = _result(output)['stages'][-1]

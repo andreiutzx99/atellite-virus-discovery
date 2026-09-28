@@ -33,9 +33,8 @@ state matrix:
 - The current M13 input has a producer stage ID, caller-supplied manifest
   digest/status, and artifact references, but no explicit reference to the
   producer `workflow.json` or a typed terminal execution record. The M13
-  [readiness audit](M13_FINAL_IMPLEMENTATION_READINESS.md) correctly notes
-  that caller assertions alone do not verify the producer stage or its
-  terminal state.
+  earlier readiness review correctly notes that caller assertions alone do
+  not verify the producer stage or its terminal state.
 
 An explicit workflow-record path and digest in `M5RunRef` would let M13 inspect
 the existing lifecycle data without searching directories or inferring an
@@ -196,50 +195,84 @@ and output bytes must remain stable.
 
 ## 5. Synthetic acceptance tests
 
-The later implementation must use synthetic records/files only and cover each
-state independently:
+Use synthetic records/files only. These are the twelve frozen acceptance cases,
+classified by the layer that owns their decisive assertion:
 
-1. Completed M5 event run: verify source event bytes/order, stage ID, run
-   identity, evidence digest, and `IMPORTED_WITH_EVENTS`.
-2. Completed zero: require `NO_DVG_EVIDENCE_DETECTED`, empty validated events,
-   and exact accounting; assert `IMPORTED_COMPLETED_ZERO` without a biological
-   negative or invented hypothesis.
-3. Not started: test terminal `pending` and explicit `skipped` separately;
-   preserve their raw distinction and emit no event.
-4. Unavailable: test both `dependency_missing` and
-   `external_module_required`; preserve each M1 state and emit no event.
-5. Runtime failure: preserve `failed` plus `ANALYSIS_FAILED` as
-   `IMPORTED_NONCOMPLETED`.
-6. Interruption: preserve `interrupted` separately from runtime `failed`, even
-   when both have M5 status `ANALYSIS_FAILED`.
-7. Truncation/incomplete accounting: use a stable failure code and require
-   `INCOMPLETE`, never a completed zero.
-8. Malformed/corrupt output: use a distinct stable failure code and require
-   `INVALID`, never a completed zero.
-9. Nonterminal workflow: `running` with a pending/running M5 stage yields
-   `INCOMPLETE`; it is not relabeled `INTERRUPTED`.
-10. Handoff integrity: missing/unreadable workflow or outcome record is
-    `UNAVAILABLE`; digest, schema, workflow-ID, stage-ID, or status mismatch is
-    `INVALID`. A caller-asserted status without both referenced records is
-    rejected. A sidecar bound to a different `workflow.json` digest is
-    rejected.
-11. Partial bundle: an invalid/incomplete run must not erase independent
-    valid runs, and no failed run may produce a placeholder scientific
-    artifact.
-12. Cache isolation: changing only the M13 outcome-record interpretation
-    changes the M13 key and leaves unrelated M1–M12 keys and existing
-    scientific artifact bytes unchanged. The new sidecar is additive metadata.
+1. **M13 IMPLEMENTATION ACCEPTANCE — completed events.** Future M13 tests must
+   verify byte-equivalent source events in order, stage/run identity, evidence
+   digest, and `IMPORTED_WITH_EVENTS`. The shared prerequisite is covered by
+   `tests/test_execution_outcome.py::test_terminal_sidecar_binds_raw_statuses_and_explicit_references`
+   and `tests/test_dvg_workflow.py::test_positive_handoff_reports_raw_link_and_resolved_catalogue_identity`.
+2. **M13 IMPLEMENTATION ACCEPTANCE — completed zero.** Future M13 tests must
+   require validated empty events and exact accounting, then assert
+   `IMPORTED_COMPLETED_ZERO` without a biological negative or invented
+   hypothesis. The shared M5 zero path is covered by
+   `tests/test_dvg_workflow.py::test_zero_events_are_not_a_non_dvg_classification`.
+3. **HANDOFF-INFRASTRUCTURE ACCEPTANCE — not started.** Test terminal `pending`
+   and `skipped` separately; preserve both raw M1 states and raw
+   `NOT_EVALUATED`, with `NOT_STARTED` rather than zero. Covered by
+   `tests/test_execution_outcome.py::test_terminal_pending_skipped_and_unavailable_states_remain_distinct`.
+   Future M13 tests must also preserve the distinction and import no events.
+4. **HANDOFF-INFRASTRUCTURE ACCEPTANCE — unavailable.** Test both
+   `dependency_missing` and `external_module_required`; preserve each raw M1
+   state and `ANALYSIS_UNAVAILABLE`, with `UNAVAILABLE` rather than zero. The
+   same shared-layer test above covers these states. Future M13 tests must
+   preserve each state and import no events.
+5. **M13 IMPLEMENTATION ACCEPTANCE — runtime failure.** Future M13 tests must
+   preserve `failed` plus `ANALYSIS_FAILED` as `IMPORTED_NONCOMPLETED`, with no
+   inferred event or completed zero. The shared `FAILED` mapping is covered by
+   `tests/test_execution_outcome.py::test_terminal_interruption_is_distinct_from_runtime_failure_and_zero`
+   and `tests/test_dvg_workflow.py::test_skip_is_not_evaluated_and_malformed_and_exit_failure_are_distinct`.
+6. **HANDOFF-INFRASTRUCTURE ACCEPTANCE — interruption.** Verify terminal M1
+   `interrupted` remains distinct from `failed` even when both retain M5
+   `ANALYSIS_FAILED`; the shared outcome must be `INTERRUPTED`, never zero.
+   Covered by
+   `tests/test_execution_outcome.py::test_terminal_interruption_is_distinct_from_runtime_failure_and_zero`.
+   Future M13 tests must map that verified record to `INTERRUPTED`.
+7. **M13 IMPLEMENTATION ACCEPTANCE — truncated/incomplete output.** Future M13
+   tests must use stable `TRUNCATED_OUTPUT` or `INCOMPLETE_ACCOUNTING` and
+   report `INCOMPLETE`, never zero. Shared classification is covered by
+   `tests/test_execution_outcome.py::test_skipped_and_invalid_results_have_distinct_outcome_classes`.
+8. **M13 IMPLEMENTATION ACCEPTANCE — malformed/corrupt output.** Future M13
+   tests must retain a distinct stable failure code and report `INVALID`, never
+   zero. Shared classification is covered by the same execution-outcome test.
+9. **M13 IMPLEMENTATION ACCEPTANCE — nonterminal workflow.** A `running`
+   workflow with a pending/running M5 stage must produce M13 `INCOMPLETE`, not
+   `INTERRUPTED`. The shared writer/verifier must not accept a final outcome;
+   covered by
+   `tests/test_execution_outcome.py::test_nonterminal_workflow_does_not_emit_final_sidecar`
+   and `::test_nonterminal_referenced_workflow_is_incomplete`.
+10. **HANDOFF-INFRASTRUCTURE ACCEPTANCE — handoff integrity.** Missing/unreadable
+    referenced records are unavailable; digest, schema, workflow-ID, stage-ID,
+    or status mismatch is invalid. Reject a missing caller reference and a
+    sidecar bound to different workflow bytes. Covered by
+    `tests/test_execution_outcome.py::test_missing_workflow_and_terminal_outcome_are_unavailable`,
+    `::test_tampered_malformed_and_wrong_schema_records_are_invalid`,
+    `::test_workflow_record_and_expected_stage_identity_mismatches_are_invalid`,
+    `::test_explicit_references_reject_traversal_and_symlinks`, and
+    `::test_record_cannot_be_reused_after_workflow_manifest_changes`.
+11. **M13 IMPLEMENTATION ACCEPTANCE — partial bundle.** An invalid/incomplete
+    run must not erase independent valid runs; no failed run may produce a
+    placeholder scientific artifact.
+12. **M13 IMPLEMENTATION ACCEPTANCE — cache isolation.** Changing only M13
+    outcome-record interpretation must change the M13 key while leaving
+    unrelated M1–M12 keys and scientific artifact bytes unchanged. The sidecar
+    remains additive metadata; the M13 key test belongs to M13 implementation.
 
-The M13 import-state cases remain acceptance requirements for its future
-implementation. The shared handoff mechanics above have synthetic coverage.
-Do not invoke ViReMa, retrieve biological data, or install optional DVG callers
-to exercise either layer.
+The shared-layer tests for structured codes also prove `FAILED`,
+`INTERRUPTED`, `INCOMPLETE_OUTPUT`, `UNAVAILABLE`, and `INVALID_OUTPUT` are
+distinct from `COMPLETED_ZERO`. Deterministic serialization, exact cache
+compatibility, and unchanged reused M5 artifact bytes are checked separately.
+Shared-layer coverage is not a substitute for the M13 assertions above. Do not
+invoke ViReMa, retrieve biological data, or install optional DVG callers to
+exercise either layer.
 
 ## 6. Implementation gate
 
-The shared versioned execution record and structured failure codes are
-implemented and pass the synthetic handoff/cache tests. This removes that
-specific prerequisite; it does not mark the full M13 readiness audit complete
-or authorize implementation of M13.
+The shared versioned execution record and structured failure codes pass the
+synthetic handoff/cache tests listed above. The infrastructure cases are
+complete; the M13 implementation cases remain mandatory future acceptance.
+This does not mark the full M13 readiness review complete or authorize
+implementation of M13.
 
 M13 HANDOFF GAP: SHARED INFRASTRUCTURE COMPLETE — M13 NOT IMPLEMENTED

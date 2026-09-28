@@ -39,6 +39,49 @@ def _write_workflow(output, workflow):
     return path
 
 
+def _reference_bundle(root, workflow=None):
+    producer = root / 'producer'
+    workflow_path = _write_workflow(
+        producer, _workflow() if workflow is None else workflow
+    )
+    input_path = root / 'input.json'
+    input_path.write_text('{}', encoding='utf-8')
+    written = execution_outcome.write_final_outcomes(producer)
+    record_path = producer / written[0]
+    workflow_bytes = workflow_path.read_bytes()
+    record_bytes = record_path.read_bytes()
+    return {
+        'input_path': input_path,
+        'workflow_path': workflow_path,
+        'record_path': record_path,
+        'workflow_ref': {
+            'path': 'producer/workflow.json',
+            'sha256': hashlib.sha256(workflow_bytes).hexdigest(),
+            'workflow_id': 'synthetic-workflow',
+        },
+        'record_ref': {
+            'path': 'producer/execution-outcomes/dvg.json',
+            'sha256': hashlib.sha256(record_bytes).hexdigest(),
+            'schema': execution_outcome.SCHEMA,
+        },
+    }
+
+
+def _verify_bundle(bundle, expected_stage_id='dvg'):
+    return execution_outcome.verify_execution_outcome_refs(
+        bundle['input_path'],
+        bundle['workflow_ref'],
+        bundle['record_ref'],
+        expected_stage_id=expected_stage_id,
+    )
+
+
+def _replace_record(bundle, record):
+    record_bytes = execution_outcome.serialize_record(record)
+    bundle['record_path'].write_bytes(record_bytes)
+    bundle['record_ref']['sha256'] = hashlib.sha256(record_bytes).hexdigest()
+
+
 class ExecutionOutcomeTests(unittest.TestCase):
     def test_terminal_sidecar_binds_raw_statuses_and_explicit_references(self):
         with scratch_directory() as directory:
@@ -92,6 +135,53 @@ class ExecutionOutcomeTests(unittest.TestCase):
             self.assertEqual(execution_outcome.write_final_outcomes(output), [])
             self.assertFalse((output / 'execution-outcomes').exists())
 
+    def test_terminal_pending_skipped_and_unavailable_states_remain_distinct(self):
+        cases = (
+            ('pending', dvg_evidence.NOT_EVALUATED, 'NOT_STARTED'),
+            ('skipped', dvg_evidence.NOT_EVALUATED, 'NOT_STARTED'),
+            ('dependency_missing', dvg_evidence.ANALYSIS_UNAVAILABLE, 'UNAVAILABLE'),
+            ('external_module_required', dvg_evidence.ANALYSIS_UNAVAILABLE, 'UNAVAILABLE'),
+        )
+        for stage_status, m5_status, expected_code in cases:
+            with self.subTest(stage_status=stage_status), scratch_directory() as directory:
+                root = Path(directory)
+                bundle = _reference_bundle(
+                    root,
+                    _workflow(
+                        workflow_status='partial',
+                        stage_status=stage_status,
+                        m5_status=m5_status,
+                    ),
+                )
+                record = json.loads(bundle['record_path'].read_text(encoding='utf-8'))
+                self.assertEqual(record['producer_execution_status_raw'], stage_status)
+                self.assertEqual(record['producer_status_raw'], m5_status)
+                self.assertEqual(record['outcome_code'], expected_code)
+                self.assertNotEqual(record['outcome_code'], 'COMPLETED_ZERO')
+                self.assertFalse((root / 'producer/dvg/evidence.json').exists())
+
+    def test_terminal_interruption_is_distinct_from_runtime_failure_and_zero(self):
+        for stage_status, expected_code in (
+            ('failed', 'FAILED'),
+            ('interrupted', 'INTERRUPTED'),
+        ):
+            with self.subTest(stage_status=stage_status), scratch_directory() as directory:
+                bundle = _reference_bundle(
+                    Path(directory),
+                    _workflow(
+                        workflow_status='failed',
+                        stage_status=stage_status,
+                        m5_status=dvg_evidence.ANALYSIS_FAILED,
+                    ),
+                )
+                record = json.loads(bundle['record_path'].read_text(encoding='utf-8'))
+                self.assertEqual(record['producer_execution_status_raw'], stage_status)
+                self.assertEqual(
+                    record['producer_status_raw'], dvg_evidence.ANALYSIS_FAILED
+                )
+                self.assertEqual(record['outcome_code'], expected_code)
+                self.assertNotEqual(record['outcome_code'], 'COMPLETED_ZERO')
+
     def test_skipped_and_invalid_results_have_distinct_outcome_classes(self):
         with scratch_directory() as directory:
             output = Path(directory) / 'skipped'
@@ -111,7 +201,11 @@ class ExecutionOutcomeTests(unittest.TestCase):
 
             for failure_code, expected in (
                 (dvg_evidence.TRUNCATED_OUTPUT, 'INCOMPLETE_OUTPUT'),
+                (dvg_evidence.INCOMPLETE_ACCOUNTING, 'INCOMPLETE_OUTPUT'),
+                (dvg_evidence.MALFORMED_OUTPUT, 'INVALID_OUTPUT'),
                 (dvg_evidence.CORRUPT_OUTPUT, 'INVALID_OUTPUT'),
+                (dvg_evidence.INVALID_M5_CONTRACT, 'INVALID_OUTPUT'),
+                (dvg_evidence.UNCLASSIFIED_INVALID_RESULT, 'INVALID_OUTPUT'),
             ):
                 with self.subTest(failure_code=failure_code):
                     workflow = _workflow(
@@ -120,6 +214,7 @@ class ExecutionOutcomeTests(unittest.TestCase):
                         m5_status=dvg_evidence.INVALID_RESULT,
                     )
                     workflow['stages'][0]['error_type'] = 'InvalidDVGResultError'
+                    workflow['stages'][0]['error'] = 'diagnostic text is not a code'
                     failure_codes = {'dvg': failure_code}
                     _write_workflow(output, workflow)
                     execution_outcome.write_final_outcomes(
@@ -132,6 +227,44 @@ class ExecutionOutcomeTests(unittest.TestCase):
                     )
                     self.assertEqual(record['failure_code'], failure_code)
                     self.assertEqual(record['outcome_code'], expected)
+                    self.assertNotEqual(record['outcome_code'], 'COMPLETED_ZERO')
+
+    def test_sidecar_serialization_is_deterministic_and_additive(self):
+        with scratch_directory() as directory:
+            output = Path(directory)
+            workflow_path = _write_workflow(output, _workflow())
+            workflow_bytes = workflow_path.read_bytes()
+            artifact_path = output / 'dvg' / 'existing-artifact.bin'
+            artifact_path.parent.mkdir()
+            artifact_path.write_bytes(b'synthetic pre-existing artifact bytes')
+            artifact_bytes = artifact_path.read_bytes()
+            self.assertEqual(
+                execution_outcome.write_final_outcomes(output),
+                ['execution-outcomes/dvg.json'],
+            )
+            record_path = output / 'execution-outcomes/dvg.json'
+            first_bytes = record_path.read_bytes()
+            record = json.loads(first_bytes.decode('utf-8'))
+
+            self.assertEqual(first_bytes, execution_outcome.serialize_record(record))
+            self.assertTrue(first_bytes.endswith(b'\n'))
+            self.assertNotIn(b'\r', first_bytes)
+            self.assertEqual(workflow_path.read_bytes(), workflow_bytes)
+            self.assertEqual(
+                sorted(path.relative_to(output).as_posix() for path in output.rglob('*')
+                       if path.is_file()),
+                [
+                    'dvg/existing-artifact.bin',
+                    'execution-outcomes/dvg.json',
+                    'workflow.json',
+                ],
+            )
+            self.assertEqual(artifact_path.read_bytes(), artifact_bytes)
+
+            execution_outcome.write_final_outcomes(output)
+            self.assertEqual(record_path.read_bytes(), first_bytes)
+            self.assertEqual(workflow_path.read_bytes(), workflow_bytes)
+            self.assertEqual(artifact_path.read_bytes(), artifact_bytes)
 
     def test_record_cannot_be_reused_after_workflow_manifest_changes(self):
         with scratch_directory() as directory:
@@ -178,16 +311,26 @@ class ExecutionOutcomeTests(unittest.TestCase):
                 'schema': execution_outcome.SCHEMA,
             }
 
-            with self.assertRaises(execution_outcome.ExecutionOutcomeInvalidError):
-                execution_outcome.verify_execution_outcome_refs(
-                    root / 'input.json',
-                    {
-                        'path': '../producer/workflow.json',
-                        'sha256': workflow_sha,
-                        'workflow_id': 'synthetic-workflow',
-                    },
-                    outcome_ref,
-                )
+            for unsafe_path in (
+                '../producer/workflow.json',
+                str(workflow_path),
+                r'C:\producer\workflow.json',
+                'producer/./workflow.json',
+                'producer//workflow.json',
+            ):
+                with self.subTest(unsafe_path=unsafe_path):
+                    with self.assertRaises(
+                        execution_outcome.ExecutionOutcomeInvalidError
+                    ):
+                        execution_outcome.verify_execution_outcome_refs(
+                            root / 'input.json',
+                            {
+                                'path': unsafe_path,
+                                'sha256': workflow_sha,
+                                'workflow_id': 'synthetic-workflow',
+                            },
+                            outcome_ref,
+                        )
 
             alias = producer / 'workflow-alias.json'
             try:
@@ -204,6 +347,123 @@ class ExecutionOutcomeTests(unittest.TestCase):
                     },
                     outcome_ref,
                 )
+
+    def test_missing_workflow_and_terminal_outcome_are_unavailable(self):
+        for missing in ('workflow', 'outcome'):
+            with self.subTest(missing=missing), scratch_directory() as directory:
+                bundle = _reference_bundle(Path(directory))
+                target = (
+                    bundle['workflow_path']
+                    if missing == 'workflow'
+                    else bundle['record_path']
+                )
+                target.unlink()
+                with self.assertRaises(
+                    execution_outcome.ExecutionOutcomeUnavailableError
+                ):
+                    _verify_bundle(bundle)
+
+        with scratch_directory() as directory:
+            bundle = _reference_bundle(Path(directory))
+            with self.assertRaises(execution_outcome.ExecutionOutcomeInvalidError):
+                execution_outcome.verify_execution_outcome_refs(
+                    bundle['input_path'], bundle['workflow_ref'], None
+                )
+
+    def test_tampered_malformed_and_wrong_schema_records_are_invalid(self):
+        for mutation in (
+            'tampered-digest',
+            'malformed-json',
+            'record-schema',
+            'workflow-schema',
+            'reference-schema',
+        ):
+            with self.subTest(mutation=mutation), scratch_directory() as directory:
+                bundle = _reference_bundle(Path(directory))
+                if mutation == 'tampered-digest':
+                    bundle['record_path'].write_bytes(
+                        bundle['record_path'].read_bytes() + b' '
+                    )
+                elif mutation == 'malformed-json':
+                    record_bytes = b'{malformed'
+                    bundle['record_path'].write_bytes(record_bytes)
+                    bundle['record_ref']['sha256'] = hashlib.sha256(
+                        record_bytes
+                    ).hexdigest()
+                elif mutation == 'record-schema':
+                    record = json.loads(
+                        bundle['record_path'].read_text(encoding='utf-8')
+                    )
+                    record['schema'] = 'm5-execution-outcome-v999'
+                    record_bytes = json.dumps(record, sort_keys=True).encode('utf-8')
+                    bundle['record_path'].write_bytes(record_bytes)
+                    bundle['record_ref']['sha256'] = hashlib.sha256(
+                        record_bytes
+                    ).hexdigest()
+                elif mutation == 'workflow-schema':
+                    workflow = json.loads(
+                        bundle['workflow_path'].read_text(encoding='utf-8')
+                    )
+                    workflow['schema'] = 'artifact-workflow-manifest-v999'
+                    workflow_bytes = json.dumps(
+                        workflow, sort_keys=True
+                    ).encode('utf-8')
+                    bundle['workflow_path'].write_bytes(workflow_bytes)
+                    bundle['workflow_ref']['sha256'] = hashlib.sha256(
+                        workflow_bytes
+                    ).hexdigest()
+                else:
+                    bundle['record_ref']['schema'] = 'm5-execution-outcome-v999'
+
+                with self.assertRaises(execution_outcome.ExecutionOutcomeInvalidError):
+                    _verify_bundle(bundle)
+
+    def test_workflow_record_and_expected_stage_identity_mismatches_are_invalid(self):
+        for mismatch in (
+            'workflow-ref-id',
+            'record-id',
+            'expected-stage-id',
+            'm1-status',
+            'm5-status',
+        ):
+            with self.subTest(mismatch=mismatch), scratch_directory() as directory:
+                bundle = _reference_bundle(Path(directory))
+                if mismatch == 'workflow-ref-id':
+                    bundle['workflow_ref']['workflow_id'] = 'other-workflow'
+                elif mismatch == 'record-id':
+                    record = json.loads(
+                        bundle['record_path'].read_text(encoding='utf-8')
+                    )
+                    record['workflow_id'] = 'other-workflow'
+                    _replace_record(bundle, record)
+                elif mismatch == 'expected-stage-id':
+                    with self.assertRaises(
+                        execution_outcome.ExecutionOutcomeInvalidError
+                    ):
+                        _verify_bundle(bundle, expected_stage_id='other-stage')
+                    continue
+                elif mismatch == 'm1-status':
+                    record = json.loads(
+                        bundle['record_path'].read_text(encoding='utf-8')
+                    )
+                    record.update({
+                        'producer_execution_status_raw': 'failed',
+                        'producer_status_raw': dvg_evidence.ANALYSIS_FAILED,
+                        'outcome_code': 'FAILED',
+                    })
+                    _replace_record(bundle, record)
+                else:
+                    record = json.loads(
+                        bundle['record_path'].read_text(encoding='utf-8')
+                    )
+                    record.update({
+                        'producer_status_raw': dvg_evidence.NO_DVG_EVIDENCE_DETECTED,
+                        'outcome_code': 'COMPLETED_ZERO',
+                    })
+                    _replace_record(bundle, record)
+
+                with self.assertRaises(execution_outcome.ExecutionOutcomeInvalidError):
+                    _verify_bundle(bundle)
 
     def test_nonterminal_referenced_workflow_is_incomplete(self):
         with scratch_directory() as directory:

@@ -30,7 +30,7 @@ or dynamic module loader. Implementation requires additive M4 workflow
 registration and additive artifact contracts; it must not change M5 scientific
 behavior. The metadata-only execution-outcome prerequisite is defined in
 section 12, the [M13 contract](../M13_CONTRACT_FREEZE.md), and the
-[M13 readiness audit](M13_FINAL_IMPLEMENTATION_READINESS.md).
+[handoff gap resolution](M13_HANDOFF_GAP_RESOLUTION.md).
 
 The input manifest is `m13-input-v1` with an opaque `candidate_id`, at least
 one ordered `m5_runs` entry, and optional `hypotheses`. Each run carries the
@@ -241,6 +241,47 @@ Use temporary synthetic files and the existing `unittest`/scratch-directory
 patterns from `tests/test_dvg_evidence.py` and `tests/test_virema_adapter.py`.
 Do not invoke ViReMa or require its installation for M13 tests.
 
+### M13 handoff acceptance retained for implementation
+
+The infrastructure-vs-implementation classification in the
+[handoff gap resolution](M13_HANDOFF_GAP_RESOLUTION.md) does not remove or
+weaken any of its twelve M13 end-to-end acceptance cases. Before M13 can be
+marked complete, its tests must cover all of the following, in addition to the
+shared-layer tests:
+
+1. Completed event run: verify source event bytes/order, stage and run identity,
+   evidence digest, then assert `IMPORTED_WITH_EVENTS`.
+2. Completed zero: require validated empty events and exact accounting; assert
+   `IMPORTED_COMPLETED_ZERO`, never a biological negative or invented
+   hypothesis.
+3. Not started: keep terminal `pending` distinct from `skipped`, preserve each
+   raw state, map to `NOT_SUPPLIED`, and import no event.
+4. Unavailable: test `dependency_missing` and `external_module_required`
+   independently; preserve both raw statuses, map to `UNAVAILABLE`, and import
+   no event.
+5. Runtime failure: preserve `failed` plus `ANALYSIS_FAILED` as
+   `IMPORTED_NONCOMPLETED`, with no inferred event or zero.
+6. Interruption: preserve `interrupted` separately from runtime `failed` and
+   map it to `INTERRUPTED`, even when both have M5 `ANALYSIS_FAILED`.
+7. Truncation/incomplete accounting: retain the stable reason code and map to
+   `INCOMPLETE`, never a completed zero.
+8. Malformed/corrupt output: retain a distinct stable reason code and map to
+   `INVALID`, never a completed zero.
+9. Nonterminal workflow: map `running` with pending/running M5 to `INCOMPLETE`,
+   not `INTERRUPTED`.
+10. Handoff integrity: map missing/unreadable references to `UNAVAILABLE` and
+    readable digest/schema/workflow/stage/status mismatches to `INVALID`;
+    reject caller-asserted status without both exact records.
+11. Partial bundle: preserve independent valid runs when another run is
+    invalid/incomplete, and produce no failed-run placeholder artifact.
+12. Cache isolation: changing only M13 outcome interpretation changes M13
+    identity while leaving M1–M12 identities and scientific artifact bytes
+    unchanged.
+
+These are M13 implementation acceptance tests, not work to pull into the
+shared-infrastructure PR. The shared-layer reference and outcome tests are
+prerequisites and do not satisfy M13 end-to-end assertions.
+
 Required contract-derived fixtures:
 
 1. **Completed event run:** one valid M5 event; assert byte-equivalent source
@@ -412,8 +453,10 @@ record and stable failure codes described in the
 state and distinguishes truncated/incomplete output from malformed/corrupt
 output without free-text parsing or filesystem search.
 
-The shared metadata change and its cache-isolation tests are complete. M1–M12
-scientific artifacts and M5 event semantics remain unchanged. The readiness
-audit still needs reconciliation before any M13 code is started.
+The shared metadata change, its cache-compatibility tests, and the M5 artifact
+reuse regression are complete. M1–M12 scientific artifacts and M5 event
+semantics remain unchanged. The M13-only cache-interpretation test remains
+required under section 6. The readiness review still needs reconciliation
+before any M13 code is started.
 
 M13 implementation execution plan: SHARED HANDOFF PREREQUISITE COMPLETE — M13 NOT IMPLEMENTED
