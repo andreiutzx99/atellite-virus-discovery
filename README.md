@@ -6,23 +6,33 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M11 software provides
+sequencing-derived candidates. The implemented M1–M12 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence,
 reference-scoped residual-read and read-back analysis, exact recurrence
 reporting, scoped nucleotide homology, protein-level ORF and local BLASTP
 evidence, exact-first sequence-architecture analysis, and optional RNA
-minimum-free-energy structure predictions.
+minimum-free-energy structure predictions, plus artifact-bounded review of
+declared M5/M6 technical and read-support evidence.
 
-M1–M11 implement scoped technical software stages. M9 provides protein-level
+M1–M12 implement scoped technical software stages. M9 provides protein-level
 computational evidence only; it does **not** classify satellites, establish
 novelty or helper dependence, or prove expression or biological function. No
 biological candidate dataset or biological protein database was searched or
 bundled as part of the M9 implementation milestone. M10 reports exact repeat
 patterns under its frozen policy; it does not establish topology, circularity,
 or biological function. M11 reports model-dependent RNA-fold predictions, not
-observed structures, ribozyme activity, or biological function. This is not an
-autonomous, biologically validated discovery pipeline.
+observed structures, ribozyme activity, or biological function. M12 checks
+declared producer identity, artifact integrity, applicable accounting, and
+scoped evidence states; it does not reopen or remap reads, infer biological
+origin, or classify candidates. M12 keeps `NO_SIGNAL_WITHIN_SCOPE` separate
+from `NO_OBSERVATION`, `UNKNOWN`, and review outcomes such as `UNAVAILABLE`,
+`INVALID`, `INCOMPLETE`, `FAILED`, `INTERRUPTED`, `NOT_EVALUATED`, and
+`NOT_APPLICABLE`; it does not emit an unqualified biological `NOT_DETECTED`
+conclusion. A scoped no-signal is not biological absence. M12 does not prove
+authenticity, definitive artifact status, satellite identity, novelty, or
+helper dependence. This is not an autonomous, biologically validated discovery
+pipeline.
 
 ## Scientific problem
 
@@ -118,7 +128,7 @@ sequencing reads and declared references
                                  ↓
                     optional M11 RNA-fold predictions
                                  ↓
-                    planned evidence layers M12–M16
+                     planned evidence layers M13–M16
 ```
 
 In paired data, a primary mapping for either mate excludes the whole fragment
@@ -137,13 +147,13 @@ contig.
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
 | Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M11 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M12 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M11: IMPLEMENTED** as scoped software milestones.
-- **M12–M16: PLANNED**, not implemented.
+- **M1–M12: IMPLEMENTED** as scoped software milestones.
+- **M13–M16: PLANNED**, not implemented.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
 M9 is limited to protein-level computational evidence. M10 implements exact
@@ -152,14 +162,13 @@ synthetic/offline policy; it does not infer biological topology. See the
 [M10 contract freeze](docs/M10_CONTRACT_FREEZE.md). M11 is an optional pinned
 RNA-fold prediction baseline; see its [frozen
 contract](docs/M11_CONTRACT_FREEZE.md) and [implementation
-notes](docs/M11_IMPLEMENTATION.md). Planned M12–M16 features are not
-implemented.
+notes](docs/M11_IMPLEMENTATION.md). M12 is limited to artifact-bounded
+technical/read-origin review within the supplied producer-artifact scope; see
+[docs/ROADMAP.md](docs/ROADMAP.md) for its boundaries. Planned M13–M16
+features are not implemented.
 
-### Planned evidence layers (M12–M16)
+### Planned evidence layers (M13–M16)
 
-- **M12 — Read-origin and technical-artifact review:** assess source reads,
-  controls, contamination, batches, and reconstruction alternatives. Sequence
-  similarity alone does not establish origin.
 - **M13 — DVG-versus-satellite differential evidence:** compare scoped evidence
   and alternatives without forcing a binary biological class.
 - **M14 — Helper association and dependence:** report association separately
