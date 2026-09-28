@@ -243,14 +243,19 @@ class ViReMaAdapterTests(unittest.TestCase):
 
     def test_nonzero_timeout_and_size_limit_record_failures(self):
         scenarios = (
-            ('nonzero', 1_000_000, ExternalToolExitError),
-            ('timeout', 1_000_000, TimeoutError),
-            ('large', 10_000, ValueError),
+            ('nonzero', 1_000_000, ExternalToolExitError, 5),
+            ('timeout', 1_000_000, TimeoutError, .15),
+            ('large', 10_000, ValueError, 5),
         )
-        for mode, budget, error_type in scenarios:
+        for mode, budget, error_type, timeout in scenarios:
             with self.subTest(mode=mode), scratch_directory() as folder:
                 root = Path(folder)
-                adapter = FixtureViReMaAdapter(mode, timeout=.15, max_bytes=budget)
+                # Only the deliberate timeout case needs a sub-second budget.
+                # The other cases test exit/size handling and should not race
+                # interpreter startup on a loaded CI or review runner.
+                adapter = FixtureViReMaAdapter(
+                    mode, timeout=timeout, max_bytes=budget
+                )
                 with self.assertRaises(error_type):
                     adapter.execute(self.fixture_inputs(root), root / 'out', self.config())
                 manifest = json.loads((root / 'out/manifest.json').read_text())
