@@ -795,22 +795,42 @@ class M13M5EvidenceTests(unittest.TestCase):
             for line in compatibility_file.read_text(encoding="utf-8").splitlines()
             if "=" in line
         )
-        legacy_runtime = {
-            **runtime,
-            "source_sha256": compatibility["legacy_source_sha256"],
-        }
+        self.assertIn(
+            artifact_workflow._legacy_package_cache_digest(runtime),
+            {
+                compatibility["legacy_source_sha256"],
+                compatibility["legacy_source_sha256_crlf"],
+            },
+        )
         registry = artifact_workflow.build_default_registry()
-        for kind, definition in registry._stages.items():
-            if kind == m13_stage.STAGE_KIND:
-                continue
-            stage = {"id": f"cache-isolation-{kind}", "kind": kind}
-            before = artifact_workflow._stage_cache_key(
-                stage, definition, {}, {}, legacy_runtime, None
-            )
-            after = artifact_workflow._stage_cache_key(
-                stage, definition, {}, {}, runtime, None
-            )
-            self.assertEqual(before, after, f"{kind} cache identity changed")
+        for suffix in ("", "_crlf"):
+            package_runtime = {
+                **runtime,
+                "source_sha256": compatibility[
+                    f"accepted_source_sha256{suffix}"
+                ],
+            }
+            legacy_runtime = {
+                **runtime,
+                "source_sha256": compatibility[
+                    f"legacy_source_sha256{suffix}"
+                ],
+            }
+            for kind, definition in registry._stages.items():
+                if kind == m13_stage.STAGE_KIND:
+                    continue
+                stage = {"id": f"cache-isolation-{kind}", "kind": kind}
+                before = artifact_workflow._stage_cache_key(
+                    stage, definition, {}, {}, legacy_runtime, None
+                )
+                after = artifact_workflow._stage_cache_key(
+                    stage, definition, {}, {}, package_runtime, None
+                )
+                self.assertEqual(
+                    before,
+                    after,
+                    f"{kind} cache identity changed for source digest {suffix!r}",
+                )
 
         relocated_root = self.root / "relocated"
         relocated_root.mkdir()
