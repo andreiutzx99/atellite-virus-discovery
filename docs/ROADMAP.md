@@ -1,12 +1,12 @@
 # Milestone roadmap and evidence boundaries
 
-This is the current milestone register for the source tree after the M12
-artifact-bounded review baseline. It supersedes older roadmap snapshots where
-their status differs. M1–M12 are implemented as scoped software milestones;
-M13–M16 remain planned. A milestone marked implemented describes software
+This is the current milestone register for the source tree after the M13
+M5/ViReMa evidence dossier baseline. It supersedes older roadmap snapshots
+where their status differs. M1–M13 are implemented as scoped software milestones;
+M14–M16 remain planned. A milestone marked implemented describes software
 behavior, not biological validation.
 
-## M1–M12 — implemented
+## M1–M13 — implemented
 
 | Milestone | Status | Implemented evidence layer | Boundary |
 | --- | --- | --- | --- |
@@ -22,14 +22,14 @@ behavior, not biological validation.
 | M10 — Genome architecture and topology (exact-first baseline) | **IMPLEMENTED (SCOPED)** | Deterministic exact-first reporting of direct/inverted terminal repeats and maximal internal repeats over the validated candidate handoff, with source-linked evidence, branch accounting, provenance, and explicit limits/statuses; validated with synthetic fixtures. | Exact sequence patterns only under the frozen policy. No biological dataset or reference search, confirmed topology/circularity, completeness claim, biological classification, or functional inference. Optional M7–M9 inputs are context only. |
 | M11 — RNA minimum-free-energy structure baseline | **IMPLEMENTED (OPTIONAL)** | Optional, hash-pinned ViennaRNA 2.7.2 MFE predictions for validated whole-sequence or explicitly requested regions, with source provenance, per-request accounting, and bounded isolated execution. | Predicted folds are model-dependent hypotheses, not observed structures or evidence of ribozyme activity/function. Ribozyme-family matching is not implemented. |
 | M12 — Read-origin and technical-artifact review | **IMPLEMENTED (SCOPED)** | Artifact-bounded review of declared same-workflow M5/M6 outputs; producer/run/type/version and digest binding, applicable contract and accounting checks, explicit evidence states, scope, limitations, and unassessed dimensions; validated with synthetic/offline fixtures. | Does not reopen or remap reads, retrieve external evidence payloads, infer biological origin, prove authenticity or definitive artifact status, classify DVGs/satellites, establish novelty, or infer helper dependence. `NO_SIGNAL_WITHIN_SCOPE` is limited to the supplied method/artifact scope, not biological absence. |
+| M13 — M5/ViReMa evidence dossier and differential context | **IMPLEMENTED (SCOPED)** | Imports explicitly referenced, validated M5/ViReMa artifacts; preserves run/event provenance and typed completed-zero, failed, incomplete, invalid, interrupted, unavailable, skipped, and not-started outcomes; presents scoped DVG-compatible evidence and differential context; validated with synthetic/offline fixtures. | Caller-scoped computational evidence only. Does not execute ViReMa or establish DVG identity, satellite identity, biological authenticity, biological absence, helper dependence, novelty, or function. |
 
-## M13–M16 — planned, not implemented
+## M14–M16 — planned, not implemented
 
-M13–M16 remain planned and are not implemented.
+M14–M16 remain planned and are not implemented.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
-| M13 — DVG-versus-satellite differential evidence | **PLANNED** | How do scoped observations bear on DVG, satellite/subviral, and other alternatives? | Requires curated independent examples and an unresolved outcome; M5 caller output alone is insufficient. |
 | M14 — Helper association and dependence | **PLANNED** | What association is supported across matched observations, and is there separate evidence of dependence? | Requires suitable samples, controls, denominators, and claim-appropriate experiments; association does not prove dependence. |
 | M15 — Evidence integration and transparent prioritization | **PLANNED** | Can scoped evidence and alternatives be integrated and, if justified, ranked for follow-up? | Preserve provenance, missingness, dependencies, and correlated evidence. Ranking is not classification and requires predeclared objectives and validation. |
 | M16 — Blinded benchmarking and claim-appropriate validation | **PLANNED** | How does a frozen workflow perform on independent holdouts, and what biological claims receive orthogonal or experimental validation? | Requires justified positives/negatives, leakage controls, predeclared criteria, and appropriate assays; software benchmarks do not establish a candidate's identity or function. |

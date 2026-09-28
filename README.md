@@ -6,16 +6,22 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M12 software provides
+sequencing-derived candidates. The implemented M1–M13 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence,
 reference-scoped residual-read and read-back analysis, exact recurrence
 reporting, scoped nucleotide homology, protein-level ORF and local BLASTP
 evidence, exact-first sequence-architecture analysis, and optional RNA
 minimum-free-energy structure predictions, plus artifact-bounded review of
-declared M5/M6 technical and read-support evidence.
+declared M5/M6 technical and read-support evidence and a scoped M5/ViReMa
+evidence dossier with differential context.
 
-M1–M12 implement scoped technical software stages. M9 provides protein-level
+M1–M13 implement scoped technical software stages. M13 imports explicitly
+referenced, validated M5/ViReMa artifacts and reports caller-scoped
+DVG-compatible computational evidence and differential context; it does not
+execute ViReMa or force a biological classification. M13 does not establish
+DVG identity, satellite identity, biological authenticity, biological absence,
+helper dependence, novelty, or function. M9 provides protein-level
 computational evidence only; it does **not** classify satellites, establish
 novelty or helper dependence, or prove expression or biological function. No
 biological candidate dataset or biological protein database was searched or
@@ -62,7 +68,7 @@ do not validate this software's output or technical defaults. See
 - Project-specific defaults are technical settings, not biologically
   validated thresholds.
 
-## Implemented workflow — M1 to M11
+## Implemented workflow — M1 to M13
 
 | Milestone | Implemented software capability | Evidence boundary |
 | --- | --- | --- |
@@ -77,6 +83,8 @@ do not validate this software's output or technical defaults. See
 | M9 — Translated and protein evidence | Deterministic six-frame ORF hypotheses under the approved table-1/ATG-only policy, preserving nested, overlapping, and partial hypotheses; ordinary local BLASTP against an explicitly supplied typed protein snapshot; typed no-ORF/no-hit/failure/incomplete states; provenance, integrity, and stage-scoped cache/reuse; synthetic/offline validation. | Protein-level computational evidence only; no satellite classification, novelty, helper dependence, expression, or biological function. No biological candidate dataset or protein database was searched for this milestone. |
 | M10 — Genome architecture and topology (exact-first baseline) | Exact-first reporting of direct/inverted terminal and maximal internal repeats, with source-linked evidence and explicit statuses. | Repeat patterns do not confirm topology, circularity, completeness, classification, or function. |
 | M11 — RNA minimum-free-energy structure baseline | Optional, pinned ViennaRNA 2.7.2 predictions for validated whole-sequence or explicitly requested regions, with provenance and per-request accounting. | Model-dependent predictions are not observed structures or evidence of ribozyme activity/function; ribozyme-family matching is not implemented. |
+| M12 — Read-origin and technical-artifact review | Artifact-bounded review of declared same-workflow M5/M6 outputs, with producer identity, integrity, accounting, scope, and typed evidence states. | Does not reopen reads or infer biological origin, authenticity, absence, DVG/satellite identity, novelty, or helper dependence. |
+| M13 — M5/ViReMa evidence dossier and differential context | Imports explicitly referenced, validated M5/ViReMa artifacts and preserves run/event provenance and typed outcomes while presenting scoped DVG-compatible evidence and differential context. | Caller-scoped computational evidence only; does not execute ViReMa or establish DVG/satellite identity, biological authenticity, absence, helper dependence, novelty, or function. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
@@ -89,6 +97,9 @@ The [M1–M6 scientific audit](docs/M1_M6_SCIENTIFIC_AUDIT.md) and
 See the [M10 contract freeze](docs/M10_CONTRACT_FREEZE.md), [M11 frozen
 contract](docs/M11_CONTRACT_FREEZE.md), and [M11 implementation
 notes](docs/M11_IMPLEMENTATION.md) for the later-stage policies and limits.
+See the [M12 contract freeze](docs/M12_CONTRACT_FREEZE.md) and
+[M13 M5/ViReMa evidence dossier](docs/M13_M5_EVIDENCE_DOSSIER.md) for their
+scopes and limitations.
 
 ## Pipeline architecture
 
@@ -128,7 +139,11 @@ sequencing reads and declared references
                                  ↓
                     optional M11 RNA-fold predictions
                                  ↓
-                     planned evidence layers M13–M16
+                     M12 artifact-bounded M5/M6 review
+                                  ↓
+                    M13 scoped M5/ViReMa evidence dossier
+                                  ↓
+                       planned evidence layers M14–M16
 ```
 
 In paired data, a primary mapping for either mate excludes the whole fragment
@@ -147,13 +162,13 @@ contig.
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
 | Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M12 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M13 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M12: IMPLEMENTED** as scoped software milestones.
-- **M13–M16: PLANNED**, not implemented.
+- **M1–M13: IMPLEMENTED** as scoped software milestones.
+- **M14–M16: PLANNED**, not implemented.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
 M9 is limited to protein-level computational evidence. M10 implements exact
@@ -164,13 +179,16 @@ RNA-fold prediction baseline; see its [frozen
 contract](docs/M11_CONTRACT_FREEZE.md) and [implementation
 notes](docs/M11_IMPLEMENTATION.md). M12 is limited to artifact-bounded
 technical/read-origin review within the supplied producer-artifact scope; see
-[docs/ROADMAP.md](docs/ROADMAP.md) for its boundaries. Planned M13–M16
-features are not implemented.
+[docs/ROADMAP.md](docs/ROADMAP.md) for its boundaries. M13's scoped evidence
+and limitations are summarized below.
 
-### Planned evidence layers (M13–M16)
+M13's structural/DVG-compatible evidence and differential context are limited
+to validated M5/ViReMa artifacts. They do not establish DVG identity, satellite
+identity, biological authenticity, biological absence, helper dependence,
+novelty, or function.
 
-- **M13 — DVG-versus-satellite differential evidence:** compare scoped evidence
-  and alternatives without forcing a binary biological class.
+### Planned evidence layers (M14–M16)
+
 - **M14 — Helper association and dependence:** report association separately
   from dependence, which requires claim-appropriate validation.
 - **M15 — Evidence integration and prioritization:** present provenance,
@@ -253,6 +271,11 @@ is distinct from the dependency-free matrix.
   sequences has not been benchmarked.
 - **DVG caller limits:** ViReMa reports caller-specific junction evidence;
   its zero-event state is scoped to a completed run and its settings.
+- **M13 is not biological classification:** it imports validated M5/ViReMa
+  artifacts and reports caller-scoped DVG-compatible computational evidence
+  and differential context. It does not execute ViReMa or establish DVG or
+  satellite identity, biological authenticity, biological absence, helper
+  dependence, novelty, or function.
 - **M9 protein evidence is not classification:** ORFs and BLASTP matches are
   computational hypotheses scoped to the declared policy and protein snapshot.
   No-ORF, no-hit, failed, and incomplete outcomes remain distinct; none
