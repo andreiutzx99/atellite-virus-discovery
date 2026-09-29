@@ -26,4 +26,4 @@ Add `--html` to also save a readable HTML report beside the JSON. Both output na
 
 Hashes establish consistency with the saved QC record, not independent authenticity of that record. A successful audit does not establish sample identity, biological suitability, infection or candidate detection.
 
-Development status: current synthetic mapping fixtures pass; biological classification remains unvalidated. See [mapping status](SYNTHETIC_MAPPING_STATUS.md). The mapping shortcut is a synthetic diagnostic, not a completed next-stage biological workflow.
+Development status: current synthetic mapping fixtures pass; biological classification remains unvalidated. The mapping shortcut is a synthetic diagnostic, not a completed next-stage biological workflow.
