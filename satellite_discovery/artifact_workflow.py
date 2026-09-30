@@ -750,6 +750,51 @@ def _legacy_package_cache_digest(runtime):
         return current
     if values.get('schema') != 'm12-legacy-cache-compat-v1':
         return current
+    source_hashes = runtime.get('source_files')
+    if (
+        isinstance(source_hashes, dict)
+        and all(
+            isinstance(name, str)
+            and isinstance(digest, str)
+            and len(digest) == 64
+            and all(char in '0123456789abcdef' for char in digest)
+            for name, digest in source_hashes.items()
+        )
+        and hashlib.sha256(
+            json.dumps(source_hashes, sort_keys=True).encode('utf-8')
+        ).hexdigest() == current
+        and 'm14_descriptive_observations.py' in source_hashes
+    ):
+        # M14 has its own implementation identity. Normalize only its source
+        # hash, and the exact cache-compatibility helper change in this file,
+        # before applying the existing package mapping for upstream stages.
+        for suffix in ('', '_crlf'):
+            accepted = values.get(f'accepted_source_sha256{suffix}')
+            legacy = values.get(f'legacy_source_sha256{suffix}')
+            m14_source = values.get(f'm14_source_sha256{suffix}')
+            workflow_source = values.get(
+                f'artifact_workflow_source_sha256{suffix}')
+            cache_helper_source = values.get(
+                f'cache_helper_artifact_workflow_sha256{suffix}')
+            if (
+                isinstance(accepted, str)
+                and isinstance(legacy, str)
+                and isinstance(m14_source, str)
+                and isinstance(workflow_source, str)
+                and source_hashes.get('artifact_workflow.py') == cache_helper_source
+                and len(m14_source) == 64
+                and all(char in '0123456789abcdef' for char in m14_source)
+                and len(workflow_source) == 64
+                and all(char in '0123456789abcdef' for char in workflow_source)
+            ):
+                normalized = dict(source_hashes)
+                normalized['m14_descriptive_observations.py'] = m14_source
+                normalized['artifact_workflow.py'] = workflow_source
+                normalized_digest = hashlib.sha256(
+                    json.dumps(normalized, sort_keys=True).encode('utf-8')
+                ).hexdigest()
+                if normalized_digest == accepted:
+                    return legacy
     for suffix in ('', '_crlf'):
         accepted = values.get(f'accepted_source_sha256{suffix}')
         legacy = values.get(f'legacy_source_sha256{suffix}')

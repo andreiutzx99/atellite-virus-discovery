@@ -483,6 +483,21 @@ def _source_kind_state_errors(outcome):
     return errors
 
 
+def _unverified_producer_stage(source):
+    """Keep caller-declared stage identity, but never echo unverified claims."""
+    stage = source.get("producer_stage") if isinstance(source, dict) else None
+    if (not isinstance(stage, dict)
+            or not _token(stage.get("stage_id"))
+            or not _token(stage.get("stage_kind"))):
+        return None
+    return {
+        "stage_id": stage["stage_id"],
+        "stage_kind": stage["stage_kind"],
+        "raw_status": None,
+        "manifest_sha256": None,
+    }
+
+
 def _invalid_source_outcome(source):
     defaults = {
         "source_id": None,
@@ -509,6 +524,7 @@ def _invalid_source_outcome(source):
         producer_completeness="NOT_REPORTED",
         reason_code="SOURCE_OUTCOME_INVALID",
     )
+    defaults["producer_stage"] = _unverified_producer_stage(source)
     return defaults
 
 
@@ -817,6 +833,7 @@ def _resolve_source_outcomes(config):
                         source_state="UNAVAILABLE", reason_code="WORKFLOW_UNAVAILABLE",
                         artifact_refs=[], artifact_attempts=[],
                         producer_result_status=None, producer_completeness="NOT_REPORTED",
+                        producer_stage=_unverified_producer_stage(source),
                     )
                     resolved_outcomes.append(current)
                     continue
@@ -825,6 +842,7 @@ def _resolve_source_outcomes(config):
                         source_state="INVALID", reason_code="SOURCE_OUTCOME_INVALID",
                         artifact_refs=[], artifact_attempts=[],
                         producer_result_status=None, producer_completeness="NOT_REPORTED",
+                        producer_stage=_unverified_producer_stage(source),
                     )
                     resolved_outcomes.append(current)
                     continue
@@ -863,6 +881,9 @@ def _resolve_source_outcomes(config):
                 resolved_outcomes.append(current)
                 continue
         if current.get("source_state") == "INVALID":
+            # Caller-declared INVALID and malformed NOT_SUPPLIED/NOT_RUN rows
+            # have not passed producer verification.
+            current["producer_stage"] = _unverified_producer_stage(source)
             resolved_outcomes.append(current)
             continue
 
@@ -879,6 +900,7 @@ def _resolve_source_outcomes(config):
                 ],
                 producer_result_status=None, producer_completeness="NOT_REPORTED",
                 reason_code="WORKFLOW_UNAVAILABLE",
+                producer_stage=_unverified_producer_stage(source),
             )
             resolved_outcomes.append(current)
             continue
@@ -910,6 +932,7 @@ def _resolve_source_outcomes(config):
                     "ARTIFACT_PATH_UNSAFE": "ARTIFACT_PATH_UNSAFE",
                     "WORKFLOW_PATH_UNSAFE": "ARTIFACT_PATH_UNSAFE",
                 }.get(reason, "SOURCE_OUTCOME_INVALID"),
+                producer_stage=_unverified_producer_stage(source),
             )
             resolved_outcomes.append(current)
             continue
@@ -929,7 +952,8 @@ def _resolve_source_outcomes(config):
         if (expected_stage.get("stage_id") != actual_stage_id
                 or expected_stage.get("stage_kind") != actual_stage_kind):
             current.update(source_state="INVALID", artifact_refs=[],
-                           reason_code="PRODUCER_IDENTITY_MISMATCH")
+                           reason_code="PRODUCER_IDENTITY_MISMATCH",
+                           producer_stage=_unverified_producer_stage(source))
             resolved_outcomes.append(current)
             continue
         if expected_stage.get("raw_status") != actual_raw_status:
