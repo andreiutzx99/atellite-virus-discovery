@@ -107,6 +107,14 @@ _CONTRACTS = {
     'm13_hypothesis_matrix': 'M13 evidence links to only explicitly supplied hypotheses.',
     'm13_summary': 'M13 per-run import states and artifact completeness.',
     'm13_result_bundle': 'M13 input, producer, output, and implementation provenance.',
+    'm14_observation_table': 'Frozen M14 descriptive observation rows; validation is unavailable until M14 is implemented.',
+    'm14_descriptive_summary': 'Frozen M14 descriptive counts and denominators; validation is unavailable until M14 is implemented.',
+    'm14_result_bundle': 'Frozen M14 input/output provenance interface; validation is unavailable until M14 is implemented.',
+    'm15_input_manifest': 'Caller-supplied, immutable M15 evidence-dossier references.',
+    'm15_evidence_envelope': 'Lossless M15 records for explicitly referenced upstream artifacts.',
+    'm15_dependency_edges': 'Explicit, provenance-bound M15 evidence relationships.',
+    'm15_dossier_summary': 'Descriptive M15 supplied, absent, invalid, and unresolved counts.',
+    'm15_result_bundle': 'M15 input, producer, dependency, implementation, and output provenance.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -839,6 +847,23 @@ def validate_artifact(path, artifact_type):
     }:
         from . import m13_contracts
         details.update(m13_contracts.validate_output_file(path, artifact_type))
+    elif artifact_type == 'm15_input_manifest':
+        from . import m15_contracts
+        details.update(m15_contracts.validate_input_manifest_file(path))
+    elif artifact_type in {
+        'm15_evidence_envelope', 'm15_dependency_edges',
+        'm15_dossier_summary', 'm15_result_bundle',
+    }:
+        from . import m15_contracts
+        details.update(m15_contracts.validate_output_file(path, artifact_type))
+    elif artifact_type in {
+        'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
+    }:
+        # M14 is frozen but not implemented on this mainline. M15 may retain an
+        # immutable syntactically valid JSON reference, but must not claim M14
+        # semantic validation or map its payload to a normalized axis.
+        value = _read_json(path)
+        details.update(schema=value.get('schema', 'UNKNOWN'))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')
