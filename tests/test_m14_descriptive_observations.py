@@ -662,8 +662,9 @@ class M14DescriptiveObservationTests(unittest.TestCase):
 
     def test_m14_source_hash_normalizes_crlf(self):
         source = Path(m14.__file__).read_bytes()
-        crlf_source = source.replace(b"\n", b"\r\n")
-        expected = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
+        lf_source = source.replace(b"\r\n", b"\n")
+        crlf_source = lf_source.replace(b"\n", b"\r\n")
+        expected = hashlib.sha256(lf_source).hexdigest()
         with patch.object(Path, "read_bytes", return_value=crlf_source):
             self.assertEqual(m14._implementation_sha256(), expected)
 
