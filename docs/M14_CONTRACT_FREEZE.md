@@ -6,6 +6,11 @@ observation identity, tested denominators, and descriptive counts. Inferential
 association models and experimental dependence are not required baseline
 behavior.
 
+The [M14 final contract clarification](research/M14_CONTRACT_CLARIFICATION.md)
+is normative for optional-source outcomes, frame/result precedence, and
+canonical M14 identity. It does not authorize M14 implementation or real-data
+use.
+
 This freeze does not fulfill the roadmap's broader matched-observation
 association question or establish helper dependence; those require
 claim-appropriate data and evidence beyond this descriptive synthetic baseline.
@@ -66,6 +71,7 @@ The UTF-8 JSON manifest uses `schema = "m14-input-v1"`:
   "schema": "m14-input-v1",
   "dataset_id": "stable non-sensitive identifier",
   "source_artifacts": [],
+  "source_outcomes": [],
   "sampling_units": [],
   "evaluated_pairs": [],
   "observations": [],
@@ -73,14 +79,30 @@ The UTF-8 JSON manifest uses `schema = "m14-input-v1"`:
 }
 ```
 
-`dataset_id` is required. `source_artifacts` contains immutable `ArtifactRef`
-objects with producer milestone/stage, producer-run-manifest digest, exact
-artifact type/version, relative path, content digest, and raw producer status.
-The allowed producer/type pairs are listed in section 2. `sampling_units`,
-`evaluated_pairs`, and `observations` are required arrays. They may all be
-empty only when the result is `NOT_EVALUATED`; an empty table is not a zero
-co-detection rate. `analysis_profile` must be null in this baseline; any
-non-null inferential model is rejected as an unsupported optional branch.
+`dataset_id` is required. `source_artifacts` contains only verified immutable
+`ArtifactRef` objects; `source_outcomes` is required typed metadata for each
+optional M4/M7 source family and run, including an explicit `NOT_SUPPLIED`
+record when the source was not provided or `NOT_RUN` when a declared source
+slot was not executed. Neither state has a placeholder scientific artifact.
+`NOT_SUPPLIED` has no artifact, workflow reference, path, or digest; `NOT_RUN`
+may retain a real M1 workflow/stage reference only when M1 records the producer
+as skipped. The allowed
+producer/type pairs and exact outcome rules are defined in the
+[contract clarification](research/M14_CONTRACT_CLARIFICATION.md#1-input-boundary-and-optional-source-records).
+For supplied artifacts, the reference binds the producer workflow/stage,
+completed stage-manifest digest, exact artifact type/version, relative path,
+content digest, and raw producer status. Resolve only explicit
+workspace-relative references; do not search the filesystem.
+
+`sampling_units`, `evaluated_pairs`, and `observations` are required arrays.
+An all-empty or explicit zero-unit scope is `NOT_EVALUATED`. A nonempty
+declared frame with missing or rejected pair/unit rows is `INCOMPLETE`; a
+structurally invalid required manifest is `INVALID_INPUT`. A complete
+nonempty frame with no jointly tested/evaluable rows is
+`INSUFFICIENT_MATCHED_EVIDENCE`. Exact precedence is normative in the
+[clarification, §2](research/M14_CONTRACT_CLARIFICATION.md#2-frame-evidence-and-result-precedence).
+`analysis_profile` must be null in this baseline; any non-null inferential
+model is rejected as an unsupported optional branch.
 
 Each `sampling_units` row has exactly these fields:
 
@@ -185,20 +207,30 @@ source records are represented in that row as `CONFLICTING` with their distinct
 provenance refs and excluded from the four cells; they are never resolved by
 row order.
 
-The output state is `COMPLETED_DESCRIPTIVE`, `NOT_EVALUATED`,
-`INSUFFICIENT_MATCHED_EVIDENCE`, `INVALID_INPUT`, `INCOMPLETE`, `FAILED`, or
-`INTERRUPTED`.
+The M14 computation result state is `COMPLETED_DESCRIPTIVE`,
+`NOT_EVALUATED`, `INSUFFICIENT_MATCHED_EVIDENCE`, `INVALID_INPUT`, or
+`INCOMPLETE`. `FAILED` and `INTERRUPTED` are M1 execution lifecycle states,
+not M14 computation results; a handler failure/interruption does not publish
+an M14 result bundle.
 There is no association estimate or dependence status in the baseline. A
 schema-valid run with no eligible units completes as M1 `complete` and
-`NOT_EVALUATED`/`INSUFFICIENT_MATCHED_EVIDENCE`. Invalid required input is
-rejected by preflight or maps to M1 `failed`; runtime failure/interruption
-uses the corresponding M1 lifecycle state. Missing optional sources remain
-explicit states and do not block the descriptive result.
+`NOT_EVALUATED` only for a zero-unit scope, or
+`INSUFFICIENT_MATCHED_EVIDENCE` for a complete nonempty frame with no eligible
+rows. Semantic input errors produce the typed `INVALID_INPUT` result when the
+M14 handler can serialize the supplied manifest. A handler runtime failure or
+interruption remains M1 `failed` or `interrupted` and does not publish a
+reusable M14 result. Optional-source outcomes never override the caller-frame
+result; preserve partial valid rows and exclude only rows whose required
+provenance fails verification. See the
+[normative precedence table](research/M14_CONTRACT_CLARIFICATION.md#2-frame-evidence-and-result-precedence).
 
 ## 5. Validation, failures, and deterministic behavior
 
 - Require exact schema, unique IDs, valid enum values, typed source refs, and
-  all artifact digests. Reject an unrecognized producer/type pair.
+  all artifact digests. Mark an unrecognized optional producer/type pair as
+  that source's `INVALID` outcome; do not discard independent valid sources.
+  If a required observation row depends on that reference, reject that row and
+  apply the frame/result precedence in §2.
 - Reject `NOT_DETECTED_WITHIN_SCOPE` without a positive tested flag, method
   reference, declared detection scope, and denominator membership. Reject
   `UNAVAILABLE`/`NOT_APPLICABLE` with a true tested flag or without a reason;
@@ -211,9 +243,13 @@ explicit states and do not block the descriptive result.
   count mates, technical replicates, lanes, or runs as biological units.
 - Missing observation rows do not become `NOT_DETECTED`. Missing metadata
   yields `UNKNOWN`; an unavailable method remains `UNAVAILABLE`.
-- A malformed required manifest fails before execution. Invalid optional
-  source rows are reported with validation errors; if no valid rows remain,
-  the summary is `INVALID_INPUT`, not an empty successful negative.
+- Source-outcome rows must obey the exact state/reference combinations in the
+  [contract clarification](research/M14_CONTRACT_CLARIFICATION.md#11-verification-and-source-state-rules).
+  Optional failures remain per-source outcomes and cannot become negative
+  observations. Reject malformed required rows and invalid required
+  provenance; retain independent valid rows. If every nonempty supplied
+  observation row is rejected, report `INVALID_INPUT`; if valid rows remain
+  but the declared frame has a hole, report `INCOMPLETE`.
 - Inferential `analysis_profile` is rejected by this baseline. It does not
   fall back to a default statistical model.
 
@@ -221,22 +257,41 @@ Serialize JSON as UTF-8, no BOM, LF, one trailing newline, sorted object keys,
 no NaN/Infinity. Sort rows by study ID (null first), unit type, unit ID,
 candidate ID, helper ID, observation ID. Sort strata and cell reports
 lexicographically by their key fields, with null before declared values. Do not
-depend on input file order.
+depend on input file order. Canonical source/frame ordering, semantic identity,
+and the distinction between scientific identity and raw-byte provenance are
+specified in the
+[contract clarification, §3](research/M14_CONTRACT_CLARIFICATION.md#3-canonical-m14-identity-reuse-and-serialization).
 
 ## 6. Provenance and cache identity
 
-The result bundle records the manifest digest; dataset ID; every source
-artifact’s producer stage/run digest, type/version, raw status, and content
-digest; normalized observation-row digests; unit/relationship/independence
-fields; method/detection limits; denominator rules; schema/semantic version;
-consumed artifact-contract semantic identities; implementation/source digest;
-and all output hashes.
+The result bundle records the canonical semantic input digest,
+`m14_provenance_sha256`, `m14_cache_identity_sha256`, dataset ID; all
+source-outcome states; each available artifact’s producer stage/run digest,
+type/version, raw status, and content digest; normalized
+observation-row digests; unit/relationship/independence fields;
+method/detection limits; denominator rules; schema/semantic version; consumed
+M4/M7 artifact-contract semantic identities; M14-scoped implementation
+identity; and all output hashes. Do not bind unreferenced files, absolute
+paths, timestamps, host identity, or unrelated workflow-stage metadata into
+the semantic digest. The semantic digest excludes raw run IDs and byte
+digests; the separate provenance digest binds those exact verified sources.
 
-The M14 cache identity includes every field above that affects row validity,
-grouping, state, denominator, or output. Exclude generated timestamps and
-absolute paths. A change in unit relationships, detection states, tested
-denominators, source table bytes, or contract version invalidates M14 only;
-it does not rewrite M7. Reuse requires identity match and output hash checks.
+The semantic, provenance, and composite M14 cache identities are defined in
+[contract clarification, §3](research/M14_CONTRACT_CLARIFICATION.md#3-canonical-m14-identity-reuse-and-serialization).
+The existing M1 stage cache key additionally partitions by stage identity and
+uses the normalized M14 configuration and per-source dependency report.
+Workspace-root relocation with unchanged relative references does not change
+identity. Changes to observation semantics, denominator, source state,
+verified producer run/artifact, M14 rules, or consumed contract semantics
+invalidate M14 only; they do not rewrite M4/M7 or alter M1–M13 cache
+identities. Raw artifact digests remain exact integrity/provenance values;
+line-ending-only text changes may change provenance/cache identity while
+leaving the scientific semantic digest and counts unchanged. To preserve
+unscoped earlier-stage keys across M14-only source changes, update the
+accepted LF/CRLF source digests in
+`satellite_discovery/m12_legacy_cache_compatibility.txt` while preserving its
+legacy baseline. Reuse requires matching composite identity and full
+output-hash/contract checks.
 
 ## 7. Synthetic acceptance fixtures
 
@@ -249,7 +304,26 @@ it does not rewrite M7. Reuse requires identity match and output hash checks.
 | One pair/unit row with conflicting source refs | Preserve the conflicting provenance and exclude that unit from the 2×2 cells pending curation. |
 | M7 declared recurrence with `independence_state = UNVERIFIED` | Link metadata; no verified-independence summary. |
 | Empty observation list | `NOT_EVALUATED`, zero evaluated denominator, no negative association. |
-| Non-null inferential profile or unsupported source artifact | Validation error; no hidden default model or tool. |
+| Non-null inferential profile | Validation error; no hidden default model or tool. |
+| Unsupported optional source artifact | Per-source `INVALID`; no incompatible artifact is consumed and independent rows remain eligible. |
+| One `NOT_SUPPLIED` or `NOT_RUN` outcome for each source family with no supplied run | No path or artifact is fabricated; a complete caller frame still computes normally. A real M1 `skipped` stage may be retained with `NOT_RUN`. |
+| Supplied, valid M4/M7 source with producer-native no-signal status | Preserve `AVAILABLE` plus the exact scoped producer result; do not convert it into an M14 negative or no-association result. |
+| Optional source unavailable, not run, failed, or interrupted | Preserve distinct source outcome and raw M1 status; consume no uncommitted artifact and do not block independent caller rows. |
+| Optional source nonterminal or positively marked incomplete/truncated | Preserve `INCOMPLETE`; do not consume the unfinished artifact. A malformed/truncated byte stream without a valid incomplete marker is `INVALID`. |
+| Optional source incompatible, corrupt, or digest-mismatched | Preserve `INVALID` and the attempted-reference reason; do not interpret it as absence or no signal. |
+| Complete zero-unit declared scope | `NOT_EVALUATED`, zero denominator, no negative claim. |
+| Complete nonempty frame with no jointly evaluable rows | `INSUFFICIENT_MATCHED_EVIDENCE`; no 2×2 negative inference. |
+| Partial valid rows with another optional source failed/invalid | Keep independently valid rows and source outcomes; `INCOMPLETE` if the declared frame has holes, otherwise result follows the complete frame. |
+| Two verified, incompatible source records for one pair/unit | Preserve one `CONFLICTING` observation with distinct provenance; exclude it from all 2×2 cells, not `INVALID`. |
+| Nonterminal selected producer stage | Source `INCOMPLETE`; uncommitted artifacts are not consumed; no required M14 row is inferred from it. |
+| M7 valid partial accounting caused by M6 gaps | Source `AVAILABLE`, `producer_completeness=PARTIAL`; preserve M7's statuses without converting them into M14 absence. |
+| Permuted order of semantically unordered inputs | Same canonical semantic identity, normalized output order, output bytes, and hashes. |
+| Equivalent numeric detection-limit tokens (`1`, `1.0`, `1e0`) | Same normalized semantic identity and canonical JSON number in output. |
+| Workspace moved with unchanged relative layout | Same M14 semantic identity and cache dependency; no absolute path is serialized. |
+| LF/CRLF-only manifest or implementation-source variation | Same M14 scientific semantic identity and counts; raw source artifact digest remains an exact provenance value. |
+| M14 configuration/rule change or relevant upstream artifact change | M14-only invalidation; M1–M13 producer outputs and identities remain unchanged. |
+| Irrelevant timestamp, host path, unrelated workflow-stage metadata, or unreferenced artifact change | No change to M14 semantic identity. |
+| Stale or tampered M14 output | Reject reuse when any stage/output/result-bundle hash or contract check fails. |
 
 ## 8. Compatibility and claim boundary
 
@@ -259,4 +333,5 @@ sample/run/study relationships. Additive M4 registration and M14 artifact
 validators are required for later workflow execution. M14 supports scoped
 descriptive co-detection only; association requires a separately reviewed
 profile, and helper dependence requires claim-appropriate experimental
-evidence outside this contract.
+evidence outside this contract. M13 is not a prerequisite: no M13 producer or
+artifact type is in the M14 source allowlist.
