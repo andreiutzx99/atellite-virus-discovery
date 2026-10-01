@@ -122,6 +122,24 @@ class M12ArtifactReviewTests(unittest.TestCase):
             artifact_workflow._legacy_package_cache_digest(changed_runtime),
             "0" * 64,
         )
+        compatibility_path = (
+            Path(artifact_workflow.__file__).with_name(
+                "m12_legacy_cache_compatibility.txt"
+            )
+        )
+        compatibility = dict(
+            line.split("=", 1)
+            for line in compatibility_path.read_text(encoding="utf-8").splitlines()
+            if "=" in line
+        )
+        crlf_runtime = {
+            **runtime,
+            "source_sha256": compatibility["accepted_source_sha256_crlf"],
+        }
+        self.assertEqual(
+            artifact_workflow._legacy_package_cache_digest(crlf_runtime),
+            compatibility["legacy_source_sha256_crlf"],
+        )
 
     @staticmethod
     def _registry(calls):

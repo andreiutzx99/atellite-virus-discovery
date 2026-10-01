@@ -107,6 +107,9 @@ _CONTRACTS = {
     'm13_hypothesis_matrix': 'M13 evidence links to only explicitly supplied hypotheses.',
     'm13_summary': 'M13 per-run import states and artifact completeness.',
     'm13_result_bundle': 'M13 input, producer, output, and implementation provenance.',
+    'm14_observation_table': 'Normalized caller-authored M14 observation rows and exact source-row references.',
+    'm14_descriptive_summary': 'M14 descriptive counts, strata, explicit states, and denominators.',
+    'm14_result_bundle': 'M14 input, output, provenance, semantic identity, and integrity binding.',
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -119,6 +122,7 @@ _CONTRACT_SEMANTIC_VERSIONS = {
         'm9_raw_blast_output',
         'm13_input_manifest', 'm13_event_index', 'm13_hypothesis_matrix',
         'm13_summary', 'm13_result_bundle',
+        'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
     )
 }
 
@@ -839,6 +843,11 @@ def validate_artifact(path, artifact_type):
     }:
         from . import m13_contracts
         details.update(m13_contracts.validate_output_file(path, artifact_type))
+    elif artifact_type in {
+        'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
+    }:
+        from . import m14_descriptive_observations
+        details.update(m14_descriptive_observations.validate_output_file(path, artifact_type))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')

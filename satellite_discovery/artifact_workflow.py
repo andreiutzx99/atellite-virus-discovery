@@ -24,6 +24,7 @@ from . import (
     independent_recurrence, local_comparison, m8_homology,
     m9_blastp_stage, m9_orf_stage, m10_stage, m11_stage,
     m12_artifact_review, m13_contracts, m13_stage,
+    m14_descriptive_observations,
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
 from .workflow_states import (
@@ -307,6 +308,20 @@ def build_default_registry():
     m12_artifact_review.register_stage(registry)
     m13_stage.register_stage(registry)
     registry.register(
+        m14_descriptive_observations.STAGE_KIND,
+        None,
+        m14_descriptive_observations.run_stage,
+        version=m14_descriptive_observations.STAGE_VERSION,
+        dynamic_inputs=True,
+        config_validator=m14_descriptive_observations.validate_config,
+        dependency_inspector=m14_descriptive_observations.inspect_dependency,
+        output_contracts=m14_descriptive_observations.OUTPUT_CONTRACTS,
+        description=(
+            'Validates caller-authored candidate/helper observations and emits '
+            'offline descriptive counts only.'
+        ),
+    )
+    registry.register(
         'workflow_report', None, artifact_stage_handlers.workflow_report,
         version='1', dynamic_inputs=True,
         config_validator=artifact_stage_handlers.validate_workflow_report_config,
@@ -329,6 +344,8 @@ def build_default_registry():
              'm9_protein_search_status', 'm9_protein_match_evidence',
              'm9_protein_summary', 'm9_search_commands', 'm9_output_bundle',
              'm9_raw_blast_output',
+             'm14_observation_table', 'm14_descriptive_summary',
+             'm14_result_bundle',
         )},
         output_contracts={'report.json': 'workflow_report_json', 'report.html': 'report'},
         description='Consolidates declared structured stage artifacts without interpretation.',
@@ -733,6 +750,51 @@ def _legacy_package_cache_digest(runtime):
         return current
     if values.get('schema') != 'm12-legacy-cache-compat-v1':
         return current
+    source_hashes = runtime.get('source_files')
+    if (
+        isinstance(source_hashes, dict)
+        and all(
+            isinstance(name, str)
+            and isinstance(digest, str)
+            and len(digest) == 64
+            and all(char in '0123456789abcdef' for char in digest)
+            for name, digest in source_hashes.items()
+        )
+        and hashlib.sha256(
+            json.dumps(source_hashes, sort_keys=True).encode('utf-8')
+        ).hexdigest() == current
+        and 'm14_descriptive_observations.py' in source_hashes
+    ):
+        # M14 has its own implementation identity. Normalize only its source
+        # hash, and the exact cache-compatibility helper change in this file,
+        # before applying the existing package mapping for upstream stages.
+        for suffix in ('', '_crlf'):
+            accepted = values.get(f'accepted_source_sha256{suffix}')
+            legacy = values.get(f'legacy_source_sha256{suffix}')
+            m14_source = values.get(f'm14_source_sha256{suffix}')
+            workflow_source = values.get(
+                f'artifact_workflow_source_sha256{suffix}')
+            cache_helper_source = values.get(
+                f'cache_helper_artifact_workflow_sha256{suffix}')
+            if (
+                isinstance(accepted, str)
+                and isinstance(legacy, str)
+                and isinstance(m14_source, str)
+                and isinstance(workflow_source, str)
+                and source_hashes.get('artifact_workflow.py') == cache_helper_source
+                and len(m14_source) == 64
+                and all(char in '0123456789abcdef' for char in m14_source)
+                and len(workflow_source) == 64
+                and all(char in '0123456789abcdef' for char in workflow_source)
+            ):
+                normalized = dict(source_hashes)
+                normalized['m14_descriptive_observations.py'] = m14_source
+                normalized['artifact_workflow.py'] = workflow_source
+                normalized_digest = hashlib.sha256(
+                    json.dumps(normalized, sort_keys=True).encode('utf-8')
+                ).hexdigest()
+                if normalized_digest == accepted:
+                    return legacy
     for suffix in ('', '_crlf'):
         accepted = values.get(f'accepted_source_sha256{suffix}')
         legacy = values.get(f'legacy_source_sha256{suffix}')
