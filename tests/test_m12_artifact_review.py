@@ -94,6 +94,43 @@ def _workflow_spec(include_m12=False, manifest_path="m12-input.json"):
 
 
 class M12ArtifactReviewTests(unittest.TestCase):
+    def test_external_provenance_addition_preserves_legacy_cache_lf_and_crlf(self):
+        compatibility_path = (
+            Path(artifact_workflow.__file__).with_name(
+                "m12_legacy_cache_compatibility.txt"
+            )
+        )
+        compatibility = dict(
+            line.split("=", 1)
+            for line in compatibility_path.read_text(encoding="utf-8").splitlines()
+            if "=" in line
+        )
+        package = Path(artifact_workflow.__file__).parent
+
+        for suffix, use_crlf in (("", False), ("_crlf", True)):
+            with self.subTest(line_endings="CRLF" if use_crlf else "LF"):
+                source_files = {}
+                for path in sorted(package.iterdir()):
+                    if path.suffix not in {".py", ".json"} or not path.is_file():
+                        continue
+                    content = path.read_bytes()
+                    if use_crlf:
+                        content = content.replace(b"\r\n", b"\n").replace(
+                            b"\n", b"\r\n"
+                        )
+                    source_files[path.name] = _sha(content)
+                source_digest = _sha(
+                    json.dumps(source_files, sort_keys=True).encode("utf-8")
+                )
+                runtime = {
+                    "source_sha256": source_digest,
+                    "source_files": source_files,
+                }
+                self.assertEqual(
+                    artifact_workflow._legacy_package_cache_digest(runtime),
+                    compatibility[f"legacy_source_sha256{suffix}"],
+                )
+
     def test_m12_package_additions_preserve_legacy_unscoped_cache_keys(self):
         runtime = reproducibility.environment()
         stage = {"id": "legacy", "kind": "legacy_stage"}
