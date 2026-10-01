@@ -113,11 +113,11 @@ class M12ArtifactReviewTests(unittest.TestCase):
                 for path in sorted(package.iterdir()):
                     if path.suffix not in {".py", ".json"} or not path.is_file():
                         continue
-                    content = path.read_bytes()
+                    # Git checkouts may use CRLF on Windows. Canonicalize first
+                    # so each subtest exercises the named line-ending variant.
+                    content = path.read_bytes().replace(b"\r\n", b"\n")
                     if use_crlf:
-                        content = content.replace(b"\r\n", b"\n").replace(
-                            b"\n", b"\r\n"
-                        )
+                        content = content.replace(b"\n", b"\r\n")
                     source_files[path.name] = _sha(content)
                 source_digest = _sha(
                     json.dumps(source_files, sort_keys=True).encode("utf-8")

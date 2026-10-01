@@ -129,6 +129,7 @@ def _safe_relative_parts(value, label):
 
 def _checked_path(root, relative_path, label):
     parts = _safe_relative_parts(relative_path, label)
+    resolved_root = Path(root).resolve(strict=True)
     current = root
     for index, part in enumerate(parts):
         current = current / part
@@ -138,8 +139,23 @@ def _checked_path(root, relative_path, label):
             _unavailable(f"{label} is missing", "REFERENCED_FILE_UNAVAILABLE")
         except OSError as error:
             _unavailable(f"{label} is unreadable", "REFERENCED_FILE_UNAVAILABLE")
-        if stat.S_ISLNK(info.st_mode):
-            _invalid(f"{label} must not traverse symbolic links", "ARTIFACT_PATH_UNSAFE")
+        reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        if (
+            stat.S_ISLNK(info.st_mode)
+            or getattr(info, "st_file_attributes", 0) & reparse_point
+        ):
+            _invalid(
+                f"{label} must not traverse symbolic links or reparse points",
+                "ARTIFACT_PATH_UNSAFE",
+            )
+        try:
+            resolved_current = current.resolve(strict=True)
+        except (OSError, RuntimeError):
+            _unavailable(f"{label} is unreadable", "REFERENCED_FILE_UNAVAILABLE")
+        try:
+            resolved_current.relative_to(resolved_root)
+        except ValueError:
+            _invalid(f"{label} escapes the selected bundle root", "ARTIFACT_PATH_UNSAFE")
         final = index == len(parts) - 1
         if final and not stat.S_ISREG(info.st_mode):
             _invalid(f"{label} must be a regular file", "ARTIFACT_PATH_UNSAFE")

@@ -1,7 +1,9 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -469,6 +471,37 @@ class ProducerProvenanceTests(unittest.TestCase):
             linked.symlink_to(fixture["workflow_path"])
             fixture["reference"]["producer_workflow_ref"]["path"] = (
                 "producer/linked/workflow.json"
+            )
+            with self.assertRaises(ProducerProvenanceInvalidError) as raised:
+                self._verify(fixture)
+        self.assertEqual(raised.exception.code, "ARTIFACT_PATH_UNSAFE")
+
+    @unittest.skipUnless(os.name == "nt", "Windows directory junction test")
+    def test_directory_junction_cannot_escape_bundle_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self._fixture(Path(directory) / "bundle")
+            producer_root = fixture["root"] / "producer"
+            outside_root = Path(directory) / "outside" / "producer"
+            outside_root.parent.mkdir()
+            shutil.move(str(producer_root), str(outside_root))
+            linked = subprocess.run(
+                [
+                    "cmd.exe",
+                    "/d",
+                    "/c",
+                    "mklink",
+                    "/J",
+                    str(producer_root),
+                    str(outside_root),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(
+                linked.returncode,
+                0,
+                msg=linked.stdout + linked.stderr,
             )
             with self.assertRaises(ProducerProvenanceInvalidError) as raised:
                 self._verify(fixture)

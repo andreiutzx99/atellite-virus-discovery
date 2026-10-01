@@ -140,8 +140,11 @@ proves the selected stage/artifact agree with the exact workflow bytes named by
 the reference. It does not prove who supplied those bytes or prevent an actor
 who can replace the workflow, reference, and expected digest together. The
 workflow digest must therefore arrive through the trusted producer handoff or
-another trusted channel. Adding signing keys or a remote attestation system is
-not part of this change.
+another trusted channel. The bundle must also remain stable while verification
+runs; path checks do not lock files against a concurrent local writer, so the
+binding describes the bytes observed during the checks rather than an atomic
+filesystem snapshot. Adding signing keys or a remote attestation system is not
+part of this change.
 
 ## 5. State and scientific boundaries
 
@@ -266,11 +269,12 @@ design report. It does not change M1–M14 producer behavior, M5 outcome
 semantics, M14 cache identity, M15/M16 implementation, or external data
 access.
 
-Validation passed: 22 focused producer-provenance tests; 8 M12 artifact-review
-and cache-compatibility tests; the full suite (622 tests, 15 skipped); Python
-compileall; `pip check`; wheel build and isolated install with the new module
-verified inside the wheel; and the installed `satellite-discovery --help`
-smoke check. Local Markdown targets/anchors, the 16-row acceptance matrix,
-terminology checks, and `git diff --check` also passed. The full suite ran
-again on the branch rebased onto current main; PR #47’s mainline delta was
-limited to README/roadmap status documentation.
+Validation passed locally on Linux: 23 focused producer-provenance tests (the
+Windows-only junction case is skipped here); 8 M12 artifact-review and
+cache-compatibility tests; 14 M13 tests; 31 M14 tests; the full suite (623
+tests, 16 skipped); Python compileall; `pip check`; and wheel build/import
+checks for the verifier and cache-compatibility metadata. The Windows CI
+matrix covers the junction regression. Local Markdown targets/anchors, the
+16-row acceptance matrix, terminology checks, and `git diff --check` also
+passed. The full suite ran on the branch rebased onto current main; PR #47’s
+mainline delta was limited to README/roadmap status documentation.
