@@ -10,14 +10,18 @@ from pathlib import Path
 import re
 
 
-INPUT_SCHEMA = "m15-input-v1"
-ENVELOPE_SCHEMA = "m15-evidence-envelope-v1"
-EDGES_SCHEMA = "m15-dependency-edges-v1"
-SUMMARY_SCHEMA = "m15-dossier-summary-v1"
-RESULT_BUNDLE_SCHEMA = "m15-result-bundle-v1"
-SEMANTIC_VERSION = "1"
-OUTPUT_CONTRACT_VERSION = "1"
-OUTPUT_SCHEMA_VERSION = "m15-output-schema-v1"
+LEGACY_INPUT_SCHEMA = "m15-input-v1"
+INPUT_SCHEMA = "m15-input-v2"
+ENVELOPE_SCHEMA = "m15-evidence-envelope-v2"
+EDGES_SCHEMA = "m15-dependency-edges-v2"
+SUMMARY_SCHEMA = "m15-dossier-summary-v2"
+RESULT_BUNDLE_SCHEMA = "m15-result-bundle-v2"
+SEMANTIC_VERSION = "2"
+OUTPUT_CONTRACT_VERSION = "2"
+OUTPUT_SCHEMA_VERSION = "m15-output-schema-v2"
+INPUT_SEMANTICS_VERSION = "m15-authenticated-producer-bindings-v2"
+AUTHENTICATED_PRODUCER_MODE = "AUTHENTICATED_PRODUCER"
+CALLER_SNAPSHOT_MODE = "CALLER_SNAPSHOT"
 
 PRODUCER_TYPES = {
     "M5": frozenset({
@@ -63,6 +67,18 @@ PRODUCER_TYPES = {
 }
 ALL_INPUT_TYPES = frozenset().union(*PRODUCER_TYPES.values())
 MILESTONES = frozenset(PRODUCER_TYPES)
+PRODUCER_STAGE_KINDS = {
+    "M5": "dvg_virema",
+    "M6": "residual_evidence",
+    "M7": "independent_recurrence",
+    "M8": "m8_homology",
+    "M9_ORF": "m9_orf_translation",
+    "M9_SEARCH": "m9_blastp",
+    "M10": "m10_exact_first",
+    "M12": "m12_artifact_review",
+    "M13": "m13_m5_evidence_matrix",
+    "M14": "m14_descriptive_observations",
+}
 OPTIONAL_STAGES = ("M12", "M13", "M14")
 OPTIONAL_STAGE_STATES = frozenset({
     "PRESENT", "NOT_SUPPLIED", "NOT_AUTHORIZED", "UNAVAILABLE",
@@ -111,6 +127,9 @@ _REF_REQUIRED = frozenset({
     "producer_run_manifest_sha256", "artifact_type",
     "artifact_contract_version", "relative_path", "sha256",
     "producer_status",
+})
+_SNAPSHOT_ONLY_TYPES = frozenset({
+    "m8_reference_snapshot_manifest", "m9_protein_reference_manifest",
 })
 
 
@@ -198,9 +217,16 @@ def _relative_path(value, label):
     return value
 
 
-def validate_artifact_ref(value):
+def validate_artifact_ref(value, *, input_schema=None):
     if not isinstance(value, dict) or not _REF_REQUIRED <= set(value):
         raise ValueError("M15 ArtifactRef is missing required identity fields")
+    if input_schema is None:
+        input_schema = (
+            INPUT_SCHEMA if "provenance_mode" in value
+            else LEGACY_INPUT_SCHEMA
+        )
+    if input_schema not in {LEGACY_INPUT_SCHEMA, INPUT_SCHEMA}:
+        raise ValueError("M15 ArtifactRef input schema is unsupported")
     milestone = value["producer_milestone"]
     if milestone not in MILESTONES:
         raise ValueError("M15 ArtifactRef has an unsupported producer milestone")
@@ -221,6 +247,27 @@ def validate_artifact_ref(value):
             or not _VERSION_RE.fullmatch(value["artifact_contract_version"])):
         raise ValueError("M15 artifact contract version is invalid")
     _relative_path(value["relative_path"], "M15 ArtifactRef.relative_path")
+    if input_schema == INPUT_SCHEMA:
+        required_v2 = {
+            "provenance_mode", "producer_execution_ref",
+            "producer_bundle_path",
+        }
+        if not required_v2 <= set(value):
+            raise ValueError("M15 v2 ArtifactRef lacks authenticated provenance fields")
+        mode = value["provenance_mode"]
+        if mode == AUTHENTICATED_PRODUCER_MODE:
+            if artifact_type in _SNAPSHOT_ONLY_TYPES:
+                raise ValueError("M15 snapshot manifests are not producer-stage artifacts")
+            if not isinstance(value["producer_execution_ref"], dict):
+                raise ValueError("M15 authenticated ArtifactRef requires producer_execution_ref")
+            _relative_path(value["producer_bundle_path"], "M15 producer_bundle_path")
+        elif mode == CALLER_SNAPSHOT_MODE:
+            if (artifact_type not in _SNAPSHOT_ONLY_TYPES
+                    or value["producer_execution_ref"] is not None
+                    or value["producer_bundle_path"] is not None):
+                raise ValueError("M15 caller-snapshot mode is invalid for this ArtifactRef")
+        else:
+            raise ValueError("M15 ArtifactRef provenance_mode is unsupported")
     # Preserve optional provenance fields exactly. Reject values that could not
     # be represented losslessly in canonical JSON.
     try:
@@ -239,6 +286,18 @@ def producer_type_allowed(ref):
     )
 
 
+def expected_producer_stage_kind(ref):
+    milestone = ref.get("producer_milestone")
+    artifact_type = ref.get("artifact_type")
+    if milestone == "M9":
+        if artifact_type in {
+            "m9_orf_results", "m9_protein_fasta", "m9_orf_bundle",
+        }:
+            return PRODUCER_STAGE_KINDS["M9_ORF"]
+        return PRODUCER_STAGE_KINDS["M9_SEARCH"]
+    return PRODUCER_STAGE_KINDS.get(milestone)
+
+
 def validate_input_manifest(value):
     if (not isinstance(value, dict)
             or set(value) != {
@@ -246,14 +305,15 @@ def validate_input_manifest(value):
                 "optional_stage_states",
             }):
         raise ValueError("M15 input manifest must contain exactly its frozen fields")
-    if value["schema"] != INPUT_SCHEMA:
+    schema = value["schema"]
+    if schema not in {LEGACY_INPUT_SCHEMA, INPUT_SCHEMA}:
         raise ValueError("M15 input manifest schema is unsupported")
     _text(value["candidate_id"], "candidate_id", maximum=256)
     refs = value["artifact_refs"]
     if not isinstance(refs, list) or len(refs) > 10_000:
         raise ValueError("M15 artifact_refs must be a bounded array")
     for ref in refs:
-        validate_artifact_ref(ref)
+        validate_artifact_ref(ref, input_schema=schema)
     states = value["optional_stage_states"]
     if not isinstance(states, dict) or set(states) != set(OPTIONAL_STAGES):
         raise ValueError("M15 optional_stage_states must contain exactly M12/M13/M14")
@@ -330,9 +390,11 @@ def validate_envelope(value):
     for record in records:
         _exact_fields(record, {
             "evidence_id", "candidate_id", "producer_ref",
-            "producer_status_raw", "producer_schema_raw", "source_row_ref",
-            "semantic_axes", "dependency_edge_ids", "validation_state",
-            "reason_code",
+            "producer_status_raw", "producer_schema_raw",
+            "producer_provenance_state", "producer_provenance_error_code",
+            "producer_binding_sha256", "producer_execution_state",
+            "source_row_ref", "semantic_axes", "dependency_edge_ids",
+            "validation_state", "reason_code",
         }, "M15 evidence record")
         if record["candidate_id"] != value["candidate_id"]:
             raise ValueError("M15 evidence record candidate_id does not match")
@@ -344,6 +406,26 @@ def validate_envelope(value):
         if record["producer_status_raw"] != record["producer_ref"]["producer_status"]:
             raise ValueError("M15 raw producer status must match its ArtifactRef")
         _text(record["producer_schema_raw"], "producer_schema_raw", maximum=256)
+        if record["producer_provenance_state"] not in {
+            "VERIFIED", "INVALID_PROVENANCE", "UNAVAILABLE", "INCOMPLETE",
+            "DECLARED_UNVERIFIED", "INVALID",
+        }:
+            raise ValueError("M15 producer provenance state is invalid")
+        if record["producer_provenance_error_code"] is not None:
+            _text(record["producer_provenance_error_code"],
+                  "producer_provenance_error_code", maximum=128)
+        binding_sha256 = record["producer_binding_sha256"]
+        if binding_sha256 is not None and (
+                not isinstance(binding_sha256, str)
+                or not HASH_RE.fullmatch(binding_sha256)):
+            raise ValueError("M15 producer binding digest is invalid")
+        if (record["producer_provenance_state"] == "VERIFIED"
+                and binding_sha256 is None):
+            raise ValueError("Verified M15 evidence requires a binding digest")
+        execution_state = record["producer_execution_state"]
+        if (not isinstance(execution_state, str) or not execution_state
+                or len(execution_state) > 256):
+            raise ValueError("M15 producer execution state is invalid")
         if record["source_row_ref"] is not None:
             raise ValueError("M15 whole-artifact records require a null source_row_ref")
         if not isinstance(record["semantic_axes"], dict) \
@@ -353,7 +435,8 @@ def validate_envelope(value):
             if record["semantic_axes"][axis] not in values:
                 raise ValueError(f"Invalid M15 semantic axis value for {axis}")
         if record["validation_state"] not in {
-            "ACCEPTED", "INVALID", "UNAVAILABLE",
+            "ACCEPTED", "INVALID", "UNAVAILABLE", "INCOMPLETE",
+            "INVALID_PROVENANCE", "UNVERIFIED",
         }:
             raise ValueError("M15 evidence validation state is invalid")
         if (record["validation_state"] == "ACCEPTED"
@@ -364,6 +447,9 @@ def validate_envelope(value):
         expected_validity = {
             "INVALID": "INVALID",
             "UNAVAILABLE": "UNKNOWN",
+            "INCOMPLETE": "UNKNOWN",
+            "INVALID_PROVENANCE": "UNKNOWN",
+            "UNVERIFIED": "UNKNOWN",
         }.get(record["validation_state"])
         if (expected_validity is not None
                 and record["semantic_axes"]["artifact_validity"]
@@ -459,8 +545,10 @@ def validate_summary(value):
     counts = value["counts"]
     count_keys = {
         "supplied_artifacts", "accepted_records", "invalid_records",
-        "unavailable_records", "absent_optional_stages",
-        "unresolved_records", "compatibility_warnings",
+        "invalid_provenance_records", "unavailable_records",
+        "incomplete_records", "unverified_records",
+        "absent_optional_stages", "unresolved_records",
+        "compatibility_warnings",
     }
     if not isinstance(counts, dict) or set(counts) != count_keys:
         raise ValueError("M15 summary counts are invalid")
@@ -477,8 +565,11 @@ def validate_summary(value):
     if counts["absent_optional_stages"] != expected_absent:
         raise ValueError("M15 absent optional-stage count does not match its states")
     if (counts["supplied_artifacts"] != counts["accepted_records"]
-            + counts["invalid_records"] + counts["unavailable_records"]):
+            + counts["invalid_records"] + counts["unavailable_records"]
+            + counts["incomplete_records"] + counts["unverified_records"]):
         raise ValueError("M15 supplied-artifact count does not reconcile")
+    if counts["invalid_provenance_records"] > counts["invalid_records"]:
+        raise ValueError("M15 invalid-provenance count exceeds invalid records")
     by_producer = value["by_producer"]
     if not isinstance(by_producer, list):
         raise ValueError("M15 by_producer must be an array of objects")
@@ -487,12 +578,16 @@ def validate_summary(value):
         "supplied_artifacts": 0,
         "accepted_records": 0,
         "invalid_records": 0,
+        "invalid_provenance_records": 0,
         "unavailable_records": 0,
+        "incomplete_records": 0,
+        "unverified_records": 0,
     }
     for row in by_producer:
         row_keys = {
             "producer_milestone", "supplied_artifacts", "accepted_records",
-            "invalid_records", "unavailable_records",
+            "invalid_records", "invalid_provenance_records",
+            "unavailable_records", "incomplete_records", "unverified_records",
         }
         if not isinstance(row, dict) or set(row) != row_keys:
             raise ValueError("M15 by_producer row fields are invalid")
@@ -518,6 +613,7 @@ def validate_result_bundle(value):
     required = {
         "schema", "input_schema", "semantic_version", "candidate_id",
         "result_completeness", "input_manifest_sha256",
+        "input_manifest_digest_kind", "input_semantics_version",
         "axis_mapping_semantic_version", "optional_stage_states", "producer_refs",
         "dependency_edges", "contract_semantics", "implementation",
         "outputs", "source_access_provenance",
@@ -527,8 +623,11 @@ def validate_result_bundle(value):
     _text(value["candidate_id"], "candidate_id", maximum=256)
     if value["result_completeness"] not in RESULT_COMPLETENESS:
         raise ValueError("M15 result bundle completeness is invalid")
-    if (value["input_schema"] != INPUT_SCHEMA
+    if (value["input_schema"] not in {LEGACY_INPUT_SCHEMA, INPUT_SCHEMA}
             or value["semantic_version"] != SEMANTIC_VERSION
+            or value["input_manifest_digest_kind"]
+                != "M15_SEMANTIC_PROJECTION_JSON_SHA256"
+            or value["input_semantics_version"] != INPUT_SEMANTICS_VERSION
             or not isinstance(value["axis_mapping_semantic_version"], str)
             or not value["axis_mapping_semantic_version"]):
         raise ValueError("M15 result bundle semantic identity is invalid")
@@ -538,7 +637,7 @@ def validate_result_bundle(value):
     if not isinstance(value["producer_refs"], list):
         raise ValueError("M15 result bundle producer_refs must be an array")
     for ref in value["producer_refs"]:
-        validate_artifact_ref(ref)
+        validate_artifact_ref(ref, input_schema=value["input_schema"])
     if not isinstance(value["dependency_edges"], list):
         raise ValueError("M15 result bundle dependency_edges must be an array")
     validate_edges({"schema": EDGES_SCHEMA, "edges": value["dependency_edges"]})

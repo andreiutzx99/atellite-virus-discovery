@@ -8,7 +8,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from satellite_discovery import artifact_contracts, artifact_workflow
+from satellite_discovery import (
+    artifact_contracts, artifact_workflow, m15_contracts, m15_stage,
+)
 from satellite_discovery import m14_descriptive_observations as m14
 
 
@@ -1308,6 +1310,129 @@ class M14DescriptiveObservationTests(unittest.TestCase):
         self.assertNotEqual(after["status"], "complete")
         after_stage = next(row for row in after["stages"] if row["id"] == "describe")
         self.assertNotEqual(after_stage["status"], "complete")
+
+
+class M14M15AuthenticatedWorkflowIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="m14-m15-integration-")
+        self.root = Path(self.temp.name)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_real_m14_workflow_artifact_is_verified_by_m15(self):
+        m14_spec_path = self.root / "m14-workflow.json"
+        m14_output = self.root / "m14-output"
+        m14_spec = {
+            "schema": "artifact-workflow-v1",
+            "stages": [{
+                "id": "describe",
+                "kind": m14.STAGE_KIND,
+                "inputs": {},
+                "config": _manifest(("unit-A",)),
+            }],
+        }
+        m15_contracts.write_json(m14_spec_path, m14_spec)
+        registry = artifact_workflow.build_default_registry()
+        artifact_workflow.run(m14_spec_path, m14_output, registry)
+        m14_workflow = json.loads(
+            (m14_output / "workflow.json").read_text(encoding="utf-8")
+        )
+        m14_row = next(
+            row for row in m14_workflow["stages"] if row["id"] == "describe"
+        )
+        self.assertEqual(m14_row["status"], "complete", m14_row.get("error"))
+        stage_output = m14_output / m14_row["output_path"]
+        relative_path = "observations.json"
+        artifact_path = stage_output / relative_path
+        stage_manifest_sha256 = m15_contracts.sha256_file(
+            stage_output / "manifest.json"
+        )
+        workflow_sha256 = m15_contracts.sha256_file(
+            m14_output / "workflow.json"
+        )
+        contract_version = artifact_contracts.CONTRACT_VERSION
+        ref = {
+            "producer_milestone": "M14",
+            "producer_stage_id": "describe",
+            "producer_run_manifest_sha256": stage_manifest_sha256,
+            "producer_status": "complete",
+            "artifact_type": "m14_observation_table",
+            "artifact_contract_version": contract_version,
+            "relative_path": relative_path,
+            "sha256": m15_contracts.sha256_file(artifact_path),
+            "provenance_mode": (
+                m15_contracts.AUTHENTICATED_PRODUCER_MODE
+            ),
+            "producer_execution_ref": {
+                "schema": "producer-execution-ref-v1",
+                "producer_workflow_ref": {
+                    "path": "workflow.json",
+                    "sha256": workflow_sha256,
+                    "workflow_id": m14_workflow["workflow_id"],
+                },
+                "producer_stage_id": "describe",
+                "producer_stage_kind": m14.STAGE_KIND,
+                "producer_stage_manifest_sha256": stage_manifest_sha256,
+            },
+            "producer_bundle_path": "m14-output",
+        }
+        m15_input_path = self.root / "m15-input.json"
+        m15_contracts.write_json(m15_input_path, {
+            "schema": m15_contracts.INPUT_SCHEMA,
+            "candidate_id": "candidate-A",
+            "artifact_refs": [ref],
+            "optional_stage_states": {
+                "M12": "NOT_SUPPLIED",
+                "M13": "NOT_SUPPLIED",
+                "M14": "PRESENT",
+            },
+        })
+        m15_spec_path = self.root / "m15-workflow.json"
+        m15_contracts.write_json(m15_spec_path, {
+            "schema": "artifact-workflow-v1",
+            "stages": [{
+                "id": "m15",
+                "kind": m15_stage.STAGE_KIND,
+                "inputs": {
+                    "manifest": {
+                        "path": m15_input_path.name,
+                        "artifact_type": "m15_input_manifest",
+                    },
+                    "artifact_0000": {
+                        "path": (
+                            f"m14-output/{m14_row['output_path']}/"
+                            f"{relative_path}"
+                        ),
+                        "artifact_type": "m14_observation_table",
+                    },
+                },
+            }],
+        })
+        m15_output = self.root / "m15-output"
+        artifact_workflow.run(m15_spec_path, m15_output, registry)
+        m15_workflow = json.loads(
+            (m15_output / "workflow.json").read_text(encoding="utf-8")
+        )
+        m15_row = next(
+            row for row in m15_workflow["stages"] if row["id"] == "m15"
+        )
+        self.assertEqual(m15_row["status"], "complete", m15_row.get("error"))
+        m15_stage_output = m15_output / m15_row["output_path"]
+        envelope = json.loads(
+            (m15_stage_output / "evidence_envelope.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        record = envelope["records"][0]
+        self.assertEqual(record["validation_state"], "ACCEPTED")
+        self.assertEqual(record["producer_provenance_state"], "VERIFIED")
+        self.assertTrue(record["producer_binding_sha256"])
+        self.assertEqual(record["semantic_axes"]["artifact_validity"], "VALID")
+        self.assertEqual(
+            record["producer_schema_raw"],
+            "m14-observation-table-v1",
+        )
 
 
 if __name__ == "__main__":
