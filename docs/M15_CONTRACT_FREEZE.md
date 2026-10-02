@@ -1,7 +1,7 @@
 # M15 contract freeze: lossless cross-stage evidence dossier
 
 **Contract status: FROZEN FOR A DESCRIPTIVE, LOSSLESS DOSSIER.** M15 is
-**PLANNED / NOT IMPLEMENTED**.
+implemented as a versioned stage; M16 remains planned and unimplemented.
 This contract preserves original producer records and adds only semantic
 normalizations that are provably lossless. There is no ranking, score,
 classifier, or biological winner.
@@ -22,10 +22,10 @@ absent, not negative.
 
 ## 2. Runner and accepted artifact types
 
-The future stage is `m15_evidence_dossier`, invoked through the existing
-allowlisted artifact-workflow manifest runner. No dedicated command,
-arbitrary import, or per-milestone executable is added. An additive M4
-registration and artifact validators will be required for implementation.
+The stage is `m15_evidence_dossier`, invoked through the existing allowlisted
+artifact-workflow manifest runner. No dedicated command, arbitrary import, or
+per-milestone executable is added. The stage registration and artifact
+validators use that existing runner.
 
 M15 accepts references to these producer types only:
 
@@ -44,12 +44,12 @@ M15 accepts references to these producer types only:
 | M13 registered stage `m13_m5_evidence_matrix` | `m13_event_index`, `m13_hypothesis_matrix`, `m13_summary`, `m13_result_bundle` |
 | M14 registered stage `m14_descriptive_observations` | `m14_observation_table`, `m14_descriptive_summary`, `m14_result_bundle` |
 
-Every reference must identify the exact producer milestone/stage, immutable
-producer-run manifest digest, artifact type and semantic version, relative
-path, SHA-256, and raw producer status. M15 does not accept arbitrary report
-text as evidence. M1–M4 workflow/run manifests may be linked for provenance,
-but their untyped contents are not interpreted as evidence rows. No M15 output
-or M16 benchmark result can be an M15 input.
+Every authenticated reference must identify the exact producer milestone and
+stage, immutable producer-run manifest digest, artifact type and descriptor
+version, relative path, SHA-256, and raw producer status. M15 does not accept
+arbitrary report text as evidence. M1–M4 workflow/run manifests may be linked
+for provenance, but their untyped contents are not interpreted as evidence
+rows. No M15 output or M16 benchmark result can be an M15 input.
 
 When an upstream reference snapshot carries source terms, attribution, access
 class, or redistribution limits, copy those exact provenance references into
@@ -58,7 +58,7 @@ redistribution rights, or include reference payloads as evidence inputs.
 
 ## 3. Input manifest
 
-The UTF-8 JSON manifest uses `schema = "m15-input-v1"`:
+The original UTF-8 JSON input shape was `m15-input-v1`:
 
 ```json
 {
@@ -84,9 +84,32 @@ artifacts; their raw producer statuses remain attached to those refs. For
 M5–M10, presence is established by `artifact_refs`; do not synthesize empty
 producer records for omitted stages.
 
+### Authenticated input extension
+
+The implementation uses `m15-input-v2` for newly authenticated references.
+It retains the v1 parser for lossless reporting, but a v1 reference has no
+authenticated producer execution reference: it is reported as
+`INVALID_PROVENANCE`, and its payload is not interpreted.
+
+A v2 reference adds `provenance_mode`, `producer_bundle_path`, and
+`producer_execution_ref`. The latter uses `producer-execution-ref-v1` to bind
+the producer workflow file and workflow ID to the selected stage ID, stage
+kind, and stage-manifest digest. M15 invokes the shared producer-artifact
+verifier before interpreting the artifact payload and confines the artifact
+path to the verified producer stage output.
+
+`artifact_contract_version` matches the version in the verified workflow
+artifact descriptor; it is distinct from per-artifact validator semantics.
+The input and output validator semantics are included in cache identity.
+`input_semantics_version` is `m15-authenticated-producer-bindings-v2` and is
+recorded in the result bundle. The result bundle and output-schema identity are
+versioned independently from the input semantics. Caller-supplied reference
+snapshots remain explicitly unverified, and their payloads are not interpreted
+as evidence.
+
 ## 4. Evidence envelope and outputs
 
-Proposed future output artifact types:
+M15 emits these output artifact types:
 
 - `m15_evidence_envelope` — one record per accepted upstream artifact/row.
 - `m15_dependency_edges` — explicit provenance/dependency relationships.

@@ -110,6 +110,13 @@ _CONTRACTS = {
     'm14_observation_table': 'Normalized caller-authored M14 observation rows and exact source-row references.',
     'm14_descriptive_summary': 'M14 descriptive counts, strata, explicit states, and denominators.',
     'm14_result_bundle': 'M14 input, output, provenance, semantic identity, and integrity binding.',
+    # M15_CACHE_NEUTRAL_BEGIN
+    'm15_input_manifest': 'Caller-supplied, immutable M15 evidence-dossier references.',
+    'm15_evidence_envelope': 'Lossless M15 records for explicitly referenced upstream artifacts.',
+    'm15_dependency_edges': 'Explicit, provenance-bound M15 evidence relationships.',
+    'm15_dossier_summary': 'Descriptive M15 supplied, absent, invalid, and unresolved counts.',
+    'm15_result_bundle': 'M15 input, producer, dependency, implementation, and output provenance.',
+    # M15_CACHE_NEUTRAL_END
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
 }
@@ -123,6 +130,10 @@ _CONTRACT_SEMANTIC_VERSIONS = {
         'm13_input_manifest', 'm13_event_index', 'm13_hypothesis_matrix',
         'm13_summary', 'm13_result_bundle',
         'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
+        # M15_CACHE_NEUTRAL_BEGIN
+        'm15_input_manifest', 'm15_evidence_envelope', 'm15_dependency_edges',
+        'm15_dossier_summary', 'm15_result_bundle',
+        # M15_CACHE_NEUTRAL_END
     )
 }
 
@@ -843,6 +854,17 @@ def validate_artifact(path, artifact_type):
     }:
         from . import m13_contracts
         details.update(m13_contracts.validate_output_file(path, artifact_type))
+    # M15_CACHE_NEUTRAL_BEGIN
+    elif artifact_type == 'm15_input_manifest':
+        from . import m15_contracts
+        details.update(m15_contracts.validate_input_manifest_file(path))
+    elif artifact_type in {
+        'm15_evidence_envelope', 'm15_dependency_edges',
+        'm15_dossier_summary', 'm15_result_bundle',
+    }:
+        from . import m15_contracts
+        details.update(m15_contracts.validate_output_file(path, artifact_type))
+    # M15_CACHE_NEUTRAL_END
     elif artifact_type in {
         'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
     }:
