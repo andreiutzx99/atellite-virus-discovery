@@ -107,9 +107,9 @@ _CONTRACTS = {
     'm13_hypothesis_matrix': 'M13 evidence links to only explicitly supplied hypotheses.',
     'm13_summary': 'M13 per-run import states and artifact completeness.',
     'm13_result_bundle': 'M13 input, producer, output, and implementation provenance.',
-    'm14_observation_table': 'Frozen M14 descriptive observation rows; validation is unavailable until M14 is implemented.',
-    'm14_descriptive_summary': 'Frozen M14 descriptive counts and denominators; validation is unavailable until M14 is implemented.',
-    'm14_result_bundle': 'Frozen M14 input/output provenance interface; validation is unavailable until M14 is implemented.',
+    'm14_observation_table': 'Normalized caller-authored M14 observation rows and exact source-row references.',
+    'm14_descriptive_summary': 'M14 descriptive counts, strata, explicit states, and denominators.',
+    'm14_result_bundle': 'M14 input, output, provenance, semantic identity, and integrity binding.',
     'm15_input_manifest': 'Caller-supplied, immutable M15 evidence-dossier references.',
     'm15_evidence_envelope': 'Lossless M15 records for explicitly referenced upstream artifacts.',
     'm15_dependency_edges': 'Explicit, provenance-bound M15 evidence relationships.',
@@ -127,6 +127,7 @@ _CONTRACT_SEMANTIC_VERSIONS = {
         'm9_raw_blast_output',
         'm13_input_manifest', 'm13_event_index', 'm13_hypothesis_matrix',
         'm13_summary', 'm13_result_bundle',
+        'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
     )
 }
 
@@ -859,11 +860,8 @@ def validate_artifact(path, artifact_type):
     elif artifact_type in {
         'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
     }:
-        # M14 is frozen but not implemented on this mainline. M15 may retain an
-        # immutable syntactically valid JSON reference, but must not claim M14
-        # semantic validation or map its payload to a normalized axis.
-        value = _read_json(path)
-        details.update(schema=value.get('schema', 'UNKNOWN'))
+        from . import m14_descriptive_observations
+        details.update(m14_descriptive_observations.validate_output_file(path, artifact_type))
     elif artifact_type == 'report':
         if path.stat().st_size > 32_000_000:
             raise ValueError('HTML report exceeds the 32 MB contract limit')

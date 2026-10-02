@@ -6,7 +6,7 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M13 software provides
+sequencing-derived candidates. The implemented M1–M14 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence,
 reference-scoped residual-read and read-back analysis, exact recurrence
@@ -14,9 +14,10 @@ reporting, scoped nucleotide homology, protein-level ORF and local BLASTP
 evidence, exact-first sequence-architecture analysis, and optional RNA
 minimum-free-energy structure predictions, plus artifact-bounded review of
 declared M5/M6 technical and read-support evidence and a scoped M5/ViReMa
-evidence dossier with differential context.
+evidence dossier with differential context, plus M14 descriptive summaries of
+caller-supplied candidate/helper observation frames.
 
-M1–M13 implement scoped technical software stages. M13 imports explicitly
+M1–M14 implement scoped technical software stages. M13 imports explicitly
 referenced, validated M5/ViReMa artifacts and reports caller-scoped
 DVG-compatible computational evidence and differential context; it does not
 execute ViReMa or force a biological classification. M13 does not establish
@@ -141,10 +142,12 @@ sequencing reads and declared references
                                  ↓
                      M12 artifact-bounded M5/M6 review
                                   ↓
-                    M13 scoped M5/ViReMa evidence dossier
-                                  ↓
-                       planned evidence layers M14–M16
+                     M13 scoped M5/ViReMa evidence dossier
 ```
+
+M14 runs separately over caller-supplied candidate/helper observation frames;
+it is not downstream of M13 and reports descriptive counts/status only. M15
+and M16 remain planned and not implemented.
 
 In paired data, a primary mapping for either mate excludes the whole fragment
 from the residual pool. M6 then applies read-length, ambiguity, entropy, and
@@ -161,14 +164,14 @@ contig.
 | Reconstruction support | That eligible source reads passed configured read-back criteria for a contig. | Independent replication, a real satellite genome, or biological validation. |
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
-| Biological association | Co-occurrence or a supplied association in the examined records. | Causation or helper dependence. |
-| Biological classification | Not produced by the implemented M1–M13 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological association | M14 does not estimate association; its caller-supplied co-detection summaries are descriptive only. | Statistical association, causation, or helper/replication dependence. |
+| Biological classification | Not produced by the implemented M1–M14 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M13: IMPLEMENTED** as scoped software milestones.
-- **M14–M16: PLANNED**, not implemented.
+- **M1–M14: IMPLEMENTED** as scoped software milestones.
+- **M15–M16: PLANNED / NOT IMPLEMENTED**.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
 M9 is limited to protein-level computational evidence. M10 implements exact
@@ -187,13 +190,18 @@ to validated M5/ViReMa artifacts. They do not establish DVG identity, satellite
 identity, biological authenticity, biological absence, helper dependence,
 novelty, or function.
 
-### Planned evidence layers (M14–M16)
+M14 validates caller-supplied observation frames and reports descriptive
+co-detection and completeness/status summaries only. It does not estimate
+statistical association or establish helper or replication dependence,
+satellite or DVG identity, biological authenticity or absence, novelty,
+expression, or function.
 
-- **M14 — Helper association and dependence:** report association separately
-  from dependence, which requires claim-appropriate validation.
+### Planned evidence layers (M15–M16)
+
 - **M15 — Evidence integration and prioritization:** present provenance,
   missingness, alternatives, and dependencies; any ranking must be transparent
-  and appropriately validated.
+  and appropriately validated. Implementation remains blocked pending shared
+  producer-stage authentication.
 - **M16 — Blinded benchmarking and validation:** evaluate frozen methods on
   independent holdouts and use claim-appropriate biological or orthogonal
   validation.
