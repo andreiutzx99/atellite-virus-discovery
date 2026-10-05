@@ -52,12 +52,23 @@ class ProcessCleanupTests(unittest.TestCase):
 
     def test_interruption_stops_worker_tree(self):
         with scratch_directory() as folder:
-            root=Path(folder); command=self.tree_command(root);sleep=time.sleep
+            root = Path(folder)
+            command = self.tree_command(root)
+            sleep = time.sleep
+            interruption_sent = False
+
             def interrupt_after_start(seconds):
-                if (root/'heartbeat').exists():raise KeyboardInterrupt
+                nonlocal interruption_sent
+                if not interruption_sent and (root / "heartbeat").exists():
+                    interruption_sent = True
+                    raise KeyboardInterrupt
                 sleep(seconds)
-            with patch.object(runner.time,'sleep',side_effect=interrupt_after_start):
-                with self.assertRaises(KeyboardInterrupt):runner.run(command,root,'interrupt.log',timeout=5)
+
+            with patch.object(
+                runner.time, "sleep", side_effect=interrupt_after_start
+            ):
+                with self.assertRaises(KeyboardInterrupt):
+                    runner.run(command, root, "interrupt.log", timeout=5)
             self.assert_worker_stopped(root)
 
     @unittest.skipUnless(os.name=='posix','POSIX process-group guarantee only')
