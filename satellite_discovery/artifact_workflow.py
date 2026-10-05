@@ -25,6 +25,7 @@ from . import (
     m9_blastp_stage, m9_orf_stage, m10_stage, m11_stage,
     m12_artifact_review, m13_contracts, m13_stage,
     m14_descriptive_observations,
+    stage_cache_identity,
     # M15_CACHE_NEUTRAL_BEGIN
     m15_contracts, m15_stage,
     # M15_CACHE_NEUTRAL_END
@@ -46,6 +47,13 @@ def _legacy_handler(module_name, function_name, input_names, alignment=False):
         if alignment:
             return function(args[0], output, inputs.get('reference'))
         return function(*args, output)
+    invoke._cache_source_modules = (f'{__package__}.{module_name}',)
+    invoke._cache_source_descriptor = {
+        'module': module_name,
+        'function': function_name,
+        'input_names': tuple(input_names),
+        'alignment': bool(alignment),
+    }
     return invoke
 
 
@@ -818,6 +826,16 @@ def _legacy_package_cache_digest(runtime):
 def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependency,
                      stage_identity_context=None):
     scoped_identity=getattr(definition.handler,'cache_implementation_identity',None)
+    if callable(scoped_identity):
+        package_identity=None
+    else:
+        source_identity,line_profile=stage_cache_identity.stage_implementation_identity(
+            definition,_stage_cache_registration_identity(definition))
+        package_identity=(
+            stage_cache_identity.legacy_package_cache_alias(
+                definition.kind,source_identity,line_profile)
+            or source_identity
+        )
     identity={
         'stage_id':stage['id'],
         'kind':stage['kind'],
@@ -827,9 +845,7 @@ def _stage_cache_key(stage,definition,config,input_descriptors,runtime,dependenc
             name:{'sha256':row['sha256'],'artifact_type':row.get('artifact_type')}
             for name,row in sorted(input_descriptors.items())
         },
-        'package_sha256':(
-            None if callable(scoped_identity) else _legacy_package_cache_digest(runtime)
-        ),
+        'package_sha256':package_identity,
         'dependency':dependency,
     }
     if callable(scoped_identity):

@@ -7,7 +7,7 @@ import csv
 from pathlib import Path
 import tempfile
 
-from . import artifact_contracts, m15_contracts
+from . import artifact_contracts, m15_contracts, stage_cache_identity
 from .producer_provenance import (
     ProducerProvenanceIncompleteError,
     ProducerProvenanceInvalidError,
@@ -128,22 +128,21 @@ def artifact_input_name(index):
 
 
 def _source_identity():
-    sources = (
-        Path(__file__).resolve(),
-        Path(m15_contracts.__file__).resolve(),
-        Path(artifact_contracts.__file__).resolve(),
-        Path(__file__).with_name("artifact_workflow.py").resolve(),
+    source_sha256, _ = stage_cache_identity.stage_source_identity(
+        STAGE_KIND,
+        ("satellite_discovery.m15_stage",),
+        {
+            "m15_input_manifest",
+            *m15_contracts.ALL_INPUT_TYPES,
+            *m15_contracts.OUTPUT_CONTRACTS.values(),
+        },
+        semantic_version=m15_contracts.SEMANTIC_VERSION,
+        output_schema_version=m15_contracts.OUTPUT_SCHEMA_VERSION,
     )
-    digest = hashlib.sha256()
-    for source in sorted(sources, key=lambda item: item.name):
-        digest.update(source.name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(source.read_bytes().replace(b"\r\n", b"\n"))
-        digest.update(b"\0")
     return {
         "schema": "m15-stage-implementation-v1",
         "semantic_version": m15_contracts.SEMANTIC_VERSION,
-        "source_sha256": digest.hexdigest(),
+        "source_sha256": source_sha256,
         "output_schema_version": m15_contracts.OUTPUT_SCHEMA_VERSION,
     }
 

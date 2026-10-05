@@ -2382,6 +2382,9 @@ def _cache_implementation_identity():
         "stage_version": STAGE_VERSION,
         "implementation_sha256": _implementation_sha256(),
         "contract_types": sorted(OUTPUT_CONTRACTS.values()),
+        "contract_semantics": artifact_contracts.semantic_identity(
+            sorted(OUTPUT_CONTRACTS.values())
+        ),
     }
 
 

@@ -1,8 +1,10 @@
 # M16 implementation execution plan
 
-**Status:** planning only. M16 remains planned and this document does not
-implement a benchmark, select a dataset, assign a holdout, or authorize
-empirical execution.
+**Status:** M16 planning only. The separate cache/source-identity prerequisite
+is implemented on an unmerged infrastructure branch; M16 implementation must
+wait until that prerequisite is reviewed, merged, and passes its full regression
+and CI gates. This plan does not select a dataset, assign a holdout, or
+authorize empirical execution.
 
 This plan covers the frozen generic synthetic benchmark and leakage harness.
 The contract explicitly separates software correctness from benchmark
@@ -11,6 +13,10 @@ performance, biological validation, and experimental confirmation
 [M16 readiness](M16_PRECONTRACT_READINESS.md), lines 8–26). All fixtures and
 expected outcomes described here are software-contract fixtures, not biological
 truth.
+
+The cache prerequisite's scope, identity migration, and pending gates are
+recorded in [M16 registration/cache decoupling](M16_REGISTRATION_CACHE_DECOUPLING.md).
+Its branch implementation does not register or implement M16.
 
 ## 1. Frozen implementation boundary
 
@@ -41,6 +47,11 @@ parallel, but it must not invent substitute upstream bundles or silently accept
 untyped placeholders. The broader sequence places M15 integration after M12–M14
 schemas and M16 final evaluator integration after M12–M15 bundles
 ([implementation sequence](M12_M16_IMPLEMENTATION_SEQUENCE.md), lines 93–118).
+The shared cache/source-identity prerequisite is an additional gate: it must be
+merged with the M1–M15 regression boundary passing before M16 implementation
+begins. Final M16 integration still requires an actual offline synthetic M15
+execution, its authenticated `m15_result_bundle`, and M16 consuming that exact
+bundle; mocks do not satisfy this gate.
 
 Reject `dataset_kind = "EMPIRICAL"` as `OUT_OF_SCOPE`; empirical labels,
 biological truth tiers, actual development/tuning/holdout membership, and
@@ -100,6 +111,10 @@ When the new modules exist, make additive changes only:
 - `tests/test_artifact_validation.py` and
   `tests/test_stage_cache_identity.py`: add focused M16 validator and
   stage-local cache-isolation coverage.
+- Do not change `stage_cache_identity.py` or broaden the compatibility aliases
+  for M16. M16-only contracts, implementation sources, and registry entries
+  must leave existing M1–M15 identities stable; only a genuinely shared
+  behavior change may invalidate stages that depend on it.
 - Existing `workflow_states.py` should not change. Custody states are artifact
   events; workflow lifecycle remains the M1 state set
   ([M16 contract](../M16_CONTRACT_FREEZE.md), lines 120–124, 161–179).
@@ -201,6 +216,12 @@ identity must bind:
 - scoring implementation/version;
 - M16 contract semantic version;
 - every output digest.
+
+M16 implementation may use the shared stage-source identity composition only
+after its infrastructure prerequisite has merged. M16 must own its source and
+contract dependencies; do not add M16 source files to upstream inventories or
+preserve the pre-prerequisite M15 identity that omitted producer-verification
+behavior.
 
 Target execution identity excludes sealed key content and expected outcomes,
 but includes the sealed-key commitment. Scoring identity additionally binds the
@@ -306,6 +327,8 @@ gate ([validation logistics](M12_M16_VALIDATION_LOGISTICS.md), lines 278–294).
 
 ## 10. Implementation order and invariants
 
+0. Verify the shared cache/source-identity prerequisite is merged and its
+   required Linux/Windows and M1–M15 regression checks pass.
 1. Build the test-only synthetic fixture adapter and local canonical serializer.
 2. Implement standalone public/key/target schemas and validators.
 3. Implement group/leakage checks and independent state partitions.

@@ -789,60 +789,47 @@ class M14DescriptiveObservationTests(unittest.TestCase):
         with patch.object(Path, "read_bytes", return_value=crlf_source):
             self.assertEqual(m14._implementation_sha256(), expected)
 
-    def test_m14_only_source_changes_preserve_legacy_upstream_cache_identity(self):
-        runtime = artifact_workflow.reproducibility.environment()
-        legacy_identity = artifact_workflow._legacy_package_cache_digest(runtime)
+    def test_m14_source_change_does_not_leak_into_unscoped_stage_identity(self):
+        from satellite_discovery import stage_cache_identity
 
-        m14_only_change = copy.deepcopy(runtime)
-        m14_only_change["source_files"]["m14_descriptive_observations.py"] = (
-            "f" * 64
+        registry = artifact_workflow.build_default_registry()
+        upstream = registry.get("inventory")
+        before = artifact_workflow._stage_cache_key(
+            {"id": "inventory", "kind": "inventory"},
+            upstream,
+            {},
+            {},
+            {"source_sha256": "unchanged"},
+            None,
         )
-        m14_only_change["source_sha256"] = hashlib.sha256(
-            json.dumps(
-                m14_only_change["source_files"], sort_keys=True,
-            ).encode("utf-8")
-        ).hexdigest()
-        self.assertEqual(
-            legacy_identity,
-            artifact_workflow._legacy_package_cache_digest(m14_only_change),
-        )
+        resolve_source = stage_cache_identity._source_file_for_module
+        original_source = Path(m14.__file__)
 
-        crlf_runtime = copy.deepcopy(runtime)
-        package = Path(artifact_workflow.reproducibility.__file__).resolve().parent
-        crlf_hashes = {}
-        for source in sorted(package.iterdir()):
-            if source.suffix not in {".py", ".json"} or not source.is_file():
-                continue
-            content = source.read_bytes()
-            content = content.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
-            crlf_hashes[source.name] = hashlib.sha256(content).hexdigest()
-        crlf_runtime["source_files"] = crlf_hashes
-        crlf_runtime["source_sha256"] = hashlib.sha256(
-            json.dumps(crlf_hashes, sort_keys=True).encode("utf-8")
-        ).hexdigest()
-        compatibility = dict(
-            line.split("=", 1)
-            for line in (
-                package / "m12_legacy_cache_compatibility.txt"
-            ).read_text(encoding="utf-8").splitlines()
-            if "=" in line
-        )
-        self.assertEqual(
-            compatibility["legacy_source_sha256_crlf"],
-            artifact_workflow._legacy_package_cache_digest(crlf_runtime),
-        )
+        with tempfile.TemporaryDirectory() as directory:
+            replacement = Path(directory) / original_source.name
+            replacement.write_bytes(
+                original_source.read_bytes() + b"\n# isolated M14 source probe\n"
+            )
 
-        shared_change = copy.deepcopy(m14_only_change)
-        shared_change["source_files"]["artifact_workflow.py"] = "e" * 64
-        shared_change["source_sha256"] = hashlib.sha256(
-            json.dumps(
-                shared_change["source_files"], sort_keys=True,
-            ).encode("utf-8")
-        ).hexdigest()
-        self.assertEqual(
-            shared_change["source_sha256"],
-            artifact_workflow._legacy_package_cache_digest(shared_change),
-        )
+            def resolver(module_name):
+                if module_name == "satellite_discovery.m14_descriptive_observations":
+                    return replacement
+                return resolve_source(module_name)
+
+            with patch.object(
+                stage_cache_identity,
+                "_source_file_for_module",
+                side_effect=resolver,
+            ):
+                after = artifact_workflow._stage_cache_key(
+                    {"id": "inventory", "kind": "inventory"},
+                    upstream,
+                    {},
+                    {},
+                    {"source_sha256": "changed"},
+                    None,
+                )
+        self.assertEqual(before, after)
 
     def test_m14_stage_is_registered_and_runs_through_m1(self):
         config = _manifest(("u1",))

@@ -1,9 +1,13 @@
 # M16 pre-contract readiness: benchmark and validation
 
-**Readiness: READY FOR SYNTHETIC IMPLEMENTATION WITH DEFERRED REAL-DATA
-DECISIONS.** M16 remains planned under the [roadmap](../ROADMAP.md). This
-report freezes offline manifest/split-validation mechanics, not a biological
-truth set, actual holdout, or performance claim.
+**Readiness: CONDITIONAL FOR SYNTHETIC IMPLEMENTATION, WITH REAL-DATA
+DECISIONS DEFERRED.** M16 remains planned under the [roadmap](../ROADMAP.md).
+The offline manifest/split-validation design is ready, but M16 implementation
+must wait until the separate shared cache/source-identity prerequisite is
+merged and its regression/CI gates pass. See
+[M16 registration/cache decoupling](M16_REGISTRATION_CACHE_DECOUPLING.md).
+This report does not select a biological truth set, actual holdout, or
+performance claim.
 
 ## 1. Smallest useful baseline
 
@@ -144,9 +148,13 @@ independent reviewers decide:
 | What minimum denominator, metric, uncertainty, strata, threshold, and stop rule are defensible? | Blocks final protocol freeze and performance claims; software can expose explicit denominators without setting a biological threshold. |
 | Which sources/assays are rights-cleared and ethically/biosafety approved? | Blocks affected data/experimental execution and claims, not offline harness work. |
 
-**Milestone disposition:** `READY FOR SYNTHETIC IMPLEMENTATION WITH DEFERRED
-REAL-DATA DECISIONS`. This is not `READY` for a final biological benchmark or
-generalized performance claim. No actual holdout is selected or assigned.
+**Milestone disposition:** `CONDITIONAL FOR SYNTHETIC IMPLEMENTATION WITH
+DEFERRED REAL-DATA DECISIONS`. The shared cache/source-identity prerequisite
+must first be merged with the M1–M15 regression boundary passing. After that,
+M16 still requires a real offline synthetic M15 execution, its authenticated
+`m15_result_bundle`, and M16 consuming that exact artifact. This is not `READY`
+for a final biological benchmark or generalized performance claim. No actual
+holdout is selected or assigned.
 
 ## 5. M1–M10 compatibility and boundaries
 

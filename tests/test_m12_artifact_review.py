@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from types import SimpleNamespace
 
 from satellite_discovery import (
     artifact_contracts,
@@ -11,7 +10,9 @@ from satellite_discovery import (
     m12_artifact_review,
     m12_contracts,
     reproducibility,
+    stage_cache_identity,
 )
+from satellite_discovery.artifact_workflow import build_default_registry
 from satellite_discovery.stage_registry import WorkflowStageRegistry
 
 
@@ -94,7 +95,7 @@ def _workflow_spec(include_m12=False, manifest_path="m12-input.json"):
 
 
 class M12ArtifactReviewTests(unittest.TestCase):
-    def test_external_provenance_addition_preserves_legacy_cache_lf_and_crlf(self):
+    def test_stage_scoped_legacy_alias_preserves_lf_and_crlf_cache_digests(self):
         compatibility_path = (
             Path(artifact_workflow.__file__).with_name(
                 "m12_legacy_cache_compatibility.txt"
@@ -105,76 +106,69 @@ class M12ArtifactReviewTests(unittest.TestCase):
             for line in compatibility_path.read_text(encoding="utf-8").splitlines()
             if "=" in line
         )
-        package = Path(artifact_workflow.__file__).parent
-
-        for suffix, use_crlf in (("", False), ("_crlf", True)):
-            with self.subTest(line_endings="CRLF" if use_crlf else "LF"):
-                source_files = {}
-                for path in sorted(package.iterdir()):
-                    if path.suffix not in {".py", ".json"} or not path.is_file():
-                        continue
-                    # Git checkouts may use CRLF on Windows. Canonicalize first
-                    # so each subtest exercises the named line-ending variant.
-                    content = path.read_bytes().replace(b"\r\n", b"\n")
-                    if use_crlf:
-                        content = content.replace(b"\n", b"\r\n")
-                    source_files[path.name] = _sha(content)
-                source_digest = _sha(
-                    json.dumps(source_files, sort_keys=True).encode("utf-8")
-                )
-                runtime = {
-                    "source_sha256": source_digest,
-                    "source_files": source_files,
-                }
+        definition = build_default_registry().get("inventory")
+        identity, _ = stage_cache_identity.stage_implementation_identity(
+            definition,
+            artifact_workflow._stage_cache_registration_identity(definition),
+        )
+        for suffix, profile in (("", "lf"), ("_crlf", "crlf")):
+            with self.subTest(line_endings=profile):
                 self.assertEqual(
-                    artifact_workflow._legacy_package_cache_digest(runtime),
+                    stage_cache_identity.legacy_package_cache_alias(
+                        definition.kind, identity, profile
+                    ),
                     compatibility[f"legacy_source_sha256{suffix}"],
                 )
 
     def test_m12_package_additions_preserve_legacy_unscoped_cache_keys(self):
         runtime = reproducibility.environment()
-        stage = {"id": "legacy", "kind": "legacy_stage"}
-        definition = SimpleNamespace(handler=lambda *_args: None, version="1")
+        definition = build_default_registry().get("inventory")
+        stage = {"id": "legacy", "kind": definition.kind}
         actual_key = artifact_workflow._stage_cache_key(
             stage, definition, {}, {}, runtime, None
         )
-        legacy_digest = artifact_workflow._legacy_package_cache_digest(runtime)
-        self.assertIn(
-            legacy_digest,
-            {
-                "9242e7b8cbba0c0e912ad6317241628541dafcde2815c7f2786f2ce06f0770ed",
-                "4a7da5c1d54b22cf610bda933bcb9ca340a4a8d69fed031d52254a7f63c57312",
-            },
-        )
-        legacy_runtime = {
-            **runtime,
-            "source_sha256": legacy_digest,
-        }
-        expected_legacy_key = artifact_workflow._stage_cache_key(
-            stage, definition, {}, {}, legacy_runtime, None
-        )
-        self.assertEqual(actual_key, expected_legacy_key)
         changed_runtime = {**runtime, "source_sha256": "0" * 64}
         self.assertEqual(
             artifact_workflow._legacy_package_cache_digest(changed_runtime),
             "0" * 64,
         )
-        compatibility_path = (
-            Path(artifact_workflow.__file__).with_name(
-                "m12_legacy_cache_compatibility.txt"
-            )
+        self.assertEqual(
+            actual_key,
+            artifact_workflow._stage_cache_key(
+                stage, definition, {}, {}, changed_runtime, None
+            ),
+        )
+        identity, _ = stage_cache_identity.stage_implementation_identity(
+            definition,
+            artifact_workflow._stage_cache_registration_identity(definition),
+        )
+        compatibility_path = Path(artifact_workflow.__file__).with_name(
+            "m12_legacy_cache_compatibility.txt"
         )
         compatibility = dict(
             line.split("=", 1)
             for line in compatibility_path.read_text(encoding="utf-8").splitlines()
             if "=" in line
         )
-        crlf_runtime = {
-            **runtime,
-            "source_sha256": compatibility["accepted_source_sha256_crlf"],
-        }
         self.assertEqual(
-            artifact_workflow._legacy_package_cache_digest(crlf_runtime),
+            actual_key,
+            artifact_workflow._stage_cache_key(
+                stage, definition, {}, {}, runtime, None
+            ),
+        )
+        self.assertIn(
+            stage_cache_identity.legacy_package_cache_alias(
+                definition.kind, identity, "lf"
+            ),
+            {
+                compatibility["legacy_source_sha256"],
+                compatibility["legacy_source_sha256_crlf"],
+            },
+        )
+        self.assertEqual(
+            stage_cache_identity.legacy_package_cache_alias(
+                definition.kind, identity, "crlf"
+            ),
             compatibility["legacy_source_sha256_crlf"],
         )
 
