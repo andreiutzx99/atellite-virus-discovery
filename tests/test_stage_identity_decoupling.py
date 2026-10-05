@@ -28,7 +28,7 @@ _MILESTONE_KINDS = (
 )
 _SNAPSHOT_SCRIPT = r"""
 import json
-from satellite_discovery import artifact_workflow, m12_artifact_review
+from satellite_discovery import artifact_workflow, m12_artifact_review, m12_contracts
 from satellite_discovery import m13_stage, m14_descriptive_observations, m15_stage
 from satellite_discovery import stage_cache_identity
 registry = artifact_workflow.build_default_registry()
@@ -46,6 +46,17 @@ inventory_identity = stage_cache_identity.stage_implementation_identity(
     registry.get("inventory"),
     artifact_workflow._stage_cache_registration_identity(registry.get("inventory")),
 )
+m12_raw_source_sha256, m12_source_profile = stage_cache_identity.stage_source_identity(
+    m12_artifact_review.STAGE_KIND,
+    ("satellite_discovery.m12_artifact_review",),
+    {
+        "m12_input_manifest",
+        *m12_contracts.TYPE_MILESTONE,
+        *m12_artifact_review.OUTPUT_CONTRACTS.values(),
+    },
+    semantic_version=m12_contracts.SEMANTIC_VERSION,
+    output_schema_version=m12_artifact_review.OUTPUT_SCHEMA_VERSION,
+)
 print("IDENTITY_SNAPSHOT=" + json.dumps({
     "keys": keys,
     "source": {
@@ -57,6 +68,8 @@ print("IDENTITY_SNAPSHOT=" + json.dumps({
     "inventory_alias": stage_cache_identity.legacy_package_cache_alias(
         "inventory", inventory_identity[0], inventory_identity[1]
     ),
+    "m12_raw_source_sha256": m12_raw_source_sha256,
+    "m12_source_profile": m12_source_profile,
 }, sort_keys=True))
 """
 
@@ -391,18 +404,22 @@ class StageIdentityDecouplingTests(unittest.TestCase):
             relocated["source"]["m15"]["source_sha256"],
             crlf["source"]["m15"]["source_sha256"],
         )
-        self.assertEqual(
-            relocated["source"]["m12"]["source_sha256"],
-            identity_compatibility[
+        expected_m12_aliases = {
+            "lf": identity_compatibility[
                 "source.m12_artifact_review.legacy_sha256_lf"
             ],
-        )
-        self.assertEqual(
-            crlf["source"]["m12"]["source_sha256"],
-            identity_compatibility[
+            "crlf": identity_compatibility[
                 "source.m12_artifact_review.legacy_sha256_crlf"
             ],
-        )
+        }
+        for snapshot in (relocated, crlf):
+            profile = snapshot["m12_source_profile"]
+            self.assertIn(profile, {"lf", "crlf", "mixed"})
+            expected = expected_m12_aliases.get(
+                profile, snapshot["m12_raw_source_sha256"]
+            )
+            with self.subTest(m12_source_profile=profile):
+                self.assertEqual(snapshot["source"]["m12"]["source_sha256"], expected)
 
 
 if __name__ == "__main__":
