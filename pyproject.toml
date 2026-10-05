@@ -22,6 +22,7 @@ satellite_discovery = [
     "model_scope.json",
     "m12_legacy_cache_compatibility.txt",
     "m5_execution_outcome_cache_compatibility.txt",
+    "stage_cache_identity_compatibility.txt",
 ]
 
 [project.optional-dependencies]

@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 
-from . import artifact_contracts, m12_contracts
+from . import artifact_contracts, m12_contracts, stage_cache_identity
 
 
 STAGE_KIND = "m12_artifact_review"
@@ -58,21 +58,27 @@ def validate_config(config):
 
 
 def _source_identity():
-    sources = (
-        Path(__file__).resolve(),
-        Path(m12_contracts.__file__).resolve(),
-        Path(__file__).with_name("artifact_workflow.py").resolve(),
+    source_sha256, line_profile = stage_cache_identity.stage_source_identity(
+        STAGE_KIND,
+        ("satellite_discovery.m12_artifact_review",),
+        {
+            "m12_input_manifest",
+            *m12_contracts.TYPE_MILESTONE,
+            *OUTPUT_CONTRACTS.values(),
+        },
+        semantic_version=m12_contracts.SEMANTIC_VERSION,
+        output_schema_version=OUTPUT_SCHEMA_VERSION,
     )
-    content = hashlib.sha256()
-    for source in sorted(sources, key=lambda item: item.name):
-        content.update(source.name.encode("utf-8"))
-        content.update(b"\0")
-        content.update(source.read_bytes())
-        content.update(b"\0")
+    source_sha256 = (
+        stage_cache_identity.legacy_stage_source_identity(
+            STAGE_KIND, source_sha256, line_profile
+        )
+        or source_sha256
+    )
     return {
         "schema": "m12-stage-implementation-v1",
         "semantic_version": m12_contracts.SEMANTIC_VERSION,
-        "source_sha256": content.hexdigest(),
+        "source_sha256": source_sha256,
         "output_schema_version": OUTPUT_SCHEMA_VERSION,
     }
 

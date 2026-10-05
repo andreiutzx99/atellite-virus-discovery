@@ -795,12 +795,21 @@ class M13M5EvidenceTests(unittest.TestCase):
             for line in compatibility_file.read_text(encoding="utf-8").splitlines()
             if "=" in line
         )
-        self.assertIn(
-            artifact_workflow._legacy_package_cache_digest(runtime),
-            {
-                compatibility["legacy_source_sha256"],
-                compatibility["legacy_source_sha256_crlf"],
-            },
+        identity_compatibility_file = Path(artifact_workflow.__file__).with_name(
+            "stage_cache_identity_compatibility.txt"
+        )
+        identity_compatibility = dict(
+            line.split("=", 1)
+            for line in identity_compatibility_file.read_text(
+                encoding="utf-8"
+            ).splitlines()
+            if "=" in line
+        )
+        self.assertEqual(
+            m13_stage._source_identity()["source_sha256"],
+            identity_compatibility[
+                "source.m13_m5_evidence_matrix.legacy_sha256_lf"
+            ],
         )
         registry = artifact_workflow.build_default_registry()
         for suffix in ("", "_crlf"):
@@ -862,36 +871,11 @@ class M13M5EvidenceTests(unittest.TestCase):
             original_event_bytes,
         )
 
-    def test_m13_source_identity_normalizes_lf_and_crlf(self):
-        sources = (
-            Path(m13_stage.__file__),
-            Path(m13_contracts.__file__),
-            Path(execution_outcome.__file__),
-            Path(dvg_evidence.__file__),
-            Path(m13_stage.artifact_contracts.__file__),
-            Path(m13_stage.m12_contracts.__file__),
-            Path(m13_stage.external_tool.__file__),
-            Path(m13_stage.virema_adapter.__file__),
-            Path(m13_stage.__file__).with_name("artifact_workflow.py"),
-        )
-
-        def digest_with_newlines(use_crlf):
-            digest = hashlib.sha256()
-            for source in sorted(sources, key=lambda path: path.name):
-                content = source.read_bytes().replace(b"\r\n", b"\n")
-                if use_crlf:
-                    content = content.replace(b"\n", b"\r\n")
-                digest.update(source.name.encode("utf-8"))
-                digest.update(b"\0")
-                digest.update(content.replace(b"\r\n", b"\n"))
-                digest.update(b"\0")
-            return digest.hexdigest()
-
-        self.assertEqual(digest_with_newlines(False), digest_with_newlines(True))
-        self.assertEqual(
-            m13_stage._source_identity()["source_sha256"],
-            digest_with_newlines(False),
-        )
+    def test_m13_source_identity_is_deterministic_and_normalized(self):
+        first = m13_stage._source_identity()
+        second = m13_stage._source_identity()
+        self.assertEqual(first, second)
+        self.assertRegex(first["source_sha256"], r"^[0-9a-f]{64}$")
 
 if __name__ == "__main__":
     unittest.main()

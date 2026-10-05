@@ -13,6 +13,7 @@ from . import (
     external_tool,
     m12_contracts,
     m13_contracts,
+    stage_cache_identity,
     virema_adapter,
 )
 from .virema_adapter import CALLER_NAME, CALLER_VERSION
@@ -52,28 +53,27 @@ def _sha256_file(path):
 
 
 def _source_identity():
-    package = Path(__file__).resolve().parent
-    sources = (
-        Path(__file__).resolve(),
-        Path(m13_contracts.__file__).resolve(),
-        Path(execution_outcome.__file__).resolve(),
-        Path(dvg_evidence.__file__).resolve(),
-        Path(artifact_contracts.__file__).resolve(),
-        Path(m12_contracts.__file__).resolve(),
-        Path(external_tool.__file__).resolve(),
-        Path(virema_adapter.__file__).resolve(),
-        Path(__file__).with_name("artifact_workflow.py").resolve(),
+    source_sha256, line_profile = stage_cache_identity.stage_source_identity(
+        STAGE_KIND,
+        ("satellite_discovery.m13_stage",),
+        {
+            "m13_input_manifest",
+            *m13_contracts.M5_ARTIFACT_TYPES,
+            *OUTPUT_CONTRACTS.values(),
+        },
+        semantic_version=m13_contracts.SEMANTIC_VERSION,
+        output_schema_version=OUTPUT_SCHEMA_VERSION,
     )
-    content = hashlib.sha256()
-    for source in sorted(sources, key=lambda item: item.name):
-        content.update(source.name.encode("utf-8"))
-        content.update(b"\0")
-        content.update(source.read_bytes().replace(b"\r\n", b"\n"))
-        content.update(b"\0")
+    source_sha256 = (
+        stage_cache_identity.legacy_stage_source_identity(
+            STAGE_KIND, source_sha256, line_profile
+        )
+        or source_sha256
+    )
     return {
         "schema": "m13-stage-implementation-v1",
         "semantic_version": m13_contracts.SEMANTIC_VERSION,
-        "source_sha256": content.hexdigest(),
+        "source_sha256": source_sha256,
         "output_schema_version": OUTPUT_SCHEMA_VERSION,
     }
 
