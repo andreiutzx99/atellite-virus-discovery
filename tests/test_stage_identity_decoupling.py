@@ -370,13 +370,18 @@ class StageIdentityDecouplingTests(unittest.TestCase):
             relocated["inventory_identity"][0],
             crlf["inventory_identity"][0],
         )
+        expected_inventory_aliases = {
+            "lf": legacy_compatibility["legacy_source_sha256"],
+            "crlf": legacy_compatibility["legacy_source_sha256_crlf"],
+            "mixed": None,
+        }
         self.assertEqual(
             relocated["inventory_alias"],
-            legacy_compatibility["legacy_source_sha256"],
+            expected_inventory_aliases[relocated["inventory_identity"][1]],
         )
         self.assertEqual(
             crlf["inventory_alias"],
-            legacy_compatibility["legacy_source_sha256_crlf"],
+            expected_inventory_aliases[crlf["inventory_identity"][1]],
         )
         self.assertEqual(
             relocated["source"]["m13"]["source_sha256"],
