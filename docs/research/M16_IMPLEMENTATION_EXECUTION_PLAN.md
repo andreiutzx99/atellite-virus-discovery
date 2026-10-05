@@ -1,10 +1,10 @@
 # M16 implementation execution plan
 
-**Status:** M16 planning only. The separate cache/source-identity prerequisite
-is implemented on an unmerged infrastructure branch; M16 implementation must
-wait until that prerequisite is reviewed, merged, and passes its full regression
-and CI gates. This plan does not select a dataset, assign a holdout, or
-authorize empirical execution.
+**Status:** M16 planning only. The cache/source-identity prerequisite is merged
+on authoritative `main` at `c620834c78c51b33989880ce78f5bcb36f0e9845` and its
+post-merge regression/CI validation passed. That prerequisite gate is satisfied;
+M16 remains planned and unimplemented. This plan does not select a dataset,
+assign a holdout, or authorize empirical execution.
 
 This plan covers the frozen generic synthetic benchmark and leakage harness.
 The contract explicitly separates software correctness from benchmark
@@ -14,9 +14,11 @@ performance, biological validation, and experimental confirmation
 expected outcomes described here are software-contract fixtures, not biological
 truth.
 
-The cache prerequisite's scope, identity migration, and pending gates are
-recorded in [M16 registration/cache decoupling](M16_REGISTRATION_CACHE_DECOUPLING.md).
-Its branch implementation does not register or implement M16.
+The [M16 registration/cache-decoupling note](M16_REGISTRATION_CACHE_DECOUPLING.md)
+is a pre-merge snapshot; its “not merged” status is historical and superseded
+by `c620834`. Its implementation does not register or implement M16. For the
+current cache boundary and M15 handoff profile, use the
+[post-prerequisite readiness reconciliation](M16_FINAL_IMPLEMENTATION_READINESS.md#10-post-prerequisite-reconciliation).
 
 ## 1. Frozen implementation boundary
 
@@ -38,20 +40,29 @@ SHA-256, artifact type and semantic version, relative path, output SHA-256, and
 exact target implementation/configuration identity
 ([M16 contract](../M16_CONTRACT_FREEZE.md), lines 39–52).
 
-**Integration gate:** M16 evaluator integration must wait until the M12–M15
-result bundle artifact contracts, registrations, schemas, semantic versions,
-and identity behavior are frozen and available. A target must be frozen before
-fixture predictions are generated. M16 may develop its standalone manifest,
-leakage, custody, serializer, and metric mechanics with generated fixtures in
-parallel, but it must not invent substitute upstream bundles or silently accept
-untyped placeholders. The broader sequence places M15 integration after M12–M14
-schemas and M16 final evaluator integration after M12–M15 bundles
+For the M15 target, use only the clarified `m15_dossier_state_projection`
+adapter version 1 and its exact target/query/projection schemas and field
+mapping documented in the
+[readiness reconciliation](M16_FINAL_IMPLEMENTATION_READINESS.md#10-post-prerequisite-reconciliation).
+It binds `producer_workflow_ref.sha256` as the raw M1 workflow identity and
+binds `producer_stage_manifest_sha256` separately. Do not map M15 dossier
+states to biological labels. M12–M14 content-to-outcome adapters remain
+disabled until each has its own frozen deterministic profile; do not infer
+those mappings from the M15 profile.
+
+**Integration acceptance:** The M12–M15 result-bundle contracts, registrations,
+schemas, semantic versions, and current cache identities are frozen and
+available on `main`; the cache/source-identity prerequisite is merged. These
+are no longer prerequisites to starting M16. M16 may implement its synthetic
+manifest, leakage, custody, serializer, and metric mechanics, but it must not
+invent substitute upstream bundles or silently accept untyped placeholders.
+Final acceptance still requires an offline end-to-end test that creates a
+synthetic authenticated `m15-input-v2` producer reference, executes actual M15
+through the workflow runner, verifies its result bundle and all three companion
+outputs, constructs the exact M15 target reference, and runs the M16 production
+path through the clarified adapter. A handcrafted M15-shaped JSON file does
+not satisfy this test. The broader sequence remains useful for ordering
 ([implementation sequence](M12_M16_IMPLEMENTATION_SEQUENCE.md), lines 93–118).
-The shared cache/source-identity prerequisite is an additional gate: it must be
-merged with the M1–M15 regression boundary passing before M16 implementation
-begins. Final M16 integration still requires an actual offline synthetic M15
-execution, its authenticated `m15_result_bundle`, and M16 consuming that exact
-bundle; mocks do not satisfy this gate.
 
 Reject `dataset_kind = "EMPIRICAL"` as `OUT_OF_SCOPE`; empirical labels,
 biological truth tiers, actual development/tuning/holdout membership, and
@@ -104,13 +115,17 @@ When the new modules exist, make additive changes only:
   for M16-only behavior.
 - `satellite_discovery/artifact_workflow.py`: import/register
   `m16_synthetic_benchmark` in `build_default_registry()`, declare its typed
-  inputs and five outputs, and add only any required report allowlist entries.
-  The existing registry supports dynamic inputs, config validation, and typed
+  inputs and five outputs, add only any required report allowlist entries, and
+  implement the M16-only normalized cache-input projection from §5. Keep the
+  original descriptors for validation and stage execution. The existing
+  registry supports dynamic inputs, config validation, and typed
   output maps ([workflow registration](../../satellite_discovery/artifact_workflow.py),
   lines 46–124, 293–318).
 - `tests/test_artifact_validation.py` and
   `tests/test_stage_cache_identity.py`: add focused M16 validator and
-  stage-local cache-isolation coverage.
+  stage-local cache-isolation coverage; also assert current upstream identities
+  remain stable using the downstream-only registration regression in
+  `tests/test_stage_identity_decoupling.py`.
 - Do not change `stage_cache_identity.py` or broaden the compatibility aliases
   for M16. M16-only contracts, implementation sources, and registry entries
   must leave existing M1–M15 identities stable; only a genuinely shared
@@ -203,33 +218,37 @@ sequence number, and metric rows by adapter-defined outcome
 
 ## 5. Cache and provenance identity
 
-Use the existing stage-scoped cache machinery and output verification. The M16
-identity must bind:
+Use the stage-scoped cache machinery merged in `c620834` and output
+verification. The M16 identity must bind:
 
-- public-manifest digest and fixture-set ID;
-- exact M12–M15 target producer/run/artifact/output digests;
-- target implementation/configuration identity;
-- adapter ID/version;
-- group graph, split roles, and label-state summary;
-- sealed-key commitment;
-- prediction digest;
-- scoring implementation/version;
-- M16 contract semantic version;
-- every output digest.
+- normalized public-manifest/query semantics and fixture-set ID;
+- the M15 shared-verifier `binding_sha256`, raw result-bundle and companion
+  digests/types/versions/schemas, and exact implementation/configuration and
+  contract-semantics objects;
+- adapter ID/version and outcome-schema version;
+- public item IDs, group graph, split roles, label-state summary, and the
+  opaque sealed-key commitment;
+- committed prediction digest, scoring implementation/version, M16 contract
+  semantic version, and every declared output digest.
 
-M16 implementation may use the shared stage-source identity composition only
-after its infrastructure prerequisite has merged. M16 must own its source and
-contract dependencies; do not add M16 source files to upstream inventories or
-preserve the pre-prerequisite M15 identity that omitted producer-verification
-behavior.
+For the M15 adapter, implement the versioned
+`m16-target-execution-cache-v1`, scoring identity, and M16 stage-cache
+projection from the readiness reconciliation. Public manifests and query
+fixtures use canonical semantic digests; verified M15 artifacts and companions
+retain raw digests. Exclude locator paths, raw M16 JSON-file digests, key
+contents, and expected outcomes from target-execution identity. M16 must own its
+source and contract dependencies; do not add M16 source files to upstream
+inventories or alter current M1–M15 identities.
 
 Target execution identity excludes sealed key content and expected outcomes,
 but includes the sealed-key commitment. Scoring identity additionally binds the
 sealed-key and prediction digests. Any target, fixture, adapter, config,
 scoring, or contract change invalidates M16 only; it must not rewrite or
 invalidate M12–M15 outputs ([M16 contract](../M16_CONTRACT_FREEZE.md), lines
-210–223). Add a test proving that an unrelated new contract does not alter
-existing stage identities, following `tests/test_stage_cache_identity.py`.
+210–223). Add tests proving a downstream-only registration and M16
+input-projection hook do not alter current c620 M1–M15 keys, following
+`tests/test_stage_identity_decoupling.py` and
+`tests/test_stage_cache_identity.py`.
 
 ## 6. Synthetic fixture and adapter matrix
 
@@ -244,7 +263,7 @@ The following cases are required:
 | Custody/blinding | Key unavailable to target; valid `SEALED → PREDICTIONS_COMMITTED → BLINDED_CHECKED → SCORED`; premature key access, changed identity, wrong commitment, corrupt key, or post-commit prediction mutation yields terminal `INTEGRITY_FAILED` and no metrics. |
 | Execution states | Completed emitted/abstained/unknown/N/A plus `NOT_EVALUATED`, `DEPENDENCY_UNAVAILABLE`, `FAILED`, `INTERRUPTED`, `INCOMPLETE`, `TRUNCATED`, and `INVALID_INPUT`; every item remains counted once. |
 | Denominators/rates | `n_items` item axis and three-way label axis each sum correctly; zero labelled/emitted denominators serialize null rates, never zero or divide-by-zero. |
-| Target refs | Each accepted M12–M15 bundle type; wrong type/schema/version, missing path, changed upstream bytes, or target identity mismatch is rejected. |
+| Target refs | Validate the frozen M12–M15 artifact-type allowlist. Enable the clarified M15 adapter only; reject wrong M15 type/schema/version, missing path, changed bytes, or identity mismatch. Do not enable M12–M14 content adapters until each has its own frozen deterministic profile. |
 | Input integrity | Duplicate item/key IDs, malformed group IDs, unsorted group IDs, fixture mismatch, BOM/CRLF/NaN, empirical dataset kind, biological label claim, and unsafe paths are rejected. |
 
 The cross-milestone fixture reuse rules belong in
@@ -327,8 +346,9 @@ gate ([validation logistics](M12_M16_VALIDATION_LOGISTICS.md), lines 278–294).
 
 ## 10. Implementation order and invariants
 
-0. Verify the shared cache/source-identity prerequisite is merged and its
-   required Linux/Windows and M1–M15 regression checks pass.
+0. Pin the authoritative post-merge baseline at `c620834` and retain its
+   current M1–M15 identities as the regression baseline; the shared prerequisite
+   is already merged and validated.
 1. Build the test-only synthetic fixture adapter and local canonical serializer.
 2. Implement standalone public/key/target schemas and validators.
 3. Implement group/leakage checks and independent state partitions.
@@ -338,8 +358,9 @@ gate ([validation logistics](M12_M16_VALIDATION_LOGISTICS.md), lines 278–294).
 6. Add artifact-contract registrations and validators.
 7. Add the allowlisted workflow registration and preflight/typed handoffs.
 8. Add workflow, reuse, tamper, interruption, and cache-isolation tests.
-9. Integrate target references only after M12–M15 result bundle identities and
-   registrations are frozen; then run the full offline regression suite.
+9. Integrate the clarified M15 target profile; enable M12–M14 content adapters
+   only after each has its own frozen deterministic profile. Run the full
+   offline regression suite.
 
 Tests must enforce these invariants:
 
