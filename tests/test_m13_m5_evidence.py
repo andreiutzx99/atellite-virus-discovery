@@ -12,6 +12,7 @@ from satellite_discovery import (
     execution_outcome,
     m13_contracts,
     m13_stage,
+    m15_contracts,
     reproducibility,
 )
 from satellite_discovery import artifact_workflow
@@ -876,6 +877,236 @@ class M13M5EvidenceTests(unittest.TestCase):
         second = m13_stage._source_identity()
         self.assertEqual(first, second)
         self.assertRegex(first["source_sha256"], r"^[0-9a-f]{64}$")
+
+    def test_authenticated_m5_m13_m15_runner_chain_preserves_provenance(self):
+        completed = self._produce_m5("m5-events", "multi")
+        completed_zero = self._produce_m5("m5-completed-zero", "negative")
+        noncompleted = self._produce_m5("m5-noncompleted", "nonzero")
+        skipped = self._produce_m5("m5-skipped", "positive", skip=True)
+        incomplete = self._produce_m5("m5-incomplete", "positive", skip=True)
+
+        incomplete_workflow = incomplete["workflow"]
+        incomplete_workflow["status"] = "running"
+        incomplete_stage = next(
+            row for row in incomplete_workflow["stages"] if row["id"] == "dvg"
+        )
+        incomplete_stage["status"] = "running"
+        m13_contracts.write_json(incomplete["workflow_path"], incomplete_workflow)
+
+        completed_ref = self._m5_run_ref(completed)
+        completed_zero_ref = self._m5_run_ref(completed_zero)
+        noncompleted_ref = self._m5_run_ref(noncompleted)
+        skipped_ref = self._m5_run_ref(skipped)
+        incomplete_ref = self._m5_run_ref(
+            incomplete,
+            outcome_path=incomplete["output"] / "not-written-yet.json",
+        )
+        m13_result = self._run_m13(
+            [
+                completed_ref,
+                completed_zero_ref,
+                noncompleted_ref,
+                skipped_ref,
+                incomplete_ref,
+            ]
+        )
+
+        runs = m13_result["summary"]["runs"]
+        completed_zero_row = next(
+            row for row in runs
+            if row["run_import_state"] == "IMPORTED_COMPLETED_ZERO"
+        )
+        noncompleted_row = next(
+            row for row in runs
+            if row["producer_execution_status_raw"] == "failed"
+        )
+        skipped_row = next(
+            row for row in runs
+            if row["producer_execution_status_raw"] == "skipped"
+        )
+        incomplete_row = next(
+            row for row in runs
+            if row["producer_execution_status_raw"] == "running"
+        )
+        self.assertEqual(
+            completed_zero_row["producer_status_raw"],
+            dvg_evidence.NO_DVG_EVIDENCE_DETECTED,
+        )
+        self.assertEqual(
+            completed_zero_row["producer_execution_status_raw"], "complete"
+        )
+        self.assertEqual(completed_zero_row["event_count"], 0)
+        self.assertEqual(noncompleted_row["run_import_state"], "IMPORTED_NONCOMPLETED")
+        self.assertEqual(noncompleted_row["outcome_code"], "FAILED")
+        self.assertEqual(skipped_row["producer_status_raw"], "NOT_EVALUATED")
+        self.assertEqual(skipped_row["run_import_state"], "NOT_SUPPLIED")
+        self.assertEqual(incomplete_row["run_import_state"], "INCOMPLETE")
+        self.assertIsNone(incomplete_row["outcome_code"])
+
+        dvg_ref = next(
+            ref for ref in completed_ref["artifacts"]
+            if ref["artifact_type"] == "dvg_evidence"
+        )
+        event_rows = m13_result["event_index"]["events"]
+        self.assertTrue(event_rows)
+        self.assertEqual(
+            [row["source_row_index"] for row in event_rows],
+            sorted(row["source_row_index"] for row in event_rows),
+        )
+        for row in event_rows:
+            self.assertEqual(
+                row["m5_run_ref"]["producer_stage_id"],
+                completed_ref["producer_stage_id"],
+            )
+            self.assertEqual(
+                row["m5_run_ref"]["producer_run_manifest_sha256"],
+                completed_ref["producer_run_manifest_sha256"],
+            )
+            self.assertEqual(
+                row["m5_run_ref"]["dvg_evidence_sha256"], dvg_ref["sha256"]
+            )
+
+        producer_bundle = self.root / "m13-producer"
+        shutil.copytree(m13_result["output_root"], producer_bundle)
+        m13_workflow = json.loads(
+            (producer_bundle / "workflow.json").read_text(encoding="utf-8")
+        )
+        m13_stage = next(
+            row for row in m13_workflow["stages"] if row["id"] == "m13"
+        )
+        workflow_sha256 = _sha256(producer_bundle / "workflow.json")
+        artifact_specs = (
+            ("event_index.json", "m13_event_index"),
+            ("hypothesis_matrix.json", "m13_hypothesis_matrix"),
+            ("summary.json", "m13_summary"),
+            ("result_bundle.json", "m13_result_bundle"),
+        )
+        producer_refs = []
+        artifact_paths = []
+        for filename, artifact_type in artifact_specs:
+            descriptor = m13_stage["artifacts"][filename]
+            self.assertEqual(descriptor["artifact_type"], artifact_type)
+            artifact_path = producer_bundle / descriptor["path"]
+            self.assertEqual(_sha256(artifact_path), descriptor["sha256"])
+            relative_path = Path(descriptor["path"]).relative_to(
+                m13_stage["output_path"]
+            ).as_posix()
+            producer_refs.append({
+                "producer_milestone": "M13",
+                "producer_stage_id": m13_stage["id"],
+                "producer_run_manifest_sha256":
+                    m13_stage["stage_manifest_sha256"],
+                "producer_status": m13_stage["status"],
+                "artifact_type": artifact_type,
+                "artifact_contract_version": descriptor["contract_version"],
+                "relative_path": relative_path,
+                "sha256": descriptor["sha256"],
+                "provenance_mode":
+                    m15_contracts.AUTHENTICATED_PRODUCER_MODE,
+                "producer_execution_ref": {
+                    "schema": "producer-execution-ref-v1",
+                    "producer_workflow_ref": {
+                        "path": "workflow.json",
+                        "sha256": workflow_sha256,
+                        "workflow_id": m13_workflow["workflow_id"],
+                    },
+                    "producer_stage_id": m13_stage["id"],
+                    "producer_stage_kind": m13_stage["kind"],
+                    "producer_stage_manifest_sha256":
+                        m13_stage["stage_manifest_sha256"],
+                },
+                "producer_bundle_path": "m13-producer",
+            })
+            artifact_paths.append(artifact_path)
+
+        input_manifest_path = self.root / "m15-input.json"
+        m15_contracts.write_json(input_manifest_path, {
+            "schema": m15_contracts.INPUT_SCHEMA,
+            "candidate_id": "synthetic-candidate",
+            "artifact_refs": producer_refs,
+            "optional_stage_states": {
+                "M12": "NOT_SUPPLIED",
+                "M13": "PRESENT",
+                "M14": "NOT_SUPPLIED",
+            },
+        })
+        workflow_spec = {
+            "schema": "artifact-workflow-v1",
+            "stages": [{
+                "id": "m15",
+                "kind": "m15_evidence_dossier",
+                "inputs": {
+                    "manifest": {
+                        "path": input_manifest_path.name,
+                        "artifact_type": "m15_input_manifest",
+                    },
+                    **{
+                        f"artifact_{index:04d}": {
+                            "path": path.relative_to(self.root).as_posix(),
+                            "artifact_type": producer_refs[index]["artifact_type"],
+                        }
+                        for index, path in enumerate(artifact_paths)
+                    },
+                },
+            }],
+        }
+        workflow_spec_path = self.root / "m15-workflow.json"
+        m15_contracts.write_json(workflow_spec_path, workflow_spec)
+
+        output_bytes = []
+        output_records = []
+        for output_name in ("m15-output-one", "m15-output-two"):
+            output_root = self.root / output_name
+            run_workflow(workflow_spec_path, output_root)
+            workflow = json.loads(
+                (output_root / "workflow.json").read_text(encoding="utf-8")
+            )
+            stage = next(row for row in workflow["stages"] if row["id"] == "m15")
+            self.assertEqual(stage["status"], "complete", stage.get("error"))
+            stage_output = output_root / stage["output_path"]
+            filenames = (
+                "evidence_envelope.json",
+                "dependency_edges.json",
+                "dossier_summary.json",
+                "result_bundle.json",
+            )
+            output_bytes.append({
+                filename: (stage_output / filename).read_bytes()
+                for filename in filenames
+            })
+            envelope = json.loads(
+                (stage_output / "evidence_envelope.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            output_records.append(envelope["records"])
+
+        self.assertEqual(output_bytes[0], output_bytes[1])
+        self.assertEqual(
+            [record["evidence_id"] for record in output_records[0]],
+            [record["evidence_id"] for record in output_records[1]],
+        )
+        self.assertEqual(
+            {
+                record["producer_ref"]["artifact_type"]
+                for record in output_records[0]
+            },
+            {artifact_type for _, artifact_type in artifact_specs},
+        )
+        for record in output_records[0]:
+            producer_ref = record["producer_ref"]
+            self.assertEqual(record["validation_state"], "ACCEPTED")
+            self.assertEqual(record["producer_provenance_state"], "VERIFIED")
+            self.assertEqual(
+                producer_ref["producer_execution_ref"][
+                    "producer_workflow_ref"
+                ]["workflow_id"],
+                m13_workflow["workflow_id"],
+            )
+            self.assertEqual(
+                record["semantic_axes"]["interpretation"], "NOT_INTERPRETED"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
