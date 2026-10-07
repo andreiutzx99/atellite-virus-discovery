@@ -159,10 +159,17 @@ class M16WorkflowTests(unittest.TestCase):
         self.assertTrue(envelope["records"])
         return m15_output, workflow, stage, bundle, envelope, bundle_path
 
-    def _make_m16_inputs(self):
+    def _make_m16_inputs(self, *, producer_workflow_crlf=False):
         m15_output, workflow, stage, bundle, envelope, bundle_path = (
             self._run_actual_m15()
         )
+        if producer_workflow_crlf:
+            producer_workflow_path = m15_output / "workflow.json"
+            producer_workflow = producer_workflow_path.read_bytes()
+            producer_workflow = producer_workflow.replace(b"\r\n", b"\n")
+            producer_workflow_path.write_bytes(
+                producer_workflow.replace(b"\n", b"\r\n")
+            )
         descriptor = stage["artifacts"]["result_bundle.json"]
         execution_ref = {
             "schema": "producer-execution-ref-v1",
@@ -237,6 +244,11 @@ class M16WorkflowTests(unittest.TestCase):
             "public_manifest": public_path,
             "target_bundle": bundle_path,
         })
+        self.assertEqual(
+            query_context["target_status"],
+            "AVAILABLE",
+            query_context["target_error"],
+        )
         expected = m16_stage._projection(
             query_context["target"], query["evidence_ids"]
         )
@@ -358,6 +370,11 @@ class M16WorkflowTests(unittest.TestCase):
         self.assertEqual(
             stage["inputs"]["sealed_key"]["validation_state"], "sealed_unread"
         )
+
+    def test_windows_style_m15_workflow_newlines_are_accepted(self):
+        paths = self._make_m16_inputs(producer_workflow_crlf=True)
+        _output, _workflow, stage = self._run_m16(paths)
+        self.assertEqual(stage["status"], "complete", stage.get("reason"))
 
     def test_commitment_mismatch_is_terminal_and_emits_no_metrics(self):
         paths = self._make_m16_inputs()

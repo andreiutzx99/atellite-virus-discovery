@@ -143,8 +143,11 @@ def _load_m15_target(public_manifest_path, target_bundle_path, target_ref):
         raise M16IntegrityError(
             "INTEGRITY_FAILED: producer workflow digest mismatch"
         )
+    # M15's shared workflow writer uses platform text-mode newlines. Bind the
+    # exact producer bytes above, then normalize CRLF only for strict parsing.
     workflow = m16_contracts.parse_json_bytes(
-        workflow_raw, label="M15 producer workflow manifest"
+        workflow_raw.replace(b"\r\n", b"\n"),
+        label="M15 producer workflow manifest",
     )
     stages = workflow.get("stages")
     if not isinstance(stages, list):
