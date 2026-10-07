@@ -988,11 +988,14 @@ def validate_custody_log(value):
         raise ValueError("M16 custody log must contain events")
     current = None
     terminal = None
+    sealed_key_commitment = None
+    target_binding_sha256 = None
+    prediction_sha256 = None
     for sequence, event in enumerate(value["events"], start=1):
         _exact_object(
             event,
             {"sequence", "from_state", "to_state", "actor", "tool_identity",
-             "digests", "reason"},
+             "sealed_key_commitment", "sealed_key_digest", "digests", "reason"},
             "M16 custody event",
         )
         if event["sequence"] != sequence:
@@ -1018,11 +1021,86 @@ def validate_custody_log(value):
             raise ValueError("M16 custody transition is not permitted")
         _text(event["actor"], "M16 custody actor")
         _text(event["tool_identity"], "M16 custody tool identity")
-        if not isinstance(event["digests"], dict):
-            raise ValueError("M16 custody digests must be an object")
+        _text(
+            event["sealed_key_commitment"],
+            "M16 custody sealed_key_commitment",
+            maximum=512,
+        )
+        if sealed_key_commitment is None:
+            if destination != "SEALED":
+                raise ValueError("M16 custody log must begin with SEALED")
+            sealed_key_commitment = event["sealed_key_commitment"]
+        elif event["sealed_key_commitment"] != sealed_key_commitment:
+            raise ValueError(
+                "M16 custody sealed_key_commitment is inconsistent across events"
+            )
+
+        sealed_key_digest = event["sealed_key_digest"]
+        if destination in {
+            "SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED",
+        }:
+            if sealed_key_digest is not None:
+                raise ValueError(
+                    "M16 sealed_key_digest is unavailable before scorer access"
+                )
+        elif destination == "SCORED":
+            _hash(sealed_key_digest, "M16 custody sealed_key_digest")
+        elif destination == "INTEGRITY_FAILED" and sealed_key_digest is not None:
+            if current != "BLINDED_CHECKED":
+                raise ValueError(
+                    "M16 sealed_key_digest is unavailable before scorer access"
+                )
+            _hash(sealed_key_digest, "M16 custody sealed_key_digest")
+
+        _exact_object(
+            event["digests"],
+            {"target_binding_sha256", "prediction_sha256"},
+            "M16 custody artifact digests",
+        )
         for name, digest in event["digests"].items():
             if digest is not None:
                 _hash(digest, f"M16 custody digest {name}")
+        target_digest = event["digests"]["target_binding_sha256"]
+        prediction_digest = event["digests"]["prediction_sha256"]
+        if (
+            target_digest is not None
+            and target_binding_sha256 is not None
+            and target_digest != target_binding_sha256
+        ):
+            raise ValueError("M16 custody target identity changed between events")
+        if (
+            prediction_digest is not None
+            and prediction_sha256 is not None
+            and prediction_digest != prediction_sha256
+        ):
+            raise ValueError(
+                "M16 custody committed prediction identity changed between events"
+            )
+        if target_digest is not None:
+            target_binding_sha256 = target_digest
+        if prediction_digest is not None:
+            prediction_sha256 = prediction_digest
+        if destination in {
+            "PREDICTIONS_COMMITTED", "BLINDED_CHECKED", "SCORED",
+        }:
+            if target_digest is None or prediction_digest is None:
+                raise ValueError(
+                    f"M16 {destination} custody event requires target and prediction digests"
+                )
+        if destination in {"BLINDED_CHECKED", "SCORED"} and (
+            target_digest != target_binding_sha256
+            or prediction_digest != prediction_sha256
+        ):
+            raise ValueError(
+                f"M16 {destination} custody event changed a committed identity"
+            )
+        if destination == "INTEGRITY_FAILED" and prediction_sha256 is not None and (
+            target_digest != target_binding_sha256
+            or prediction_digest != prediction_sha256
+        ):
+            raise ValueError(
+                "M16 integrity-failure event changed a committed identity"
+            )
         _text(event["reason"], "M16 custody reason")
         current = destination
         if destination in {"SCORED", "INTEGRITY_FAILED"}:

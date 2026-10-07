@@ -59,6 +59,38 @@ def public_manifest(label_state="SEALED_SYNTHETIC_EXPECTATION"):
     }
 
 
+def custody_log():
+    states = (
+        ("SEALED", None, "a" * 64, None),
+        ("PREDICTIONS_COMMITTED", "SEALED", "a" * 64, "b" * 64),
+        ("BLINDED_CHECKED", "PREDICTIONS_COMMITTED", "a" * 64, "b" * 64),
+        ("SCORED", "BLINDED_CHECKED", "a" * 64, "b" * 64),
+    )
+    events = []
+    for sequence, (destination, source, target_digest, prediction_digest) in enumerate(
+        states, start=1
+    ):
+        events.append({
+            "sequence": sequence,
+            "from_state": source,
+            "to_state": destination,
+            "actor": "m16-synthetic-benchmark",
+            "tool_identity": "m16-stage-v1",
+            "sealed_key_commitment": "opaque-custodian-commitment",
+            "sealed_key_digest": "c" * 64 if destination == "SCORED" else None,
+            "digests": {
+                "target_binding_sha256": target_digest,
+                "prediction_sha256": prediction_digest,
+            },
+            "reason": "synthetic custody fixture",
+        })
+    return {
+        "schema": m16_contracts.CUSTODY_SCHEMA,
+        "events": events,
+        "terminal_state": "SCORED",
+    }
+
+
 class M16ContractTests(unittest.TestCase):
     def test_public_m15_profile_and_sealed_key_coverage(self):
         public = m16_contracts.validate_public_manifest(public_manifest())
@@ -129,6 +161,74 @@ class M16ContractTests(unittest.TestCase):
         self.assertEqual(
             m16_contracts.validate_synthetic_key(key, unlabelled)["items"], []
         )
+
+    def test_custody_log_requires_commitment_and_canonical_digest_separately(self):
+        value = custody_log()
+        self.assertEqual(
+            m16_contracts.validate_custody_log(value),
+            {"event_count": 4, "terminal_state": "SCORED"},
+        )
+
+        missing_commitment = custody_log()
+        del missing_commitment["events"][0]["sealed_key_commitment"]
+        with self.assertRaises(ValueError):
+            m16_contracts.validate_custody_log(missing_commitment)
+
+        inconsistent_commitment = custody_log()
+        inconsistent_commitment["events"][2][
+            "sealed_key_commitment"
+        ] = "another-opaque-commitment"
+        with self.assertRaisesRegex(ValueError, "inconsistent"):
+            m16_contracts.validate_custody_log(inconsistent_commitment)
+
+        missing_scored_digest = custody_log()
+        missing_scored_digest["events"][-1]["sealed_key_digest"] = None
+        with self.assertRaises(ValueError):
+            m16_contracts.validate_custody_log(missing_scored_digest)
+
+        opaque_value_in_digest = custody_log()
+        opaque_value_in_digest["events"][-1]["sealed_key_digest"] = (
+            "opaque-custodian-commitment"
+        )
+        with self.assertRaises(ValueError):
+            m16_contracts.validate_custody_log(opaque_value_in_digest)
+
+        digest_cannot_replace_commitment = custody_log()
+        digest_cannot_replace_commitment["events"][0][
+            "sealed_key_commitment"
+        ] = None
+        with self.assertRaises(ValueError):
+            m16_contracts.validate_custody_log(digest_cannot_replace_commitment)
+
+    def test_custody_log_forbids_key_digest_before_permitted_scorer_access(self):
+        for event_index, state in enumerate(
+            ("SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED")
+        ):
+            with self.subTest(state=state):
+                value = custody_log()
+                value["events"][event_index]["sealed_key_digest"] = "c" * 64
+                with self.assertRaisesRegex(ValueError, "unavailable"):
+                    m16_contracts.validate_custody_log(value)
+
+    def test_custody_log_preserves_committed_identities_and_transition_order(self):
+        changed_target = custody_log()
+        changed_target["events"][2]["digests"][
+            "target_binding_sha256"
+        ] = "d" * 64
+        with self.assertRaisesRegex(ValueError, "target identity changed"):
+            m16_contracts.validate_custody_log(changed_target)
+
+        changed_prediction = custody_log()
+        changed_prediction["events"][3]["digests"][
+            "prediction_sha256"
+        ] = "e" * 64
+        with self.assertRaisesRegex(ValueError, "prediction identity changed"):
+            m16_contracts.validate_custody_log(changed_prediction)
+
+        wrong_order = custody_log()
+        wrong_order["events"][2]["to_state"] = "SCORED"
+        with self.assertRaisesRegex(ValueError, "transition"):
+            m16_contracts.validate_custody_log(wrong_order)
 
     def test_duplicate_queries_and_unsorted_or_duplicate_groups_are_rejected(self):
         with self.assertRaises(ValueError):

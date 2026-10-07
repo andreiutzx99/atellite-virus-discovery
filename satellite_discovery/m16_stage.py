@@ -941,18 +941,24 @@ def _metrics(public_manifest, predictions, key):
 
 
 def _custody_event(events, destination, reason, *, target_digest=None,
-                   prediction_digest=None, key_digest=None):
+                   prediction_digest=None, sealed_key_commitment=None,
+                   sealed_key_digest=None):
     current = events[-1]["to_state"] if events else None
+    if sealed_key_commitment is None:
+        if not events:
+            raise ValueError("The initial M16 custody event requires a commitment")
+        sealed_key_commitment = events[0]["sealed_key_commitment"]
     events.append({
         "sequence": len(events) + 1,
         "from_state": current,
         "to_state": destination,
         "actor": "m16-synthetic-benchmark",
         "tool_identity": "m16-stage-v1",
+        "sealed_key_commitment": sealed_key_commitment,
+        "sealed_key_digest": sealed_key_digest,
         "digests": {
             "target_binding_sha256": target_digest,
             "prediction_sha256": prediction_digest,
-            "canonical_sealed_key_sha256": key_digest,
         },
         "reason": reason,
     })
@@ -1111,13 +1117,13 @@ def _after_prediction_commit(_prediction_path):
 
 
 def _terminal_failure(output, temporary, events, message, *, target_digest=None,
-                      prediction_digest=None, key_digest=None):
+                      prediction_digest=None, sealed_key_digest=None):
     if not events or events[-1]["to_state"] != "INTEGRITY_FAILED":
         _custody_event(
             events, "INTEGRITY_FAILED", message,
             target_digest=target_digest,
             prediction_digest=prediction_digest,
-            key_digest=key_digest,
+            sealed_key_digest=sealed_key_digest,
         )
     _write_document(temporary, "custody_log.json", _custody_document(events))
     _publish_directory(temporary, output)
@@ -1168,6 +1174,7 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
         events, "SEALED",
         "Opaque custodian commitment recorded; key content and path are unavailable to public execution.",
         target_digest=target_digest,
+        sealed_key_commitment=public_manifest["sealed_key_commitment"],
     )
     existing_output_state = _managed_output_state(output)
     if existing_output_state == "MANAGED" and not _existing_output_is_valid(output):
@@ -1293,7 +1300,7 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
             output, temporary, events, str(error),
             target_digest=target_digest,
             prediction_digest=prediction_digest,
-            key_digest=canonical_key_digest,
+            sealed_key_digest=canonical_key_digest,
         )
 
     metrics = _metrics(public_manifest, predictions["rows"], key)
@@ -1310,17 +1317,9 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
             f"METRIC_INTEGRITY_FAILED: {error}",
             target_digest=target_digest,
             prediction_digest=prediction_digest,
-            key_digest=canonical_key_digest,
+            sealed_key_digest=canonical_key_digest,
         )
     _write_document(temporary, "metric_summary.json", metrics)
-    _custody_event(
-        events, "SCORED",
-        "Scorer opened the sealed key only after prediction commitment and blinding checks.",
-        target_digest=target_digest,
-        prediction_digest=prediction_digest,
-        key_digest=canonical_key_digest,
-    )
-    _write_document(temporary, "custody_log.json", _custody_document(events))
     try:
         _verify_prediction_commit(prediction_path, prediction_digest)
     except M16IntegrityError as error:
@@ -1329,8 +1328,17 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
             output, temporary, events, str(error),
             target_digest=target_digest,
             prediction_digest=prediction_digest,
-            key_digest=canonical_key_digest,
+            sealed_key_digest=canonical_key_digest,
         )
+
+    _custody_event(
+        events, "SCORED",
+        "Scorer opened the sealed key only after prediction commitment and blinding checks.",
+        target_digest=target_digest,
+        prediction_digest=prediction_digest,
+        sealed_key_digest=canonical_key_digest,
+    )
+    _write_document(temporary, "custody_log.json", _custody_document(events))
 
     sidecar_hashes = {
         name: m16_contracts.sha256_file(temporary / name)

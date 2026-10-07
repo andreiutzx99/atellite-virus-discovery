@@ -327,22 +327,73 @@ class M16WorkflowTests(unittest.TestCase):
             m16_contracts.OUTPUT_CONTRACTS,
         )
 
-        events = []
+        custody_states = []
+        access_trace = []
+        key_access_states = []
         original_read_regular_file = m16_contracts.read_regular_file
         original_commit_hook = m16_stage._after_prediction_commit
+        original_custody_event = m16_stage._custody_event
+        original_semantic_sha256 = m16_contracts.semantic_sha256
+        original_public_executor = m16_stage._execute_public
+
+        def monitored_custody_event(events, destination, reason, **kwargs):
+            result = original_custody_event(
+                events, destination, reason, **kwargs
+            )
+            custody_states.append(destination)
+            return result
 
         def monitored_read(
             path, *, label="M16 input", maximum=m16_contracts.JSON_LIMIT
         ):
             if label == "M16 sealed synthetic key":
-                events.append("key-opened")
+                self.assertEqual(
+                    custody_states,
+                    ["SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED"],
+                )
+                key_access_states.append(("read", tuple(custody_states)))
+                access_trace.append("key-opened")
             return original_read_regular_file(
                 path, label=label, maximum=maximum
             )
 
+        def monitored_semantic_sha256(value):
+            if (
+                isinstance(value, dict)
+                and value.get("schema") == m16_contracts.SYNTHETIC_KEY_SCHEMA
+            ):
+                self.assertEqual(
+                    custody_states,
+                    ["SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED"],
+                )
+                key_access_states.append(("hash", tuple(custody_states)))
+                access_trace.append("key-hashed")
+            return original_semantic_sha256(value)
+
+        def monitored_public_executor(
+            public, target, queries, adapter_id, adapter_version
+        ):
+            public_inputs = json.dumps({
+                "public": public,
+                "target": target,
+                "queries": queries,
+                "adapter_id": adapter_id,
+                "adapter_version": adapter_version,
+            })
+            self.assertNotIn(str(paths["key_path"]), public_inputs)
+            self.assertNotIn("expected_software_outcome", public_inputs)
+            self.assertIn(public["sealed_key_commitment"], public_inputs)
+            access_trace.append("public-executor")
+            return original_public_executor(
+                public, target, queries, adapter_id, adapter_version
+            )
+
         def committed(path):
             self.assertTrue(Path(path).is_file())
-            events.append("predictions-committed")
+            self.assertEqual(
+                custody_states, ["SEALED", "PREDICTIONS_COMMITTED"]
+            )
+            access_trace.append("predictions-committed")
             original_commit_hook(path)
 
         with (
@@ -351,12 +402,39 @@ class M16WorkflowTests(unittest.TestCase):
                 "read_regular_file",
                 side_effect=monitored_read,
             ),
+            mock.patch.object(
+                m16_contracts,
+                "semantic_sha256",
+                side_effect=monitored_semantic_sha256,
+            ),
+            mock.patch.object(
+                m16_stage, "_custody_event", side_effect=monitored_custody_event
+            ),
+            mock.patch.object(
+                m16_stage, "_execute_public", side_effect=monitored_public_executor
+            ),
             mock.patch.object(m16_stage, "_after_prediction_commit", side_effect=committed),
         ):
             output, workflow, stage = self._run_m16(paths)
 
         self.assertEqual(stage["status"], "complete", stage.get("reason"))
-        self.assertEqual(events, ["predictions-committed", "key-opened"])
+        self.assertEqual(
+            access_trace,
+            [
+                "public-executor", "predictions-committed",
+                "key-opened", "key-hashed",
+            ],
+        )
+        self.assertEqual(
+            key_access_states,
+            [
+                (
+                    action,
+                    ("SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED"),
+                )
+                for action in ("read", "hash")
+            ],
+        )
         stage_output = output / stage["output_path"]
         prediction = m16_contracts.read_json(stage_output / "predictions.json")
         leakage = m16_contracts.read_json(stage_output / "leakage_report.json")
@@ -369,6 +447,22 @@ class M16WorkflowTests(unittest.TestCase):
             [event["to_state"] for event in custody["events"]],
             ["SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED", "SCORED"],
         )
+        commitment = paths["public_manifest"]["sealed_key_commitment"]
+        self.assertEqual(custody_states, [
+            "SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED", "SCORED",
+        ])
+        for event in custody["events"]:
+            self.assertEqual(event["sealed_key_commitment"], commitment)
+        for event in custody["events"][:3]:
+            self.assertIsNone(event["sealed_key_digest"])
+        self.assertEqual(
+            custody["events"][-1]["sealed_key_digest"],
+            bundle["canonical_sealed_key_sha256"],
+        )
+        self.assertEqual(
+            m16_contracts.validate_custody_log(custody)["terminal_state"],
+            "SCORED",
+        )
         self.assertEqual(metrics["n_exact_match"], 1)
         self.assertEqual(metrics["fixture_agreement_rate"], 1)
         self.assertEqual(bundle["target_identity"]["binding_sha256"],
@@ -380,6 +474,67 @@ class M16WorkflowTests(unittest.TestCase):
         self.assertEqual(
             stage["inputs"]["sealed_key"]["validation_state"], "sealed_unread"
         )
+
+    def test_prediction_commit_is_rechecked_after_key_access_before_scoring(self):
+        paths = self._make_m16_inputs()
+        original_reader = m16_contracts.read_regular_file
+        original_commit_hook = m16_stage._after_prediction_commit
+        prediction_paths = []
+
+        def remember_prediction(path):
+            prediction_paths.append(Path(path))
+            original_commit_hook(path)
+
+        def read_key_then_mutate_prediction(
+            path, *, label="M16 input", maximum=m16_contracts.JSON_LIMIT
+        ):
+            value = original_reader(path, label=label, maximum=maximum)
+            if label == "M16 sealed synthetic key":
+                self.assertTrue(prediction_paths)
+                with prediction_paths[-1].open("ab") as stream:
+                    stream.write(b" ")
+            return value
+
+        with (
+            mock.patch.object(
+                m16_stage,
+                "_after_prediction_commit",
+                side_effect=remember_prediction,
+            ),
+            mock.patch.object(
+                m16_contracts,
+                "read_regular_file",
+                side_effect=read_key_then_mutate_prediction,
+            ),
+            self.assertRaises(m16_contracts.M16IntegrityError),
+        ):
+            self._run_m16(paths)
+
+        output = self.root / "m16-output"
+        workflow = json.loads((output / "workflow.json").read_text())
+        stage = next(row for row in workflow["stages"] if row["id"] == "m16-fixture")
+        self.assertEqual(stage["status"], "failed")
+        stage_output = output / stage["output_path"]
+        custody = m16_contracts.read_json(stage_output / "custody_log.json")
+        self.assertEqual(
+            [event["to_state"] for event in custody["events"]],
+            [
+                "SEALED", "PREDICTIONS_COMMITTED", "BLINDED_CHECKED",
+                "INTEGRITY_FAILED",
+            ],
+        )
+        self.assertEqual(
+            custody["events"][-1]["sealed_key_digest"],
+            m16_contracts.semantic_sha256(
+                m16_contracts.read_json(paths["key_path"])
+            ),
+        )
+        self.assertEqual(
+            m16_contracts.validate_custody_log(custody)["terminal_state"],
+            "INTEGRITY_FAILED",
+        )
+        self.assertFalse((stage_output / "metric_summary.json").exists())
+        self.assertFalse((stage_output / "result_bundle.json").exists())
 
     def test_windows_style_m15_workflow_newlines_are_accepted(self):
         paths = self._make_m16_inputs(producer_workflow_crlf=True)
@@ -400,6 +555,15 @@ class M16WorkflowTests(unittest.TestCase):
         stage_output = output / stage["output_path"]
         custody = m16_contracts.read_json(stage_output / "custody_log.json")
         self.assertEqual(custody["terminal_state"], "INTEGRITY_FAILED")
+        self.assertEqual(
+            m16_contracts.validate_custody_log(custody)["terminal_state"],
+            "INTEGRITY_FAILED",
+        )
+        self.assertEqual(
+            custody["events"][0]["sealed_key_commitment"],
+            paths["public_manifest"]["sealed_key_commitment"],
+        )
+        self.assertIsNone(custody["events"][-1]["sealed_key_digest"])
         self.assertFalse((stage_output / "metric_summary.json").exists())
         self.assertFalse((stage_output / "result_bundle.json").exists())
         self.assertEqual(
@@ -450,6 +614,9 @@ class M16WorkflowTests(unittest.TestCase):
     def test_scoring_identity_change_recomputes_m16_without_touching_m15(self):
         paths = self._make_m16_inputs()
         output, _workflow, first_stage = self._run_m16(paths)
+        first_bundle = m16_contracts.read_json(
+            output / first_stage["output_path"] / "result_bundle.json"
+        )
         m15_before = self._tree_hashes(paths["m15_output"])
         original_cache_key = first_stage["cache_key"]
         key = m16_contracts.read_json(paths["key_path"])
@@ -464,9 +631,61 @@ class M16WorkflowTests(unittest.TestCase):
         self.assertEqual(second_stage["cache_key"], original_cache_key)
         self.assertEqual(second_stage["execution"], "executed")
         stage_output = output / second_stage["output_path"]
+        second_bundle = m16_contracts.read_json(
+            stage_output / "result_bundle.json"
+        )
         metrics = m16_contracts.read_json(stage_output / "metric_summary.json")
         self.assertEqual(metrics["n_exact_match"], 0)
+        self.assertEqual(
+            second_bundle["execution_identity_sha256"],
+            first_bundle["execution_identity_sha256"],
+        )
+        self.assertNotEqual(
+            second_bundle["canonical_sealed_key_sha256"],
+            first_bundle["canonical_sealed_key_sha256"],
+        )
+        self.assertEqual(
+            second_bundle["scoring_identity"]["execution_identity_sha256"],
+            second_bundle["execution_identity_sha256"],
+        )
+        self.assertEqual(
+            second_bundle["scoring_identity"]["canonical_sealed_key_sha256"],
+            second_bundle["canonical_sealed_key_sha256"],
+        )
         self.assertEqual(self._tree_hashes(paths["m15_output"]), m15_before)
+
+    def test_target_execution_identity_binds_public_opaque_commitment(self):
+        paths = self._make_m16_inputs()
+        output, _workflow, first_stage = self._run_m16(paths)
+        first_bundle = m16_contracts.read_json(
+            output / first_stage["output_path"] / "result_bundle.json"
+        )
+
+        public = m16_contracts.read_json(paths["public_path"])
+        key = m16_contracts.read_json(paths["key_path"])
+        new_commitment = "opaque-custodian-commitment-for-identity-test"
+        public["sealed_key_commitment"] = new_commitment
+        key["sealed_key_commitment"] = new_commitment
+        m16_contracts.write_json(paths["public_path"], public)
+        m16_contracts.write_json(paths["key_path"], key)
+
+        output, _workflow, second_stage = self._run_m16(paths)
+        second_bundle = m16_contracts.read_json(
+            output / second_stage["output_path"] / "result_bundle.json"
+        )
+        self.assertEqual(second_stage["status"], "complete")
+        self.assertEqual(second_stage["execution"], "executed")
+        self.assertNotEqual(
+            second_bundle["execution_identity_sha256"],
+            first_bundle["execution_identity_sha256"],
+        )
+        self.assertEqual(
+            second_bundle["sealed_key_commitment"], new_commitment
+        )
+        self.assertEqual(
+            second_bundle["scoring_identity"]["execution_identity_sha256"],
+            second_bundle["execution_identity_sha256"],
+        )
 
     def test_tampered_cached_prediction_is_rejected_without_metrics(self):
         paths = self._make_m16_inputs()
