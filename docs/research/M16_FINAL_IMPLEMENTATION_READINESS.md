@@ -581,12 +581,18 @@ exact equality after the key is opened. This profile does not define its
 generation scheme; M16 must not derive it from key contents, and equality is
 not cryptographic verification. The commitment is distinct from the canonical
 sealed-key digest, which is added with the committed prediction digest to
-scoring identity. The M16 result bundle must not contain a self-hash: its bytes
-are bound by the enclosing M1 descriptor and stage manifest, while its
-siblings' raw hashes are in the bundle. Every cache hit must revalidate the
-producer chain and output schemas/digests; stale or tampered M16 outputs are
-misses and must be recomputed or rejected. The cache projection is M16-only;
-raw M15 producer digests are never normalized.
+scoring identity. For custody, `SEALED` requires `sealed_key_commitment` as a
+structured field and MUST NOT read, open, or hash the sealed key;
+`sealed_key_digest` is absent or null in `SEALED`, `PREDICTIONS_COMMITTED`, and
+`BLINDED_CHECKED`. The scorer may open the key only after the latter two checks
+pass; after opening, the canonical digest is recorded in scoring/custody state
+and is required in `SCORED`. The M16 result bundle must not contain a
+self-hash: its bytes are bound by the enclosing M1 descriptor and stage
+manifest, while its siblings' raw hashes are in the bundle. Every cache hit
+must revalidate the producer chain and output schemas/digests; stale or
+tampered M16 outputs are misses and must be recomputed or rejected. The cache
+projection is M16-only; raw M15 producer digests are never normalized. See the
+[frozen custody rules](../M16_CONTRACT_FREEZE.md#5-groupleakage-and-custody-rules).
 
 | Acceptance fixture | Expected result |
 | --- | --- |
