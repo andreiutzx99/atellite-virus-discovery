@@ -143,11 +143,14 @@ modules, and the existing artifact-workflow runner remains the interface.
 ### Public manifest
 
 Validate UTF-8 JSON with schema `m16-public-manifest-v1` and fields:
-`dataset_kind`, `fixture_set_id`, `target_ref`, `adapter_id`,
+`dataset_kind`, `fixture_set_id`, `sealed_key_commitment`, `target_ref`, `adapter_id`,
 `adapter_version`, and `items`. Each item has a unique `item_id`, hash-bound
 synthetic `target_input_ref`, sorted `group_ids`, a generic `split_role`,
 `label_state`, and explicit synthetic fixture provenance
-([M16 contract](../M16_CONTRACT_FREEZE.md), lines 54–71, 84–93).
+([M16 contract](../M16_CONTRACT_FREEZE.md#3-input-manifests-and-hidden-label-boundary)).
+
+The commitment is an opaque custodian-supplied identifier. M16 v1 does not
+define its generation and must not derive it from sealed-key contents.
 
 Allowed split roles are `DEVELOPMENT`, `TUNING`, `SYNTHETIC_HOLDOUT`, and
 `UNASSIGNED`. They exercise generic split mechanics only; they do not select
@@ -156,12 +159,17 @@ real partitions.
 ### Sealed synthetic key
 
 Validate separately hashed UTF-8 JSON with schema `m16-synthetic-key-v1`,
-matching `fixture_set_id`, and one entry per labelled item. Each entry has
-`item_id`, an adapter-defined opaque `expected_software_outcome`, and
+matching `fixture_set_id` and the exact `sealed_key_commitment` value from the
+public manifest, and one entry per labelled item. Each entry has `item_id`, an
+adapter-defined opaque `expected_software_outcome`, and
 `label_scope = "SOFTWARE_CONTRACT"`. `UNKNOWN` and `NOT_APPLICABLE` items have
-no expected outcome. The public target path must never receive key contents or
-an expected-outcome path ([M16 contract](../M16_CONTRACT_FREEZE.md), lines
-73–105).
+no expected outcome. The public execution path may receive the opaque
+commitment from the public manifest, but must never receive sealed-key
+contents, expected outcomes, or the sealed-key path. After predictions are
+committed and the key is opened, the scorer checks exact commitment equality
+before scoring; mismatch is `INTEGRITY_FAILED` and emits no metrics. Equality
+is not cryptographic verification
+([M16 contract](../M16_CONTRACT_FREEZE.md#3-input-manifests-and-hidden-label-boundary)).
 
 ### Output artifacts
 
@@ -188,13 +196,16 @@ input.
 - exact schemas and allowed fields;
 - `SYNTHETIC_FIXTURE` dataset kind and fixture provenance;
 - unique item IDs and one key row per labelled item;
-- matching public/key fixture-set IDs;
+- matching public/key fixture-set IDs and exact `sealed_key_commitment` values
+  after the scorer opens the sealed key;
 - accepted M12–M15 target type, producer identity, run-manifest digest,
   semantic version, output digest, relative path, and target implementation/
   configuration identity;
 - adapter registration and immutable adapter version;
 - sorted group IDs and valid split roles;
-- no expected outcome or key path in public inputs;
+- public execution receives only the public manifest (including the opaque
+  commitment), target artifact, and synthetic input fixtures—not sealed-key
+  contents, expected outcomes, or the sealed-key path;
 - prediction coverage: exactly one row per public item;
 - completed outcome states (`EMITTED`, `ABSTAINED`, `NOT_APPLICABLE`,
   `UNKNOWN`) versus null/unknown outcomes for non-completed execution;
@@ -231,6 +242,10 @@ verification. The M16 identity must bind:
 - committed prediction digest, scoring implementation/version, M16 contract
   semantic version, and every declared output digest.
 
+The commitment is an opaque custodian-supplied value and is distinct from the
+canonical sealed-key digest. Do not derive it from key contents or treat
+matching commitment fields as cryptographic verification.
+
 For the M15 adapter, implement the versioned
 `m16-target-execution-cache-v1`, scoring identity, and M16 stage-cache
 projection from the readiness reconciliation. Public manifests and query
@@ -242,8 +257,9 @@ inventories or alter current M1–M15 identities.
 
 Target execution identity excludes sealed key content and expected outcomes,
 but includes the sealed-key commitment. Scoring identity additionally binds the
-sealed-key and prediction digests. Any target, fixture, adapter, config,
-scoring, or contract change invalidates M16 only; it must not rewrite or
+canonical sealed-key digest and committed prediction digest. Any target,
+fixture, adapter, config, scoring, or contract change invalidates M16 only; it
+must not rewrite or
 invalidate M12–M15 outputs ([M16 contract](../M16_CONTRACT_FREEZE.md), lines
 210–223). Add tests proving a downstream-only registration and M16
 input-projection hook do not alter current c620 M1–M15 keys, following
@@ -260,7 +276,7 @@ The following cases are required:
 | Label-state isolation | `SEALED_SYNTHETIC_EXPECTATION`, `UNKNOWN`, and `NOT_APPLICABLE`; unknown/N/A never enter `n_labelled` or a negative denominator. No empirical positive/negative labels. |
 | Matching outcomes | Fully synthetic expected outcomes with exact emitted predictions; hand-calculate `n_labelled`, `n_emitted`, `n_exact_match`, coverage, and both fixture rates. |
 | Leakage groups | Exact duplicate, near-duplicate/family, sample/run/study/lab-like groups; shared non-empty group across split roles yields `LEAKAGE_DETECTED` and blocks scoring. |
-| Custody/blinding | Key unavailable to target; valid `SEALED → PREDICTIONS_COMMITTED → BLINDED_CHECKED → SCORED`; premature key access, changed identity, wrong commitment, corrupt key, or post-commit prediction mutation yields terminal `INTEGRITY_FAILED` and no metrics. |
+| Custody/blinding | Key contents and path unavailable to public execution; valid `SEALED → PREDICTIONS_COMMITTED → BLINDED_CHECKED → SCORED`; premature key access, changed identity, mismatched public/key commitment, corrupt key, or post-commit prediction mutation yields terminal `INTEGRITY_FAILED` and no metrics. |
 | Execution states | Completed emitted/abstained/unknown/N/A plus `NOT_EVALUATED`, `DEPENDENCY_UNAVAILABLE`, `FAILED`, `INTERRUPTED`, `INCOMPLETE`, `TRUNCATED`, and `INVALID_INPUT`; every item remains counted once. |
 | Denominators/rates | `n_items` item axis and three-way label axis each sum correctly; zero labelled/emitted denominators serialize null rates, never zero or divide-by-zero. |
 | Target refs | Validate the frozen M12–M15 artifact-type allowlist. Enable the clarified M15 adapter only; reject wrong M15 type/schema/version, missing path, changed bytes, or identity mismatch. Do not enable M12–M14 content adapters until each has its own frozen deterministic profile. |

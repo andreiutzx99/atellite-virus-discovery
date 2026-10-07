@@ -68,6 +68,7 @@ M16 consumes two separately hashed UTF-8 JSON inputs:
   "schema": "m16-public-manifest-v1",
   "dataset_kind": "SYNTHETIC_FIXTURE",
   "fixture_set_id": "stable synthetic identifier",
+  "sealed_key_commitment": "opaque custodian-supplied identifier",
   "target_ref": {},
   "adapter_id": "registered adapter identifier",
   "adapter_version": "immutable version",
@@ -82,9 +83,16 @@ M16 consumes two separately hashed UTF-8 JSON inputs:
 {
   "schema": "m16-synthetic-key-v1",
   "fixture_set_id": "same synthetic identifier",
+  "sealed_key_commitment": "same opaque custodian-supplied identifier",
   "items": []
 }
 ```
+
+The `sealed_key_commitment` is an opaque custodian-supplied identifier present
+in both inputs. The two values MUST match exactly. M16 v1 does not define how
+the identifier is generated and MUST NOT derive it from sealed-key contents.
+Equality checks consistency between the supplied fields; it does not
+cryptographically verify the sealed key.
 
 Every public item contains:
 
@@ -102,9 +110,11 @@ The sealed key contains one entry per labelled item with `item_id`,
 `expected_software_outcome` is a string/object defined by the registered
 synthetic adapter schema, not a biological class. Unknown/not-applicable items
 have no expected outcome. The public manifest must not contain an expected
-outcome or label-key path that the target can read. The public runner receives
-only the public manifest, target artifact, and input fixtures; the scorer
-receives predictions plus the sealed key after prediction commitment.
+outcome or label-key path that the target can read. The public runner may
+receive the opaque commitment through the public manifest, but receives neither
+the sealed-key contents nor its path nor expected outcomes. It receives only
+the public manifest, target artifact, and input fixtures; the scorer receives
+predictions plus the sealed key after prediction commitment.
 
 There is no empirical `positive`, `negative`, `disputed truth`, or biological
 label enum in this contract.
@@ -175,7 +185,9 @@ SEALED -> PREDICTIONS_COMMITTED -> BLINDED_CHECKED -> SCORED
 - `PREDICTIONS_COMMITTED`: prediction bytes and target identity hashed and
   immutable.
 - `BLINDED_CHECKED`: execution record confirms that the public runner was not
-  given the key content and leakage checks passed.
+  given the key content, key path, or expected outcomes, and leakage checks
+  passed. The public runner may receive the opaque commitment in the public
+  manifest.
 - `SCORED`: scorer opened the synthetic key after all prior checks.
 - `INTEGRITY_FAILED`: terminal; no score may be produced.
 
@@ -187,18 +199,20 @@ may claim blinded empirical evaluation.
 
 - Validate exact schema, target type/identity, adapter registration/version,
   unique item IDs, synthetic-only provenance, matching public/key fixture-set
-  IDs, key coverage, and SHA-256 values.
+  IDs, exact equality of the public/key `sealed_key_commitment` values, key
+  coverage, and SHA-256 values.
 - Require exactly one prediction record per public item. A completed prediction
   has exactly one of `EMITTED`, `ABSTAINED`, `NOT_APPLICABLE`, or `UNKNOWN`;
   non-completed predictions have no emitted value and an unknown outcome.
   Prediction-state and label-state partitions are validated independently.
 - Public target execution must finish and the prediction digest must be
   committed before scorer access. If label-key content is available to target
-  execution, fail the blinding check and do not score.
+  execution, or the public/key commitments mismatch after key access, fail
+  integrity checks and do not score.
 - Run grouping checks before scoring. Leakage, target identity mismatch,
-  hidden-label access, corrupted key, or changed prediction digest yields
-  M16 result `INTEGRITY_FAILED`; the M1 stage lifecycle is `failed` and no
-  metrics are emitted.
+  hidden-label access, corrupted key, public/key commitment mismatch, or
+  changed prediction digest yields M16 result `INTEGRITY_FAILED`; the M1 stage
+  lifecycle is `failed` and no metrics are emitted.
 - A target item may be unavailable, failed, interrupted, incomplete, or
   abstained while other items remain in the result. Preserve each state and
   denominator; do not silently drop rows.
@@ -216,16 +230,19 @@ byte-identical semantic outputs.
 
 Bind the public-manifest digest, fixture-set identity, target producer/run and
 output digest, target implementation/configuration identity, adapter ID and
-version, group graph, split roles, label-state summary, sealed-key commitment,
-prediction digest, scoring implementation/version, contract semantic version,
-and all output hashes.
+version, group graph, split roles, label-state summary, opaque sealed-key
+commitment, prediction digest, scoring implementation/version, contract
+semantic version, and all output hashes.
 
 The target-execution identity excludes the sealed key content and expected
 outcomes; it includes only the public-manifest digest and sealed-key
-commitment supplied by the custodian. The scoring identity additionally binds
-the sealed-key digest and prediction digest. A target/config/adapter/fixture
-change invalidates M16 only; it does not rewrite M12–M15 outputs. Reuse requires
-all identities and output hashes to match.
+commitment supplied by the custodian. This commitment is distinct from the
+canonical sealed-key digest: M16 does not derive one from the other or treat
+commitment equality as cryptographic verification. The scoring identity
+additionally binds the canonical sealed-key digest and committed prediction
+digest. A target/config/adapter/fixture change invalidates M16 only; it does not
+rewrite M12–M15 outputs. Reuse requires all identities and output hashes to
+match.
 
 ## 8. Synthetic acceptance fixtures
 
