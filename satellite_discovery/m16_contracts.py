@@ -30,6 +30,11 @@ PROJECTION_SCHEMA = "m16-m15-dossier-state-projection-v1"
 SEMANTIC_VERSION = "1"
 OUTPUT_SCHEMA_VERSION = "m16-output-schema-v1"
 SCORING_VERSION = "1"
+SCORER_IDENTITY_SCHEMA = "m16-scorer-identity-v1"
+SCORER_IMPLEMENTATION_SCHEMA = "m16-stage-implementation-v1"
+SCORER_CACHE_PROJECTION_VERSION = "m16-workflow-cache-input-projection-v1"
+SCORING_IDENTITY_SCHEMA = "m16-scoring-identity-v1"
+STAGE_CACHE_IDENTITY_SCHEMA = "m16-stage-cache-key-v1"
 OUTCOME_SCHEMA_VERSION = PROJECTION_SCHEMA
 JSON_LIMIT = 1_000_000
 RATE_PRECISION = 6
@@ -1225,10 +1230,6 @@ def validate_result_bundle(value):
     _token(value["adapter_id"], "M16 result adapter_id")
     _text(value["adapter_version"], "M16 result adapter_version", maximum=64)
     _text(value["outcome_schema_version"], "M16 outcome schema version", maximum=128)
-    if not isinstance(value["scoring_identity"], dict):
-        raise ValueError("M16 scoring identity must be an object")
-    if not isinstance(value["stage_cache_identity"], dict):
-        raise ValueError("M16 stage cache identity must be an object")
     outputs = value["outputs"]
     if not isinstance(outputs, dict) or set(outputs) != set(SIDE_CAR_CONTRACTS):
         raise ValueError("M16 result bundle sidecar inventory is incomplete")
@@ -1245,8 +1246,101 @@ def validate_result_bundle(value):
         ):
             raise ValueError(f"M16 result sidecar {name} has an invalid type/version")
         _hash(row["sha256"], f"M16 result sidecar {name} SHA-256")
+    _validate_scoring_identity(value["scoring_identity"], value, outputs)
+    _validate_stage_cache_identity(
+        value["stage_cache_identity"], value, value["scoring_identity"]
+    )
     _validate_json_value(value, "M16 result bundle")
     return {"sidecar_count": len(outputs)}
+
+
+def _validate_scorer_identity(value, label):
+    _exact_object(
+        value, {"schema", "implementation", "scoring_version"}, label
+    )
+    if (
+        value["schema"] != SCORER_IDENTITY_SCHEMA
+        or value["scoring_version"] != SCORING_VERSION
+    ):
+        raise ValueError(f"{label} schema or scoring version is invalid")
+    implementation = value["implementation"]
+    _exact_object(
+        implementation,
+        {
+            "schema", "semantic_version", "source_sha256",
+            "output_schema_version", "workflow_cache_projection_version",
+        },
+        f"{label} implementation",
+    )
+    if (
+        implementation["schema"] != SCORER_IMPLEMENTATION_SCHEMA
+        or implementation["semantic_version"] != SEMANTIC_VERSION
+        or implementation["output_schema_version"] != OUTPUT_SCHEMA_VERSION
+        or implementation["workflow_cache_projection_version"]
+        != SCORER_CACHE_PROJECTION_VERSION
+    ):
+        raise ValueError(f"{label} implementation identity is invalid")
+    _hash(implementation["source_sha256"], f"{label} implementation SHA-256")
+
+
+def _validate_scoring_identity(value, bundle, outputs):
+    label = "M16 scoring identity"
+    _exact_object(
+        value,
+        {
+            "schema", "execution_identity_sha256",
+            "canonical_sealed_key_sha256", "committed_prediction_sha256",
+            "scorer_identity", "scoring_version", "sidecar_sha256",
+        },
+        label,
+    )
+    if value["schema"] != SCORING_IDENTITY_SCHEMA:
+        raise ValueError(f"{label} schema is invalid")
+    if value["scoring_version"] != SCORING_VERSION:
+        raise ValueError(f"{label} scoring version is invalid")
+    bindings = {
+        "execution_identity_sha256": "execution_identity_sha256",
+        "canonical_sealed_key_sha256": "canonical_sealed_key_sha256",
+        "committed_prediction_sha256": "prediction_sha256",
+    }
+    for identity_field, bundle_field in bindings.items():
+        digest = _hash(value[identity_field], f"{label} {identity_field}")
+        if digest != bundle[bundle_field]:
+            raise ValueError(f"{label} {identity_field} differs from result bundle")
+    _validate_scorer_identity(value["scorer_identity"], f"{label} scorer identity")
+    sidecar_hashes = value["sidecar_sha256"]
+    if not isinstance(sidecar_hashes, dict) or set(sidecar_hashes) != set(outputs):
+        raise ValueError(f"{label} sidecar hash inventory is incomplete")
+    for name, descriptor in outputs.items():
+        digest = _hash(sidecar_hashes[name], f"{label} sidecar {name} SHA-256")
+        if digest != descriptor["sha256"]:
+            raise ValueError(f"{label} sidecar hash differs for {name}")
+
+
+def _validate_stage_cache_identity(value, bundle, scoring_identity):
+    label = "M16 stage-cache identity"
+    _exact_object(
+        value,
+        {
+            "schema", "execution_identity_sha256",
+            "canonical_sealed_key_sha256", "scorer_identity",
+            "scoring_version",
+        },
+        label,
+    )
+    if value["schema"] != STAGE_CACHE_IDENTITY_SCHEMA:
+        raise ValueError(f"{label} schema is invalid")
+    if value["scoring_version"] != SCORING_VERSION:
+        raise ValueError(f"{label} scoring version is invalid")
+    for field in ("execution_identity_sha256", "canonical_sealed_key_sha256"):
+        digest = _hash(value[field], f"{label} {field}")
+        if digest != bundle[field]:
+            raise ValueError(f"{label} {field} differs from result bundle")
+    _validate_scorer_identity(value["scorer_identity"], f"{label} scorer identity")
+    if value["scorer_identity"] != scoring_identity["scorer_identity"]:
+        raise ValueError(f"{label} scorer identity differs from scoring identity")
+    if value["scoring_version"] != scoring_identity["scoring_version"]:
+        raise ValueError(f"{label} scoring version differs from scoring identity")
 
 
 def validate_output_document(artifact_type, value):
@@ -1269,6 +1363,7 @@ def validate_output_file(path, artifact_type):
     details = validate_output_document(artifact_type, value)
     if artifact_type == "m16_result_bundle":
         root = Path(path).parent
+        sidecar_values = {}
         for name, descriptor in value["outputs"].items():
             sidecar = root / name
             if sidecar.is_symlink() or not sidecar.is_file():
@@ -1280,9 +1375,47 @@ def validate_output_file(path, artifact_type):
             validate_output_document(contract, sidecar_value)
             if sidecar_value.get("schema") != descriptor["schema"]:
                 raise ValueError(f"M16 result sidecar schema mismatch: {name}")
-        prediction = read_json(root / "predictions.json", label="M16 predictions")
+            sidecar_values[name] = sidecar_value
+        prediction = sidecar_values["predictions.json"]
         if prediction["target_provenance"]["binding_sha256"] != (
             value["target_identity"].get("binding_sha256")
         ):
             raise ValueError("M16 result bundle target identity differs from predictions")
+        if (
+            value["outputs"]["predictions.json"]["sha256"]
+            != value["prediction_sha256"]
+        ):
+            raise ValueError(
+                "M16 prediction sidecar digest differs from the committed prediction"
+            )
+        custody = sidecar_values["custody_log.json"]
+        if custody["terminal_state"] != "SCORED":
+            raise ValueError("M16 result bundle requires a scored custody log")
+        events = custody["events"]
+        if (
+            events[0]["sealed_key_commitment"]
+            != value["sealed_key_commitment"]
+        ):
+            raise ValueError(
+                "M16 result bundle sealed-key commitment differs from custody"
+            )
+        scored = events[-1]
+        if (
+            scored["to_state"] != "SCORED"
+            or scored["sealed_key_digest"]
+            != value["canonical_sealed_key_sha256"]
+        ):
+            raise ValueError(
+                "M16 canonical sealed-key digest differs from scored custody"
+            )
+        if scored["digests"]["prediction_sha256"] != value["prediction_sha256"]:
+            raise ValueError(
+                "M16 custody prediction identity differs from result bundle"
+            )
+        if scored["digests"]["target_binding_sha256"] != (
+            value["target_identity"].get("binding_sha256")
+        ):
+            raise ValueError(
+                "M16 custody target identity differs from result bundle"
+            )
     return details

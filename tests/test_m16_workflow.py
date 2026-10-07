@@ -654,6 +654,270 @@ class M16WorkflowTests(unittest.TestCase):
         )
         self.assertEqual(self._tree_hashes(paths["m15_output"]), m15_before)
 
+    def test_result_bundle_rejects_missing_or_inconsistent_identity_bindings(self):
+        paths = self._make_m16_inputs()
+        output, _workflow, stage = self._run_m16(paths)
+        bundle = m16_contracts.read_json(
+            output / stage["output_path"] / "result_bundle.json"
+        )
+
+        def different_hash(value):
+            return "0" * 64 if value != "0" * 64 else "1" * 64
+
+        mutations = [
+            (
+                "missing committed prediction",
+                lambda value: value["scoring_identity"].pop(
+                    "committed_prediction_sha256"
+                ),
+            ),
+            (
+                "wrong committed prediction",
+                lambda value: value["scoring_identity"].__setitem__(
+                    "committed_prediction_sha256",
+                    different_hash(value["prediction_sha256"]),
+                ),
+            ),
+            (
+                "missing canonical key digest",
+                lambda value: value["scoring_identity"].pop(
+                    "canonical_sealed_key_sha256"
+                ),
+            ),
+            (
+                "wrong canonical key digest",
+                lambda value: value["scoring_identity"].__setitem__(
+                    "canonical_sealed_key_sha256",
+                    different_hash(value["canonical_sealed_key_sha256"]),
+                ),
+            ),
+            (
+                "wrong execution identity",
+                lambda value: value["scoring_identity"].__setitem__(
+                    "execution_identity_sha256",
+                    different_hash(value["execution_identity_sha256"]),
+                ),
+            ),
+            (
+                "incomplete scoring identity",
+                lambda value: value["scoring_identity"].pop("scoring_version"),
+            ),
+            (
+                "extra scoring identity field",
+                lambda value: value["scoring_identity"].__setitem__(
+                    "unexpected", "value"
+                ),
+            ),
+            (
+                "incomplete scorer identity",
+                lambda value: value["scoring_identity"][
+                    "scorer_identity"
+                ].pop("scoring_version"),
+            ),
+            (
+                "extra scorer identity field",
+                lambda value: value["scoring_identity"][
+                    "scorer_identity"
+                ].__setitem__("unexpected", "value"),
+            ),
+            (
+                "invalid scorer implementation digest",
+                lambda value: value["scoring_identity"]["scorer_identity"][
+                    "implementation"
+                ].__setitem__("source_sha256", "not-a-digest"),
+            ),
+            (
+                "inconsistent scorer identity",
+                lambda value: value["stage_cache_identity"][
+                    "scorer_identity"
+                ]["implementation"].__setitem__(
+                    "source_sha256",
+                    different_hash(
+                        value["scoring_identity"]["scorer_identity"][
+                            "implementation"
+                        ]["source_sha256"]
+                    ),
+                ),
+            ),
+            (
+                "missing scoring sidecar hash",
+                lambda value: value["scoring_identity"][
+                    "sidecar_sha256"
+                ].pop("metric_summary.json"),
+            ),
+            (
+                "extra scoring sidecar hash",
+                lambda value: value["scoring_identity"][
+                    "sidecar_sha256"
+                ].__setitem__("unexpected.json", "0" * 64),
+            ),
+            (
+                "wrong scoring version",
+                lambda value: value["scoring_identity"].__setitem__(
+                    "scoring_version", "2"
+                ),
+            ),
+            (
+                "sidecar hash mismatch",
+                lambda value: value["scoring_identity"]["sidecar_sha256"].__setitem__(
+                    "custody_log.json",
+                    different_hash(
+                        value["outputs"]["custody_log.json"]["sha256"]
+                    ),
+                ),
+            ),
+            (
+                "missing stage-cache canonical digest",
+                lambda value: value["stage_cache_identity"].pop(
+                    "canonical_sealed_key_sha256"
+                ),
+            ),
+            (
+                "wrong stage-cache execution identity",
+                lambda value: value["stage_cache_identity"].__setitem__(
+                    "execution_identity_sha256",
+                    different_hash(value["execution_identity_sha256"]),
+                ),
+            ),
+            (
+                "wrong stage-cache canonical digest",
+                lambda value: value["stage_cache_identity"].__setitem__(
+                    "canonical_sealed_key_sha256",
+                    different_hash(value["canonical_sealed_key_sha256"]),
+                ),
+            ),
+            (
+                "extra stage-cache field",
+                lambda value: value["stage_cache_identity"].__setitem__(
+                    "unexpected", "value"
+                ),
+            ),
+            (
+                "wrong stage-cache scoring version",
+                lambda value: value["stage_cache_identity"].__setitem__(
+                    "scoring_version", "2"
+                ),
+            ),
+        ]
+        for label, mutate in mutations:
+            altered = json.loads(json.dumps(bundle))
+            mutate(altered)
+            with self.subTest(binding=label):
+                with self.assertRaises(ValueError):
+                    m16_contracts.validate_result_bundle(altered)
+
+    def test_complete_result_bundle_cross_binds_custody_and_prediction_digests(self):
+        paths = self._make_m16_inputs()
+        output, _workflow, stage = self._run_m16(paths)
+        stage_output = output / stage["output_path"]
+        original_bundle = m16_contracts.read_json(
+            stage_output / "result_bundle.json"
+        )
+        canonical_digest = original_bundle["canonical_sealed_key_sha256"]
+        self.assertNotEqual(
+            original_bundle["sealed_key_commitment"], canonical_digest
+        )
+
+        def different_hash(value):
+            return "0" * 64 if value != "0" * 64 else "1" * 64
+
+        def copy_output(label):
+            destination = self.root / f"m16-cross-binding-{label}"
+            shutil.copytree(stage_output, destination)
+            return destination
+
+        def rewrite_sidecar_binding(root, bundle, name):
+            digest = m16_contracts.sha256_file(root / name)
+            bundle["outputs"][name]["sha256"] = digest
+            bundle["scoring_identity"]["sidecar_sha256"][name] = digest
+
+        def assert_rejected(root):
+            with self.assertRaises(ValueError):
+                m16_contracts.validate_output_file(
+                    root / "result_bundle.json", "m16_result_bundle"
+                )
+
+        root = copy_output("bundle-commitment-substitution")
+        bundle = m16_contracts.read_json(root / "result_bundle.json")
+        bundle["sealed_key_commitment"] = canonical_digest
+        m16_contracts.write_json(root / "result_bundle.json", bundle)
+        with self.subTest(binding="bundle commitment replaced by key digest"):
+            assert_rejected(root)
+
+        root = copy_output("custody-commitment-substitution")
+        bundle = m16_contracts.read_json(root / "result_bundle.json")
+        custody = m16_contracts.read_json(root / "custody_log.json")
+        for event in custody["events"]:
+            event["sealed_key_commitment"] = canonical_digest
+        m16_contracts.validate_custody_log(custody)
+        m16_contracts.write_json(root / "custody_log.json", custody)
+        rewrite_sidecar_binding(root, bundle, "custody_log.json")
+        m16_contracts.write_json(root / "result_bundle.json", bundle)
+        with self.subTest(binding="custody commitment replaced by key digest"):
+            assert_rejected(root)
+
+        root = copy_output("scored-key-digest-mismatch")
+        bundle = m16_contracts.read_json(root / "result_bundle.json")
+        custody = m16_contracts.read_json(root / "custody_log.json")
+        custody["events"][-1]["sealed_key_digest"] = different_hash(
+            canonical_digest
+        )
+        m16_contracts.write_json(root / "custody_log.json", custody)
+        rewrite_sidecar_binding(root, bundle, "custody_log.json")
+        m16_contracts.write_json(root / "result_bundle.json", bundle)
+        with self.subTest(binding="scored key digest differs from result bundle"):
+            assert_rejected(root)
+
+        root = copy_output("custody-prediction-mismatch")
+        bundle = m16_contracts.read_json(root / "result_bundle.json")
+        custody = m16_contracts.read_json(root / "custody_log.json")
+        committed_prediction = different_hash(bundle["prediction_sha256"])
+        for event in custody["events"][1:]:
+            event["digests"]["prediction_sha256"] = committed_prediction
+        m16_contracts.validate_custody_log(custody)
+        m16_contracts.write_json(root / "custody_log.json", custody)
+        rewrite_sidecar_binding(root, bundle, "custody_log.json")
+        m16_contracts.write_json(root / "result_bundle.json", bundle)
+        with self.subTest(binding="custody prediction differs from result bundle"):
+            assert_rejected(root)
+
+        root = copy_output("prediction-sidecar-mismatch")
+        bundle = m16_contracts.read_json(root / "result_bundle.json")
+        prediction = m16_contracts.read_json(root / "predictions.json")
+        prediction["rows"][0]["emitted_value"]["compatibility_warnings"].append(
+            "result-bundle sidecar cross-binding probe"
+        )
+        m16_contracts.write_json(root / "predictions.json", prediction)
+        rewrite_sidecar_binding(root, bundle, "predictions.json")
+        m16_contracts.write_json(root / "result_bundle.json", bundle)
+        with self.subTest(binding="prediction sidecar differs from committed prediction"):
+            assert_rejected(root)
+
+    def test_digest_shaped_opaque_commitment_is_valid_when_cross_bound(self):
+        paths = self._make_m16_inputs()
+        commitment = "a" * 64
+        public = m16_contracts.read_json(paths["public_path"])
+        key = m16_contracts.read_json(paths["key_path"])
+        public["sealed_key_commitment"] = commitment
+        key["sealed_key_commitment"] = commitment
+        paths["public_manifest"] = public
+        m16_contracts.write_json(paths["public_path"], public)
+        m16_contracts.write_json(paths["key_path"], key)
+
+        output, _workflow, stage = self._run_m16(paths)
+        bundle_path = output / stage["output_path"] / "result_bundle.json"
+        bundle = m16_contracts.read_json(bundle_path)
+        self.assertEqual(bundle["sealed_key_commitment"], commitment)
+        self.assertNotEqual(
+            bundle["canonical_sealed_key_sha256"], commitment
+        )
+        self.assertEqual(
+            m16_contracts.validate_output_file(
+                bundle_path, "m16_result_bundle"
+            ),
+            {"sidecar_count": 4},
+        )
+
     def test_target_execution_identity_binds_public_opaque_commitment(self):
         paths = self._make_m16_inputs()
         output, _workflow, first_stage = self._run_m16(paths)
@@ -719,14 +983,31 @@ class M16WorkflowTests(unittest.TestCase):
         m16_contracts.write_json(prediction_path, predictions)
         prediction_digest = m16_contracts.sha256_file(prediction_path)
 
+        custody_path = stage_output / "custody_log.json"
+        custody = m16_contracts.read_json(custody_path)
+        for event in custody["events"][1:]:
+            event["digests"]["prediction_sha256"] = prediction_digest
+        m16_contracts.validate_custody_log(custody)
+        m16_contracts.write_json(custody_path, custody)
+        custody_digest = m16_contracts.sha256_file(custody_path)
+
         result_path = stage_output / "result_bundle.json"
         result_bundle = m16_contracts.read_json(result_path)
         result_bundle["prediction_sha256"] = prediction_digest
         result_bundle["scoring_identity"][
             "committed_prediction_sha256"
         ] = prediction_digest
+        result_bundle["scoring_identity"]["sidecar_sha256"][
+            "predictions.json"
+        ] = prediction_digest
+        result_bundle["scoring_identity"]["sidecar_sha256"][
+            "custody_log.json"
+        ] = custody_digest
         result_bundle["outputs"]["predictions.json"]["sha256"] = (
             prediction_digest
+        )
+        result_bundle["outputs"]["custody_log.json"]["sha256"] = (
+            custody_digest
         )
         m16_contracts.write_json(result_path, result_bundle)
 
