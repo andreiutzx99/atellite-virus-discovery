@@ -27,7 +27,7 @@ from . import (
     m14_descriptive_observations,
     stage_cache_identity,
     # M15_CACHE_NEUTRAL_BEGIN
-    m15_contracts, m15_stage,
+    m15_contracts, m15_stage, m16_contracts, m16_stage,
     # M15_CACHE_NEUTRAL_END
 )
 from .stage_registry import WorkflowStageRegistry, valid_module_name
@@ -320,6 +320,7 @@ def build_default_registry():
     m13_stage.register_stage(registry)
     # M15_CACHE_NEUTRAL_BEGIN
     m15_stage.register_stage(registry)
+    m16_stage.register_stage(registry)
     # M15_CACHE_NEUTRAL_END
     registry.register(
         m14_descriptive_observations.STAGE_KIND,
@@ -1157,6 +1158,25 @@ def _m15_handoff_plans(manifest, stages, registry):
             'static_input_failures': static_failures,
         }
     return plans
+
+
+def _m16_direct_input(manifest, stage, input_name):
+    value = stage.get('inputs', {}).get(input_name)
+    if input_name == 'target_bundle':
+        if (not isinstance(value, dict)
+                or set(value) != {'path', 'artifact_type'}
+                or value.get('artifact_type') not in m16_stage._TARGET_CONTRACT_TYPES):
+            raise ValueError('M16 target_bundle must be a typed M12-M15 result bundle')
+        relative_path = value['path']
+        artifact_type = value['artifact_type']
+    else:
+        if not isinstance(value, str):
+            raise ValueError(f'M16 {input_name} must be a direct relative file path')
+        relative_path = value
+        artifact_type = None
+    path = m16_contracts.resolve_relative_path(
+        Path(manifest).parent, relative_path, f'M16 {input_name} path')
+    return path, artifact_type
 # M15_CACHE_NEUTRAL_END
 def _stage_output_directory(output,stage_id,cache_key,previous_rows):
     prior=previous_rows.get(stage_id,{})
@@ -1241,9 +1261,49 @@ def inspect_configuration(manifest,registry=None,output=None):
             if m15_plan is not None else set()
         )
         # M15_CACHE_NEUTRAL_END
+        # M15_CACHE_NEUTRAL_BEGIN
+        m16_context=None
+        m16_validation_error=None
+        # M15_CACHE_NEUTRAL_END
         has_missing_input=False
         waits_for_upstream=False
         for key,value in stage['inputs'].items():
+            # M15_CACHE_NEUTRAL_BEGIN
+            if definition.kind==m16_stage.STAGE_KIND:
+                try:
+                    path,artifact_type=_m16_direct_input(manifest,stage,key)
+                    if not path.is_file():
+                        has_missing_input=True
+                        inputs[key]={
+                            'path':str(path),
+                            'status':'missing',
+                            'artifact_type':artifact_type,
+                            'validation_state':'unavailable',
+                        }
+                    else:
+                        inputs[key]={
+                            'path':str(path.resolve(strict=True)),
+                            'status':'available',
+                            'artifact_type':artifact_type,
+                            'validation_state':(
+                                'deferred_to_m16_verifier'
+                                if key=='target_bundle'
+                                else 'deferred_to_m16_semantic_parser'
+                                if key=='public_manifest'
+                                else 'sealed_unread'
+                            ),
+                        }
+                except (OSError,ValueError,KeyError,TypeError) as error:
+                    has_missing_input=True
+                    inputs[key]={
+                        'status':'invalid',
+                        'artifact_type':None,
+                        'validation_state':'invalid',
+                        'validation_error':str(error),
+                    }
+                    m16_validation_error=str(error)
+                continue
+            # M15_CACHE_NEUTRAL_END
             # M15_CACHE_NEUTRAL_BEGIN
             if (definition.kind==m15_stage.STAGE_KIND
                     and key in m15_input_failures):
@@ -1427,6 +1487,21 @@ def inspect_configuration(manifest,registry=None,output=None):
             except (OSError,ValueError,KeyError,TypeError):
                 has_missing_input=True
         # M15_CACHE_NEUTRAL_END
+        # M15_CACHE_NEUTRAL_BEGIN
+        if (definition.kind==m16_stage.STAGE_KIND
+                and not has_missing_input
+                and not waits_for_upstream):
+            try:
+                resolved_paths={
+                    name:Path(value['path'])
+                    for name,value in inputs.items()
+                    if isinstance(value,dict) and value.get('path')
+                }
+                m16_context=m16_stage.build_stage_context(resolved_paths)
+            except (OSError,ValueError,KeyError,TypeError) as error:
+                has_missing_input=True
+                m16_validation_error=str(error)
+        # M15_CACHE_NEUTRAL_END
         row={
             'id':stage['id'],
             'kind':stage['kind'],
@@ -1458,6 +1533,14 @@ def inspect_configuration(manifest,registry=None,output=None):
                 'valid' if m15_context is not None else 'unavailable'
             )
         # M15_CACHE_NEUTRAL_END
+        # M15_CACHE_NEUTRAL_BEGIN
+        if definition.kind==m16_stage.STAGE_KIND:
+            row['m16_handoff_validation']=(
+                'valid' if m16_context is not None else 'unavailable'
+            )
+            if m16_validation_error is not None:
+                row['m16_validation_error']=m16_validation_error
+        # M15_CACHE_NEUTRAL_END
         if stage.get('skip') is True:
             row['expected_action']='skipped'
         if stage['kind']=='external_module':
@@ -1485,6 +1568,9 @@ def inspect_configuration(manifest,registry=None,output=None):
                     # M15_CACHE_NEUTRAL_BEGIN
                     else m15_context['cache_identity'] if m15_context is not None
                     # M15_CACHE_NEUTRAL_END
+                    # M15_CACHE_NEUTRAL_BEGIN
+                    else m16_context['cache_identity'] if m16_context is not None
+                    # M15_CACHE_NEUTRAL_END
                     else None
                 ))
             row['cache_key']=cache_key
@@ -1495,6 +1581,12 @@ def inspect_configuration(manifest,registry=None,output=None):
                 row['expected_action']='blocked_dependency'
             elif waits_for_upstream:
                 row['expected_action']='execute_after_upstream'
+            # M15_CACHE_NEUTRAL_BEGIN
+            elif definition.kind==m16_stage.STAGE_KIND:
+                # The sealed key is opened only after a fresh prediction commit;
+                # M16 therefore validates/reuses its cache inside its handler.
+                row['expected_action']='execute'
+            # M15_CACHE_NEUTRAL_END
             elif (cache_key and output_path is not None
                   and previous.get('cache_key')==cache_key):
                 reusable=_verified_previous_stage(
@@ -2111,6 +2203,42 @@ def run(manifest,output,registry=None):
             )
             # M15_CACHE_NEUTRAL_END
             for key,value in stage['inputs'].items():
+                # M15_CACHE_NEUTRAL_BEGIN
+                if definition.kind==m16_stage.STAGE_KIND:
+                    try:
+                        path,artifact_type=_m16_direct_input(manifest,stage,key)
+                        if not path.is_file():
+                            inputs[key]=None
+                            active.setdefault('inputs',{})[key]={
+                                'path':str(path),
+                                'artifact_type':artifact_type,
+                                'status':'unavailable',
+                                'validation_state':'unavailable',
+                            }
+                        else:
+                            path=path.resolve(strict=True)
+                            inputs[key]=path
+                            active.setdefault('inputs',{})[key]={
+                                'path':str(path),
+                                'artifact_type':artifact_type,
+                                'status':'available',
+                                'validation_state':(
+                                    'deferred_to_m16_verifier'
+                                    if key=='target_bundle'
+                                    else 'deferred_to_m16_semantic_parser'
+                                    if key=='public_manifest'
+                                    else 'sealed_unread'
+                                ),
+                            }
+                    except (OSError,ValueError,KeyError,TypeError) as error:
+                        inputs[key]=None
+                        active.setdefault('inputs',{})[key]={
+                            'status':'invalid',
+                            'validation_state':'invalid',
+                            'validation_error':str(error),
+                        }
+                    continue
+                # M15_CACHE_NEUTRAL_END
                 if (definition.kind==m13_stage.STAGE_KIND
                         and key in m13_input_failures):
                     inputs[key]=None
@@ -2266,6 +2394,11 @@ def run(manifest,output,registry=None):
                     m15_input_failures,
                 )
             # M15_CACHE_NEUTRAL_END
+            # M15_CACHE_NEUTRAL_BEGIN
+            m16_context=None
+            if definition.kind==m16_stage.STAGE_KIND:
+                m16_context=m16_stage.build_stage_context(inputs)
+            # M15_CACHE_NEUTRAL_END
 
             if definition.kind=='fastq_validate':
                 if (config['layout']=='paired-end') != ('read2' in inputs):
@@ -2310,6 +2443,9 @@ def run(manifest,output,registry=None):
                     # M15_CACHE_NEUTRAL_BEGIN
                     else m15_context['cache_identity'] if m15_context is not None
                     # M15_CACHE_NEUTRAL_END
+                    # M15_CACHE_NEUTRAL_BEGIN
+                    else m16_context['cache_identity'] if m16_context is not None
+                    # M15_CACHE_NEUTRAL_END
                     else None
                 ),
             )
@@ -2338,6 +2474,11 @@ def run(manifest,output,registry=None):
                 elif definition.kind==m15_stage.STAGE_KIND:
                     outcome=definition.handler(
                         inputs,stage_output,config,workflow_context=m15_context)
+                # M15_CACHE_NEUTRAL_END
+                # M15_CACHE_NEUTRAL_BEGIN
+                elif definition.kind==m16_stage.STAGE_KIND:
+                    outcome=definition.handler(
+                        inputs,stage_output,config,workflow_context=m16_context)
                 # M15_CACHE_NEUTRAL_END
                 else:
                     outcome=definition.handler(inputs,stage_output,config)

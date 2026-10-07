@@ -161,8 +161,8 @@ class StageIdentityDecouplingTests(unittest.TestCase):
             {kind: after_keys[kind] for kind in before_keys},
         )
         self.assertEqual(before_sources, after_sources)
-        self.assertEqual(len(before_keys), 36)
-        self.assertEqual(len(after_keys), 37)
+        self.assertEqual(len(before_keys), 37)
+        self.assertEqual(len(after_keys), 38)
 
     def test_m12_m13_and_m15_implementation_sources_invalidate_their_own_identity(self):
         cases = (
