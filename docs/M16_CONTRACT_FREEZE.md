@@ -58,7 +58,9 @@ be registered for mechanics-only tests; it cannot supply biological labels.
 
 ## 3. Input manifests and hidden-label boundary
 
-M16 consumes two separately hashed UTF-8 JSON inputs:
+M16 consumes two UTF-8 JSON inputs with distinct identities. The sealed fixture
+key is not read or hashed until permitted scorer access after prediction
+commitment and the blinding check:
 
 1. **Public manifest** (`schema = "m16-public-manifest-v1"`), visible to the
    target execution path:
@@ -181,34 +183,48 @@ SEALED -> PREDICTIONS_COMMITTED -> BLINDED_CHECKED -> SCORED
     +-------------+--------------------+-> INTEGRITY_FAILED
 ```
 
-- `SEALED`: key digest recorded; key content unavailable to target execution.
+- `SEALED`: the event requires `sealed_key_commitment` as a structured field,
+  copied from the public manifest. This is the opaque custodian-supplied
+  commitment, not a digest. The event MUST NOT read, open, or hash the sealed
+  key; `sealed_key_digest` is absent or null.
 - `PREDICTIONS_COMMITTED`: prediction bytes and target identity hashed and
-  immutable.
+  immutable; `sealed_key_digest` remains absent or null.
 - `BLINDED_CHECKED`: execution record confirms that the public runner was not
   given the key content, key path, or expected outcomes, and leakage checks
   passed. The public runner may receive the opaque commitment in the public
-  manifest.
-- `SCORED`: scorer opened the synthetic key after all prior checks.
+  manifest. `sealed_key_digest` remains absent or null.
+- `SCORED`: only after `PREDICTIONS_COMMITTED` and `BLINDED_CHECKED`, the
+  scorer may open the synthetic key. The canonical `sealed_key_digest` is then
+  recorded in scoring/custody state and is required in the `SCORED` event.
 - `INTEGRITY_FAILED`: terminal; no score may be produced.
 
-The log records transition, timestamp-independent event sequence number,
-actor/tool identity, relevant artifact digests, and reason. No synthetic result
-may claim blinded empirical evaluation.
+Custody validation keeps the structured `sealed_key_commitment` and
+`sealed_key_digest` fields distinct: the commitment is required at `SEALED`,
+while the canonical digest is unavailable before permitted scorer access and
+required at `SCORED`. The log records transition, timestamp-independent event
+sequence number, actor/tool identity, relevant artifact digests, and reason.
+No synthetic result may claim blinded empirical evaluation.
 
 ## 6. Validation, failure propagation, and deterministic output
 
 - Validate exact schema, target type/identity, adapter registration/version,
   unique item IDs, synthetic-only provenance, matching public/key fixture-set
   IDs, exact equality of the public/key `sealed_key_commitment` values, key
-  coverage, and SHA-256 values.
+  coverage, and SHA-256 values; compute the canonical sealed-key digest only
+  after permitted scorer access.
+- Validate custody fields separately: `SEALED` requires the public opaque
+  `sealed_key_commitment` and an absent/null `sealed_key_digest`;
+  `PREDICTIONS_COMMITTED` and `BLINDED_CHECKED` also require the digest to be
+  absent/null; `SCORED` requires the canonical digest. Commitment equality is
+  checked only after permitted scorer access and is not digest verification.
 - Require exactly one prediction record per public item. A completed prediction
   has exactly one of `EMITTED`, `ABSTAINED`, `NOT_APPLICABLE`, or `UNKNOWN`;
   non-completed predictions have no emitted value and an unknown outcome.
   Prediction-state and label-state partitions are validated independently.
-- Public target execution must finish and the prediction digest must be
-  committed before scorer access. If label-key content is available to target
-  execution, or the public/key commitments mismatch after key access, fail
-  integrity checks and do not score.
+- Public target execution must finish, the prediction digest must be committed,
+  and `BLINDED_CHECKED` must pass before scorer access. If label-key content is
+  available to target execution, or the public/key commitments mismatch after
+  permitted key access, fail integrity checks and do not score.
 - Run grouping checks before scoring. Leakage, target identity mismatch,
   hidden-label access, corrupted key, public/key commitment mismatch, or
   changed prediction digest yields M16 result `INTEGRITY_FAILED`; the M1 stage
@@ -235,11 +251,12 @@ commitment, prediction digest, scoring implementation/version, contract
 semantic version, and all output hashes.
 
 The target-execution identity excludes the sealed key content and expected
-outcomes; it includes only the public-manifest digest and sealed-key
-commitment supplied by the custodian. This commitment is distinct from the
-canonical sealed-key digest: M16 does not derive one from the other or treat
-commitment equality as cryptographic verification. The scoring identity
-additionally binds the canonical sealed-key digest and committed prediction
+outcomes; it includes only the public-manifest digest and opaque
+`sealed_key_commitment` supplied by the custodian. This commitment is distinct
+from the canonical sealed-key digest: M16 does not derive one from the other or
+treat commitment equality as cryptographic verification. The scoring identity
+additionally binds the canonical sealed-key digest, available only after
+`PREDICTIONS_COMMITTED` and `BLINDED_CHECKED`, and the committed prediction
 digest. A target/config/adapter/fixture change invalidates M16 only; it does not
 rewrite M12–M15 outputs. Reuse requires all identities and output hashes to
 match.
