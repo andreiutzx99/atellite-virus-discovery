@@ -6,10 +6,13 @@ They do not encode biological classes, truth, or performance claims.
 
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_EVEN
+import errno
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
 
 
 PUBLIC_MANIFEST_SCHEMA = "m16-public-manifest-v1"
@@ -90,6 +93,10 @@ class M16OutOfScopeError(ValueError):
 
 class M16IntegrityError(ValueError):
     """A terminal M16 custody or target-integrity condition was detected."""
+
+
+class M16PathSecurityError(ValueError):
+    """A filesystem input changed or traversed a link while being opened."""
 
 
 @dataclass(frozen=True)
@@ -324,6 +331,199 @@ def resolve_relative_path(root, value, label, *, require_file=False):
     if require_file and (not candidate.is_file() or candidate.is_symlink()):
         raise ValueError(f"{label} must name a regular file")
     return candidate
+
+
+def _is_reparse_point(info):
+    reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return (
+        stat.S_ISLNK(info.st_mode)
+        or bool(getattr(info, "st_file_attributes", 0) & reparse_point)
+    )
+
+
+def _stat_identity(info, label):
+    device = getattr(info, "st_dev", None)
+    inode = getattr(info, "st_ino", None)
+    if not isinstance(inode, int) or inode == 0:
+        raise M16PathSecurityError(
+            f"{label} filesystem does not provide a stable file identity"
+        )
+    return device, inode
+
+
+def _check_path_component(info, label, *, directory):
+    if _is_reparse_point(info):
+        raise M16PathSecurityError(
+            f"{label} must not traverse a symbolic link or reparse point"
+        )
+    if directory and not stat.S_ISDIR(info.st_mode):
+        raise M16PathSecurityError(
+            f"{label} contains a non-directory path component"
+        )
+    if not directory and not stat.S_ISREG(info.st_mode):
+        raise M16PathSecurityError(f"{label} must name a regular file")
+
+
+def _open_posix_regular_file(path, label):
+    """Open every path component relative to pinned, no-follow directory fds."""
+    absolute = Path(os.path.abspath(os.fspath(path)))
+    parts = absolute.parts
+    if len(parts) < 2 or not absolute.anchor:
+        raise M16PathSecurityError(f"{label} must name an absolute regular file")
+    if (
+        not hasattr(os, "O_NOFOLLOW")
+        or not hasattr(os, "O_DIRECTORY")
+        or os.open not in getattr(os, "supports_dir_fd", set())
+    ):
+        raise M16PathSecurityError(
+            f"{label} cannot be opened with race-resistant no-follow semantics"
+        )
+
+    common_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    directory_flags = common_flags | os.O_DIRECTORY | os.O_NOFOLLOW
+    current_fd = None
+    file_fd = None
+    try:
+        current_fd = os.open(absolute.anchor, directory_flags)
+        _check_path_component(os.fstat(current_fd), label, directory=True)
+        for part in parts[1:-1]:
+            next_fd = None
+            try:
+                next_fd = os.open(
+                    part, directory_flags, dir_fd=current_fd
+                )
+                _check_path_component(
+                    os.fstat(next_fd), label, directory=True
+                )
+            except Exception:
+                if next_fd is not None:
+                    os.close(next_fd)
+                raise
+            os.close(current_fd)
+            current_fd = next_fd
+        file_fd = os.open(
+            parts[-1],
+            common_flags | os.O_NOFOLLOW,
+            dir_fd=current_fd,
+        )
+        _check_path_component(os.fstat(file_fd), label, directory=False)
+        return file_fd
+    except OSError as error:
+        if file_fd is not None:
+            os.close(file_fd)
+            file_fd = None
+        if error.errno in {errno.ELOOP, errno.ENOTDIR}:
+            raise M16PathSecurityError(
+                f"{label} must not traverse a symbolic link or non-directory"
+            ) from error
+        raise
+    except Exception:
+        if file_fd is not None:
+            os.close(file_fd)
+        raise
+    finally:
+        if current_fd is not None:
+            os.close(current_fd)
+
+
+def _windows_path_snapshot(path, label):
+    absolute = Path(os.path.abspath(os.fspath(path)))
+    if not absolute.anchor:
+        raise M16PathSecurityError(f"{label} must name an absolute regular file")
+    parts = absolute.parts
+    if len(parts) < 2:
+        raise M16PathSecurityError(f"{label} must name a regular file")
+
+    current = Path(absolute.anchor)
+    root_info = current.lstat()
+    _check_path_component(root_info, label, directory=True)
+    snapshots = [(current, _stat_identity(root_info, label), True)]
+    remaining = parts[1:]
+    for index, part in enumerate(remaining):
+        current = current / part
+        info = current.lstat()
+        is_directory = index < len(remaining) - 1
+        _check_path_component(info, label, directory=is_directory)
+        snapshots.append((current, _stat_identity(info, label), is_directory))
+    return absolute, snapshots
+
+
+def _open_windows_regular_file(path, label):
+    """Use Windows file IDs to detect a path/reparse swap around CreateFile."""
+    absolute, snapshots = _windows_path_snapshot(path, label)
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_NOINHERIT", 0)
+    )
+    file_fd = None
+    try:
+        file_fd = os.open(os.fspath(absolute), flags)
+        opened = os.fstat(file_fd)
+        _check_path_component(opened, label, directory=False)
+        if _stat_identity(opened, label) != snapshots[-1][1]:
+            raise M16PathSecurityError(
+                f"{label} changed while its file handle was being opened"
+            )
+        for component, expected_identity, is_directory in snapshots:
+            observed = component.lstat()
+            _check_path_component(
+                observed, label, directory=is_directory
+            )
+            if _stat_identity(observed, label) != expected_identity:
+                raise M16PathSecurityError(
+                    f"{label} path changed while its file handle was being opened"
+                )
+        return file_fd
+    except Exception:
+        if file_fd is not None:
+            os.close(file_fd)
+        raise
+
+
+def read_regular_file(path, *, label="M16 input", maximum=JSON_LIMIT):
+    """Read one regular file without following links or accepting a path swap."""
+    absolute = Path(os.path.abspath(os.fspath(path)))
+    if os.name == "nt":
+        file_fd = _open_windows_regular_file(absolute, label)
+    else:
+        file_fd = _open_posix_regular_file(absolute, label)
+
+    try:
+        before = os.fstat(file_fd)
+        chunks = []
+        total = 0
+        while True:
+            request_size = 64 * 1024
+            if maximum is not None:
+                request_size = min(request_size, maximum + 1 - total)
+                if request_size <= 0:
+                    raise ValueError(f"{label} exceeds the size limit")
+            block = os.read(file_fd, request_size)
+            if not block:
+                break
+            chunks.append(block)
+            total += len(block)
+            if maximum is not None and total > maximum:
+                raise ValueError(f"{label} exceeds the size limit")
+        after = os.fstat(file_fd)
+        if (
+            _stat_identity(before, label) != _stat_identity(after, label)
+            or before.st_size != after.st_size
+        ):
+            raise M16PathSecurityError(
+                f"{label} changed while its contents were being read"
+            )
+        return b"".join(chunks)
+    finally:
+        os.close(file_fd)
+
+
+def read_relative_file(root, value, *, label="M16 input", maximum=JSON_LIMIT):
+    """Read a normalized relative file while pinning or validating its identity."""
+    safe_relative_path(value, label)
+    path = Path(root).joinpath(*PurePosixPath(value).parts)
+    return read_regular_file(path, label=label, maximum=maximum)
 
 
 def _exact_object(value, keys, label):

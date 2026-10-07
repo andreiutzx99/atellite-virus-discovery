@@ -114,6 +114,140 @@ def _input_path(inputs, name):
 
 
 def _load_m15_target(public_manifest_path, target_bundle_path, target_ref):
+    workflow_root = Path(public_manifest_path).parent
+    bundle_root_ref = m16_contracts.safe_relative_path(
+        target_ref["bundle_root_ref"], "M16 bundle_root_ref"
+    )
+    m16_contracts.resolve_relative_path(
+        workflow_root, bundle_root_ref, "M16 bundle_root_ref"
+    )
+    artifact_path = m16_contracts.safe_relative_path(
+        target_ref["artifact_path"], "M16 artifact_path"
+    )
+    expected_bundle_path = workflow_root.joinpath(
+        *PurePosixPath(bundle_root_ref).parts,
+        *PurePosixPath(artifact_path).parts,
+    )
+    supplied_path = Path(target_bundle_path)
+    if os.path.normcase(os.path.abspath(supplied_path)) != os.path.normcase(
+        os.path.abspath(expected_bundle_path)
+    ):
+        raise M16IntegrityError(
+            "INTEGRITY_FAILED: target_bundle input does not match target_ref.artifact_path"
+        )
+
+    execution_ref = target_ref["producer_execution_ref"]
+    workflow_ref = execution_ref["producer_workflow_ref"]
+    workflow_relative_path = m16_contracts.safe_relative_path(
+        workflow_ref["path"], "M16 producer workflow path"
+    )
+    workflow_input_relative_path = (
+        PurePosixPath(bundle_root_ref) / workflow_relative_path
+    ).as_posix()
+    workflow_raw = m16_contracts.read_relative_file(
+        workflow_root,
+        workflow_input_relative_path,
+        label="M16 producer workflow",
+        maximum=m16_contracts.JSON_LIMIT,
+    )
+    if hashlib.sha256(workflow_raw).hexdigest() != workflow_ref["sha256"]:
+        raise M16IntegrityError(
+            "INTEGRITY_FAILED: producer workflow digest mismatch"
+        )
+    # Authenticate the producer's exact workflow bytes before accepting its
+    # CRLF text-mode newlines for parsing.
+    workflow = m16_contracts.parse_json_bytes(
+        workflow_raw.replace(b"\r\n", b"\n"),
+        label="M15 producer workflow manifest",
+    )
+    stages = workflow.get("stages")
+    if not isinstance(stages, list):
+        raise M16IntegrityError("INTEGRITY_FAILED: producer workflow stages are invalid")
+    selected = [
+        stage for stage in stages
+        if isinstance(stage, dict)
+        and stage.get("id") == execution_ref["producer_stage_id"]
+    ]
+    if len(selected) != 1:
+        raise M16IntegrityError(
+            "INTEGRITY_FAILED: selected M15 producer stage is missing or ambiguous"
+        )
+    stage = selected[0]
+
+    snapshot_files = [
+        workflow_relative_path,
+        artifact_path,
+    ]
+    companion_snapshot_paths = set()
+    stage_output = stage.get("output_path")
+    if stage.get("status") == "complete" and stage.get("kind") == "m15_evidence_dossier":
+        if not isinstance(stage_output, str):
+            raise M16IntegrityError(
+                "INTEGRITY_FAILED: M15 stage output path is missing"
+            )
+        stage_output = m16_contracts.safe_relative_path(
+            stage_output, "M15 workflow stage output_path"
+        )
+        snapshot_files.extend([
+            (PurePosixPath(stage_output) / "manifest.json").as_posix(),
+            *(
+                (PurePosixPath(stage_output) / filename).as_posix()
+                for filename in _M15_COMPANIONS
+            ),
+        ])
+        companion_snapshot_paths = {
+            (PurePosixPath(stage_output) / filename).as_posix()
+            for filename in _M15_COMPANIONS
+        }
+
+    with tempfile.TemporaryDirectory(prefix="m16-m15-input-") as snapshot_directory:
+        snapshot_root = Path(snapshot_directory)
+        snapshot_bundle_root = snapshot_root.joinpath(
+            *PurePosixPath(bundle_root_ref).parts
+        )
+        for relative_path in dict.fromkeys(snapshot_files):
+            relative_path = m16_contracts.safe_relative_path(
+                relative_path, "M16 M15 snapshot path"
+            )
+            if relative_path == workflow_relative_path:
+                raw = workflow_raw
+            else:
+                input_relative_path = (
+                    PurePosixPath(bundle_root_ref) / relative_path
+                ).as_posix()
+                try:
+                    raw = m16_contracts.read_relative_file(
+                        workflow_root,
+                        input_relative_path,
+                        label=f"M16 M15 input {relative_path}",
+                        maximum=m16_contracts.JSON_LIMIT,
+                    )
+                except FileNotFoundError as error:
+                    if relative_path in companion_snapshot_paths:
+                        raise M16IntegrityError(
+                            "INTEGRITY_FAILED: M15 companion is missing: "
+                            f"{relative_path}"
+                        ) from error
+                    raise
+            snapshot_path = snapshot_bundle_root.joinpath(
+                *PurePosixPath(relative_path).parts
+            )
+            snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+            snapshot_path.write_bytes(raw)
+
+        snapshot_bundle_path = snapshot_bundle_root.joinpath(
+            *PurePosixPath(artifact_path).parts
+        )
+        return _load_m15_target_from_snapshot(
+            snapshot_root / "m16-public-manifest.json",
+            snapshot_bundle_path,
+            target_ref,
+        )
+
+
+def _load_m15_target_from_snapshot(
+    public_manifest_path, target_bundle_path, target_ref
+):
     root = m16_contracts.resolve_relative_path(
         public_manifest_path.parent,
         target_ref["bundle_root_ref"],
@@ -404,29 +538,29 @@ def _query_semantics(manifest_path, manifest):
             "semantic_sha256": None,
         }
         try:
-            query_path = m16_contracts.resolve_relative_path(
+            m16_contracts.resolve_relative_path(
                 root, ref["path"], f"target input for {item_id}",
             )
-            if query_path.is_symlink():
-                raise ValueError("QUERY_PATH_UNSAFE")
-            if not query_path.is_file():
+            query_raw = m16_contracts.read_relative_file(
+                root,
+                ref["path"],
+                label=f"M16 query {item_id}",
+                maximum=m16_contracts.JSON_LIMIT,
+            )
+            query_value = m16_contracts.validate_query(
+                m16_contracts.parse_json_bytes(
+                    query_raw, label=f"M16 query {item_id}"
+                )
+            )
+            digest = m16_contracts.semantic_sha256(query_value)
+            if digest != ref["sha256"]:
                 record.update(
-                    status="DEPENDENCY_UNAVAILABLE",
-                    reason_code="QUERY_INPUT_UNAVAILABLE",
+                    status="INVALID_INPUT",
+                    reason_code="QUERY_DIGEST_MISMATCH",
                 )
             else:
-                query_value = m16_contracts.validate_query(
-                    m16_contracts.read_json(query_path, label=f"M16 query {item_id}")
-                )
-                digest = m16_contracts.semantic_sha256(query_value)
-                if digest != ref["sha256"]:
-                    record.update(
-                        status="INVALID_INPUT",
-                        reason_code="QUERY_DIGEST_MISMATCH",
-                    )
-                else:
-                    record["query"] = query_value
-                    record["semantic_sha256"] = digest
+                record["query"] = query_value
+                record["semantic_sha256"] = digest
         except FileNotFoundError:
             record.update(
                 status="DEPENDENCY_UNAVAILABLE",
@@ -470,8 +604,11 @@ def build_stage_context(inputs, *, workflow_root=None):
             "target": None,
             "query_inputs": {},
         }
-    public_manifest_path = public_manifest_path.resolve(strict=True)
-    public_raw = public_manifest_path.read_bytes()
+    public_raw = m16_contracts.read_regular_file(
+        public_manifest_path,
+        label="M16 public manifest",
+        maximum=m16_contracts.JSON_LIMIT,
+    )
     public_value = m16_contracts.validate_public_manifest(
         m16_contracts.parse_json_bytes(public_raw, label="M16 public manifest")
     )
@@ -844,20 +981,23 @@ def _write_document(folder, filename, value):
     return path, digest
 
 
-def _load_existing(output, cache_identity):
+def _load_existing(output, cache_identity, expected_output_hashes):
     output = Path(output)
     marker = output / "manifest.json"
     if marker.is_symlink() or not marker.is_file():
         return None
     try:
         manifest = m16_contracts.read_json(marker, label="M16 stage manifest")
+        cached_output_hashes = manifest.get("output_sha256")
         if (
             manifest.get("schema") != "m16-stage-manifest-v1"
             or manifest.get("status") != "complete"
             or manifest.get("stage") != STAGE_KIND
             or manifest.get("stage_version") != STAGE_VERSION
             or manifest.get("identity") != cache_identity
-            or set(manifest.get("output_sha256", {})) != set(OUTPUT_CONTRACTS)
+            or not isinstance(cached_output_hashes, dict)
+            or set(cached_output_hashes) != set(OUTPUT_CONTRACTS)
+            or cached_output_hashes != expected_output_hashes
         ):
             return None
         for name, artifact_type in OUTPUT_CONTRACTS.items():
@@ -866,7 +1006,7 @@ def _load_existing(output, cache_identity):
                 path.is_symlink()
                 or not path.is_file()
                 or m16_contracts.sha256_file(path)
-                    != manifest["output_sha256"].get(name)
+                    != cached_output_hashes.get(name)
             ):
                 return None
             artifact_contracts.validate_artifact(path, artifact_type)
@@ -1111,7 +1251,7 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
     _write_document(temporary, "custody_log.json", _custody_document(events))
 
     key_path = _input_path(inputs, "sealed_key")
-    if key_path is None or key_path.is_symlink() or not key_path.is_file():
+    if key_path is None:
         _terminal_failure(
             output, temporary, events,
             "SEALED_KEY_UNAVAILABLE_OR_UNSAFE",
@@ -1119,8 +1259,21 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
             prediction_digest=prediction_digest,
         )
     try:
-        key_value = m16_contracts.read_json(
-            key_path, label="M16 sealed synthetic key"
+        key_raw = m16_contracts.read_regular_file(
+            key_path,
+            label="M16 sealed synthetic key",
+            maximum=m16_contracts.JSON_LIMIT,
+        )
+    except (FileNotFoundError, m16_contracts.M16PathSecurityError):
+        _terminal_failure(
+            output, temporary, events,
+            "SEALED_KEY_UNAVAILABLE_OR_UNSAFE",
+            target_digest=target_digest,
+            prediction_digest=prediction_digest,
+        )
+    try:
+        key_value = m16_contracts.parse_json_bytes(
+            key_raw, label="M16 sealed synthetic key"
         )
         key = m16_contracts.validate_synthetic_key(key_value, public_manifest)
         for row in key["items"]:
@@ -1244,7 +1397,9 @@ def _run_stage_impl(inputs, output, config, *, workflow_context=None, temp_root)
         "output_sha256": output_hashes,
     }
     m16_contracts.write_json(temporary / "manifest.json", stage_manifest)
-    existing = _load_existing(output, stage_cache_identity)
+    existing = _load_existing(
+        output, stage_cache_identity, output_hashes
+    )
     if existing is not None:
         shutil.rmtree(temp_root, ignore_errors=True)
         return existing

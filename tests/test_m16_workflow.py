@@ -1,5 +1,7 @@
 import json
+import os
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest import mock
@@ -326,13 +328,17 @@ class M16WorkflowTests(unittest.TestCase):
         )
 
         events = []
-        original_read_json = m16_contracts.read_json
+        original_read_regular_file = m16_contracts.read_regular_file
         original_commit_hook = m16_stage._after_prediction_commit
 
-        def monitored_read(path, *, label="M16 JSON", maximum=m16_contracts.JSON_LIMIT):
+        def monitored_read(
+            path, *, label="M16 input", maximum=m16_contracts.JSON_LIMIT
+        ):
             if label == "M16 sealed synthetic key":
                 events.append("key-opened")
-            return original_read_json(path, label=label, maximum=maximum)
+            return original_read_regular_file(
+                path, label=label, maximum=maximum
+            )
 
         def committed(path):
             self.assertTrue(Path(path).is_file())
@@ -340,7 +346,11 @@ class M16WorkflowTests(unittest.TestCase):
             original_commit_hook(path)
 
         with (
-            mock.patch.object(m16_contracts, "read_json", side_effect=monitored_read),
+            mock.patch.object(
+                m16_contracts,
+                "read_regular_file",
+                side_effect=monitored_read,
+            ),
             mock.patch.object(m16_stage, "_after_prediction_commit", side_effect=committed),
         ):
             output, workflow, stage = self._run_m16(paths)
@@ -476,6 +486,270 @@ class M16WorkflowTests(unittest.TestCase):
         self.assertFalse((stage_output / "result_bundle.json").exists())
         custody = m16_contracts.read_json(stage_output / "custody_log.json")
         self.assertEqual(custody["terminal_state"], "INTEGRITY_FAILED")
+
+    def test_coherently_rehashed_cache_is_replaced_by_fresh_predictions(self):
+        paths = self._make_m16_inputs()
+        output, _workflow, first_stage = self._run_m16(paths)
+        stage_output = output / first_stage["output_path"]
+
+        prediction_path = stage_output / "predictions.json"
+        predictions = m16_contracts.read_json(prediction_path)
+        predictions["rows"][0]["emitted_value"]["compatibility_warnings"].append(
+            "coherently rehashed cache mutation"
+        )
+        m16_contracts.write_json(prediction_path, predictions)
+        prediction_digest = m16_contracts.sha256_file(prediction_path)
+
+        result_path = stage_output / "result_bundle.json"
+        result_bundle = m16_contracts.read_json(result_path)
+        result_bundle["prediction_sha256"] = prediction_digest
+        result_bundle["scoring_identity"][
+            "committed_prediction_sha256"
+        ] = prediction_digest
+        result_bundle["outputs"]["predictions.json"]["sha256"] = (
+            prediction_digest
+        )
+        m16_contracts.write_json(result_path, result_bundle)
+
+        manifest_path = stage_output / "manifest.json"
+        manifest = m16_contracts.read_json(manifest_path)
+        manifest["output_sha256"] = {
+            name: m16_contracts.sha256_file(stage_output / name)
+            for name in m16_contracts.OUTPUT_CONTRACTS
+        }
+        m16_contracts.write_json(manifest_path, manifest)
+        self.assertTrue(m16_stage._existing_output_is_valid(stage_output))
+
+        output, _workflow, second_stage = self._run_m16(paths)
+        second_output = output / second_stage["output_path"]
+        restored_predictions = m16_contracts.read_json(
+            second_output / "predictions.json"
+        )
+        self.assertEqual(second_stage["status"], "complete")
+        self.assertEqual(second_stage["execution"], "executed")
+        self.assertEqual(
+            restored_predictions["rows"][0]["emitted_value"], paths["expected"]
+        )
+        self.assertNotIn(
+            "coherently rehashed cache mutation",
+            restored_predictions["rows"][0]["emitted_value"][
+                "compatibility_warnings"
+            ],
+        )
+        metrics = m16_contracts.read_json(
+            second_output / "metric_summary.json"
+        )
+        self.assertEqual(metrics["n_exact_match"], 1)
+
+    def test_bundle_root_swap_after_validation_is_rejected_before_scoring(self):
+        paths = self._make_m16_inputs()
+        bundle_root = paths["m15_output"]
+        backup_root = self.root / "m15-output-original"
+        external_copy = self.root / "m15-output-external"
+        shutil.copytree(bundle_root, external_copy)
+        symlink_probe = self.root / ".m16-directory-link-probe"
+        try:
+            os.symlink(external_copy, symlink_probe, target_is_directory=True)
+        except (NotImplementedError, OSError) as error:
+            self.skipTest(
+                f"directory symlink/junction creation is unavailable: {error}"
+            )
+        else:
+            symlink_probe.unlink()
+        original_resolver = m16_contracts.resolve_relative_path
+        swapped = False
+
+        def validate_then_swap(root, value, label, **kwargs):
+            nonlocal swapped
+            result = original_resolver(root, value, label, **kwargs)
+            if label == "M16 bundle_root_ref" and not swapped:
+                os.replace(bundle_root, backup_root)
+                try:
+                    os.symlink(
+                        external_copy, bundle_root, target_is_directory=True
+                    )
+                except (NotImplementedError, OSError) as error:
+                    os.replace(backup_root, bundle_root)
+                    raise unittest.SkipTest(
+                        f"directory symlink/junction creation is unavailable: {error}"
+                    ) from error
+                swapped = True
+            return result
+
+        try:
+            with mock.patch.object(
+                m16_contracts,
+                "resolve_relative_path",
+                side_effect=validate_then_swap,
+            ):
+                with self.assertRaises(m16_contracts.M16IntegrityError):
+                    self._run_m16(paths)
+        finally:
+            if bundle_root.is_symlink():
+                bundle_root.unlink()
+            if backup_root.exists():
+                os.replace(backup_root, bundle_root)
+            shutil.rmtree(external_copy, ignore_errors=True)
+
+        self.assertTrue(swapped)
+        self.assertEqual(
+            list((self.root / "m16-output").rglob("metric_summary.json")), []
+        )
+
+    def test_query_path_swap_after_validation_never_loads_external_query(self):
+        paths = self._make_m16_inputs()
+        query_relative_path = paths["public_manifest"]["items"][0][
+            "target_input_ref"
+        ]["path"]
+        query_path = self.root / query_relative_path
+        backup_path = self.root / "validated-query-original.json"
+        external_path = self.root / "external-query.json"
+        m16_contracts.write_json(external_path, {
+            "schema": m16_contracts.QUERY_SCHEMA,
+            "evidence_ids": ["external-evidence"],
+        })
+        symlink_probe = self.root / ".m16-file-link-probe"
+        try:
+            os.symlink(external_path, symlink_probe)
+        except (NotImplementedError, OSError) as error:
+            self.skipTest(f"file symlink creation is unavailable: {error}")
+        else:
+            symlink_probe.unlink()
+        original_resolver = m16_contracts.resolve_relative_path
+        swapped = False
+
+        def validate_then_swap(root, value, label, **kwargs):
+            nonlocal swapped
+            result = original_resolver(root, value, label, **kwargs)
+            if label == "target input for item-a" and not swapped:
+                os.replace(query_path, backup_path)
+                try:
+                    os.symlink(external_path, query_path)
+                except (NotImplementedError, OSError) as error:
+                    os.replace(backup_path, query_path)
+                    raise unittest.SkipTest(
+                        f"file symlink creation is unavailable: {error}"
+                    ) from error
+                swapped = True
+            return result
+
+        try:
+            with mock.patch.object(
+                m16_contracts,
+                "resolve_relative_path",
+                side_effect=validate_then_swap,
+            ):
+                context = m16_stage.build_stage_context({
+                    "public_manifest": paths["public_path"],
+                    "target_bundle": paths["bundle_path"],
+                })
+        finally:
+            if query_path.is_symlink():
+                query_path.unlink()
+            if backup_path.exists():
+                os.replace(backup_path, query_path)
+            external_path.unlink(missing_ok=True)
+
+        self.assertTrue(swapped)
+        query_record = context["query_inputs"]["item-a"]
+        self.assertEqual(query_record["status"], "INVALID_INPUT")
+        self.assertEqual(query_record["reason_code"], "QUERY_PATH_UNSAFE")
+        self.assertIsNone(query_record["query"])
+        self.assertEqual(context["target_status"], "AVAILABLE")
+
+    def test_sealed_key_path_swap_is_rejected_after_prediction_commit(self):
+        paths = self._make_m16_inputs()
+        key_path = paths["key_path"]
+        backup_path = self.root / "sealed-key-original.json"
+        external_path = self.root / "external-sealed-key.json"
+        shutil.copyfile(key_path, external_path)
+        symlink_probe = self.root / ".m16-key-link-probe"
+        try:
+            os.symlink(external_path, symlink_probe)
+        except (NotImplementedError, OSError) as error:
+            self.skipTest(f"file symlink creation is unavailable: {error}")
+        else:
+            symlink_probe.unlink()
+        events = []
+        key_swapped = False
+        original_reader = m16_contracts.read_regular_file
+        original_commit_hook = m16_stage._after_prediction_commit
+
+        def committed(path):
+            events.append("predictions-committed")
+            original_commit_hook(path)
+
+        def swap_then_read(path, *, label="M16 input", maximum=m16_contracts.JSON_LIMIT):
+            nonlocal key_swapped
+            if label == "M16 sealed synthetic key":
+                events.append("sealed-key-open-attempt")
+                os.replace(key_path, backup_path)
+                try:
+                    os.symlink(external_path, key_path)
+                except (NotImplementedError, OSError) as error:
+                    os.replace(backup_path, key_path)
+                    raise unittest.SkipTest(
+                        f"file symlink creation is unavailable: {error}"
+                    ) from error
+                key_swapped = True
+            return original_reader(path, label=label, maximum=maximum)
+
+        try:
+            with (
+                mock.patch.object(
+                    m16_contracts,
+                    "read_regular_file",
+                    side_effect=swap_then_read,
+                ),
+                mock.patch.object(
+                    m16_stage,
+                    "_after_prediction_commit",
+                    side_effect=committed,
+                ),
+                self.assertRaises(m16_contracts.M16IntegrityError),
+            ):
+                self._run_m16(paths)
+        finally:
+            if key_path.is_symlink():
+                key_path.unlink()
+            if backup_path.exists():
+                os.replace(backup_path, key_path)
+            external_path.unlink(missing_ok=True)
+
+        self.assertEqual(
+            events, ["predictions-committed", "sealed-key-open-attempt"]
+        )
+        self.assertTrue(key_swapped)
+        output = self.root / "m16-output"
+        workflow = json.loads((output / "workflow.json").read_text())
+        failed_stage = next(
+            row for row in workflow["stages"] if row["id"] == "m16-fixture"
+        )
+        stage_output = output / failed_stage["output_path"]
+        custody = m16_contracts.read_json(stage_output / "custody_log.json")
+        self.assertEqual(custody["terminal_state"], "INTEGRITY_FAILED")
+        self.assertFalse((stage_output / "metric_summary.json").exists())
+        self.assertFalse((stage_output / "result_bundle.json").exists())
+
+    def test_windows_file_identity_fallback_rejects_substituted_handle(self):
+        validated_path = self.root / "validated-input.json"
+        external_path = self.root / "external-input.json"
+        validated_path.write_bytes(b'{"source":"in-root"}')
+        external_path.write_bytes(b'{"source":"outside"}')
+        original_open = os.open
+
+        def substitute_open(path, flags, *args, **kwargs):
+            if Path(path) == validated_path:
+                return original_open(external_path, flags, *args, **kwargs)
+            return original_open(path, flags, *args, **kwargs)
+
+        with mock.patch.object(
+            m16_contracts.os, "open", side_effect=substitute_open
+        ):
+            with self.assertRaises(m16_contracts.M16PathSecurityError):
+                m16_contracts._open_windows_regular_file(
+                    validated_path, "test input"
+                )
 
     def test_interruption_after_prediction_commit_leaves_no_scored_artifact(self):
         paths = self._make_m16_inputs()
