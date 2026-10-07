@@ -151,6 +151,11 @@ synthetic `target_input_ref`, sorted `group_ids`, a generic `split_role`,
 
 The commitment is an opaque custodian-supplied identifier. M16 v1 does not
 define its generation and must not derive it from sealed-key contents.
+The `SEALED` custody event requires this commitment in a structured
+`sealed_key_commitment` field copied from the public manifest; it is not a
+digest. `SEALED` must not read, open, or hash the sealed key, and
+`sealed_key_digest` is absent or null in `SEALED` and remains so through
+`PREDICTIONS_COMMITTED` and `BLINDED_CHECKED`.
 
 Allowed split roles are `DEVELOPMENT`, `TUNING`, `SYNTHETIC_HOLDOUT`, and
 `UNASSIGNED`. They exercise generic split mechanics only; they do not select
@@ -158,17 +163,19 @@ real partitions.
 
 ### Sealed synthetic key
 
-Validate separately hashed UTF-8 JSON with schema `m16-synthetic-key-v1`,
-matching `fixture_set_id` and the exact `sealed_key_commitment` value from the
-public manifest, and one entry per labelled item. Each entry has `item_id`, an
-adapter-defined opaque `expected_software_outcome`, and
-`label_scope = "SOFTWARE_CONTRACT"`. `UNKNOWN` and `NOT_APPLICABLE` items have
-no expected outcome. The public execution path may receive the opaque
-commitment from the public manifest, but must never receive sealed-key
-contents, expected outcomes, or the sealed-key path. After predictions are
-committed and the key is opened, the scorer checks exact commitment equality
-before scoring; mismatch is `INTEGRITY_FAILED` and emits no metrics. Equality
-is not cryptographic verification
+At permitted scorer access, validate the UTF-8 JSON with schema
+`m16-synthetic-key-v1`, matching `fixture_set_id` and the exact
+`sealed_key_commitment` value from the public manifest, and one entry per
+labelled item. Each entry has `item_id`, an adapter-defined opaque
+`expected_software_outcome`, and `label_scope = "SOFTWARE_CONTRACT"`.
+`UNKNOWN` and `NOT_APPLICABLE` items have no expected outcome. The public
+execution path may receive the opaque commitment from the public manifest, but
+must never receive sealed-key contents, expected outcomes, or the sealed-key
+path. After predictions are committed and `BLINDED_CHECKED` passes, the scorer
+may open and hash the key and check exact commitment equality before scoring.
+After opening, it records the canonical digest in scoring/custody state;
+`SCORED` requires that digest. Mismatch is `INTEGRITY_FAILED` and emits no
+metrics. Equality is not cryptographic verification
 ([M16 contract](../M16_CONTRACT_FREEZE.md#3-input-manifests-and-hidden-label-boundary)).
 
 ### Output artifacts
@@ -179,7 +186,7 @@ Register these exact output types:
 | --- | --- |
 | `m16_prediction_table` | One prediction row per public item, target provenance, execution/outcome state, and no emitted value for non-completed rows. |
 | `m16_leakage_report` | Group/split checks, offending IDs, deterministic status, and score-blocking reason when leakage is detected. |
-| `m16_custody_log` | Append-only, sequence-numbered transitions with actor/tool identity, relevant digests, and reason. |
+| `m16_custody_log` | Append-only, sequence-numbered transitions with actor/tool identity, separate structured commitment and canonical-digest fields at their permitted states, relevant digests, and reason. |
 | `m16_metric_summary` | Independent item/prediction and label axes, exact counts, denominator-aware rates, and software-fixture scope. |
 | `m16_result_bundle` | Public/key commitments, target and adapter identities, prediction/scoring digests, custody evidence, output references, and cache-relevant identity. |
 
@@ -198,6 +205,10 @@ input.
 - unique item IDs and one key row per labelled item;
 - matching public/key fixture-set IDs and exact `sealed_key_commitment` values
   after the scorer opens the sealed key;
+- distinct custody fields: `SEALED` requires the opaque commitment and an
+  absent/null `sealed_key_digest`; the digest stays absent/null through
+  `PREDICTIONS_COMMITTED` and `BLINDED_CHECKED`; `SCORED` requires the canonical
+  digest;
 - accepted M12–M15 target type, producer identity, run-manifest digest,
   semantic version, output digest, relative path, and target implementation/
   configuration identity;
@@ -210,7 +221,8 @@ input.
 - completed outcome states (`EMITTED`, `ABSTAINED`, `NOT_APPLICABLE`,
   `UNKNOWN`) versus null/unknown outcomes for non-completed execution;
 - independent item-state and label-state partitions;
-- custody transition order and terminal integrity failure;
+- custody transition order, required `SEALED` commitment, digest availability
+  only after the scorer gate, and terminal integrity failure;
 - no metrics after leakage, blinding, target-digest, key, or prediction
   integrity failure.
 
@@ -256,8 +268,9 @@ source and contract dependencies; do not add M16 source files to upstream
 inventories or alter current M1–M15 identities.
 
 Target execution identity excludes sealed key content and expected outcomes,
-but includes the sealed-key commitment. Scoring identity additionally binds the
-canonical sealed-key digest and committed prediction digest. Any target,
+but includes the opaque sealed-key commitment, not the canonical digest.
+Scoring identity additionally binds the canonical sealed-key digest (only after
+the scorer gate) and committed prediction digest. Any target,
 fixture, adapter, config, scoring, or contract change invalidates M16 only; it
 must not rewrite or
 invalidate M12–M15 outputs ([M16 contract](../M16_CONTRACT_FREEZE.md), lines
@@ -276,7 +289,7 @@ The following cases are required:
 | Label-state isolation | `SEALED_SYNTHETIC_EXPECTATION`, `UNKNOWN`, and `NOT_APPLICABLE`; unknown/N/A never enter `n_labelled` or a negative denominator. No empirical positive/negative labels. |
 | Matching outcomes | Fully synthetic expected outcomes with exact emitted predictions; hand-calculate `n_labelled`, `n_emitted`, `n_exact_match`, coverage, and both fixture rates. |
 | Leakage groups | Exact duplicate, near-duplicate/family, sample/run/study/lab-like groups; shared non-empty group across split roles yields `LEAKAGE_DETECTED` and blocks scoring. |
-| Custody/blinding | Key contents and path unavailable to public execution; valid `SEALED → PREDICTIONS_COMMITTED → BLINDED_CHECKED → SCORED`; premature key access, changed identity, mismatched public/key commitment, corrupt key, or post-commit prediction mutation yields terminal `INTEGRITY_FAILED` and no metrics. |
+| Custody/blinding | Key contents and path unavailable to public execution; `SEALED` records the opaque commitment but does not read/open/hash the key and has no canonical digest; digest remains absent/null through `PREDICTIONS_COMMITTED` and `BLINDED_CHECKED`; only the scorer opens the key after those gates, and `SCORED` requires its canonical digest. Premature key access, changed identity, mismatched public/key commitment, corrupt key, or post-commit prediction mutation yields terminal `INTEGRITY_FAILED` and no metrics. |
 | Execution states | Completed emitted/abstained/unknown/N/A plus `NOT_EVALUATED`, `DEPENDENCY_UNAVAILABLE`, `FAILED`, `INTERRUPTED`, `INCOMPLETE`, `TRUNCATED`, and `INVALID_INPUT`; every item remains counted once. |
 | Denominators/rates | `n_items` item axis and three-way label axis each sum correctly; zero labelled/emitted denominators serialize null rates, never zero or divide-by-zero. |
 | Target refs | Validate the frozen M12–M15 artifact-type allowlist. Enable the clarified M15 adapter only; reject wrong M15 type/schema/version, missing path, changed bytes, or identity mismatch. Do not enable M12–M14 content adapters until each has its own frozen deterministic profile. |
