@@ -417,10 +417,12 @@ class M16WorkflowTests(unittest.TestCase):
             (query_path, query),
             (paths["key_path"], key),
         ):
-            path.write_text(
-                json.dumps(value, indent=4, ensure_ascii=False) + "\n",
-                encoding="utf-8",
+            path.write_bytes(
+                (json.dumps(value, indent=4, ensure_ascii=False) + "\n").encode(
+                    "utf-8"
+                )
             )
+            self.assertNotIn(b"\r", path.read_bytes())
 
         output, _workflow, second_stage = self._run_m16(paths)
         second_output = output / second_stage["output_path"]
