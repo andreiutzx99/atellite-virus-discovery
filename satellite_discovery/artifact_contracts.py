@@ -116,6 +116,11 @@ _CONTRACTS = {
     'm15_dependency_edges': 'Explicit, provenance-bound M15 evidence relationships.',
     'm15_dossier_summary': 'Descriptive M15 supplied, absent, invalid, and unresolved counts.',
     'm15_result_bundle': 'M15 input, producer, dependency, implementation, and output provenance.',
+    'm16_prediction_table': 'Synthetic software-contract predictions committed before sealed-key scoring.',
+    'm16_leakage_report': 'Synthetic fixture split-group overlap checks and scoring block state.',
+    'm16_custody_log': 'M16 sealed-key custody transitions and bound artifact digests.',
+    'm16_metric_summary': 'Synthetic software-contract agreement and coverage counts only.',
+    'm16_result_bundle': 'M16 target, scoring, and typed sidecar identities for synthetic fixtures.',
     # M15_CACHE_NEUTRAL_END
     'report': 'A human-readable HTML report.',
     'workflow_report_json': 'Machine-readable consolidated workflow report.',
@@ -133,6 +138,8 @@ _CONTRACT_SEMANTIC_VERSIONS = {
         # M15_CACHE_NEUTRAL_BEGIN
         'm15_input_manifest', 'm15_evidence_envelope', 'm15_dependency_edges',
         'm15_dossier_summary', 'm15_result_bundle',
+        'm16_prediction_table', 'm16_leakage_report', 'm16_custody_log',
+        'm16_metric_summary', 'm16_result_bundle',
         # M15_CACHE_NEUTRAL_END
     )
 }
@@ -864,6 +871,12 @@ def validate_artifact(path, artifact_type):
     }:
         from . import m15_contracts
         details.update(m15_contracts.validate_output_file(path, artifact_type))
+    elif artifact_type in {
+        'm16_prediction_table', 'm16_leakage_report', 'm16_custody_log',
+        'm16_metric_summary', 'm16_result_bundle',
+    }:
+        from . import m16_contracts
+        details.update(m16_contracts.validate_output_file(path, artifact_type))
     # M15_CACHE_NEUTRAL_END
     elif artifact_type in {
         'm14_observation_table', 'm14_descriptive_summary', 'm14_result_bundle',
