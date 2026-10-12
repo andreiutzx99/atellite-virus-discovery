@@ -7,7 +7,7 @@ change its policy or acceptance rules.
 Run one archive accession at a time:
 
 ```sh
-python -m satellite_discovery.cli \
+python -m satellite_discovery \
   --public-virus-accession SRR12424243 \
   --public-virus hcov-229e \
   --output runs/public-virus-SRR12424243
@@ -37,8 +37,11 @@ coinfection.
 
 Strain, isolate, stock/catalogue, passage, batch, experimental laboratory,
 archive submission centre, and replicate values are retained separately when
-supported and otherwise remain `UNKNOWN`. Archive `center_name` is not
-evidence of the laboratory that prepared a biological sample.
+supported and otherwise remain `UNKNOWN`. SRA sample/study accessions
+(`SRS`/`SRP`) remain distinct from BioSample/BioProject accessions
+(`SAM*`/`PRJ*`). Archive `center_name` is not evidence of the laboratory that
+prepared a biological sample and is never serialized as an unqualified
+`laboratory` value in this profile.
 
 Identity, library suitability, complete FASTQ availability/size, and overall
 pilot readiness are separate decisions. For example, OC43 amplicon runs can

@@ -4,8 +4,10 @@
   "record": {
     "run_accession": "SRR12424243",
     "experiment_accession": "SRX8920116",
-    "sample_accession": "SAMN15776103",
-    "study_accession": "PRJNA656274",
+    "sample_accession": "SRS7176664",
+    "biosample": "SAMN15776103",
+    "study_accession": "SRP276927",
+    "bioproject": "PRJNA656274",
     "organism": "Homo sapiens",
     "attributes": {"host": "Homo sapiens"},
     "platform": "ILLUMINA",

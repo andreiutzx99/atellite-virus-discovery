@@ -4,8 +4,10 @@
   "record": {
     "run_accession": "SRR3198409",
     "experiment_accession": "SRX1608585",
-    "sample_accession": "SAMN04526166",
-    "study_accession": "PRJNA313952",
+    "sample_accession": "SRS1318115",
+    "biosample": "SAMN04526166",
+    "study_accession": "SRP071020",
+    "bioproject": "PRJNA313952",
     "organism": "Human coronavirus OC43",
     "attributes": {"isolate": "2"},
     "platform": "ILLUMINA",
