@@ -1,11 +1,10 @@
 # M16 contract freeze: synthetic benchmark and leakage harness
 
-**Contract status: FROZEN FOR GENERIC SYNTHETIC MECHANICS ONLY.** The M16
-software implementation using this contract is merged and post-merge
-validation passed. This contract defines a generated-fixture manifest,
-split/group validation, label isolation, deterministic outcome accounting,
-and custody state transitions. It does not select or execute an empirical
-benchmark.
+**Contract status: FROZEN FOR GENERIC SYNTHETIC MECHANICS ONLY.** M16 is
+**PLANNED / NOT IMPLEMENTED**. This contract defines a generated-fixture
+manifest, split/group validation, label isolation, deterministic outcome
+accounting, and custody state transitions. It does not select or execute an
+empirical benchmark.
 
 These mechanics are not the roadmap's final independent-holdout benchmark or
 claim-appropriate biological validation. Those remain outside this frozen
