@@ -2,9 +2,9 @@
 
 **Initial audit date:** 2026-10-05
 **Post-prerequisite reconciliation:** 2026-10-05
-**Current status (updated 2026-10-12):** **IMPLEMENTED (SCOPED SYNTHETIC SOFTWARE HARNESS)**. Post-merge validation passed.
+**Current verdict:** **READY FOR IMPLEMENTATION** for the frozen synthetic harness and clarified M15 adapter profile.
 
-> This report preserves the readiness audit as a historical record. Its baseline and pre-implementation conclusions below are as of 2026-10-05 and are superseded by the merged implementation and its passed post-merge validation. M16 covers synthetic software benchmarking, leakage/custody controls, and evaluation mechanics only; it is not empirical or biological validation and does not establish functional discovery.
+> The detailed findings in §§3–9 below record the earlier pre-clarification, pre-PR-#51 assessment. Section 10 is the current post-merge disposition and supersedes any conflicting blocker status in those sections.
 
 This narrow amendment changes M16 documentation only. It updates the frozen
 contract and aligns this readiness report and the implementation plan. It does
@@ -22,9 +22,8 @@ tree `b4ebcb31ca412ac01e1f3a54d700099f3e5c7eea`. This normal merge has parents
 head. The active task workspace is a divergent feature branch and is not used
 as implementation authority.
 
-At the 2026-10-05 audit baseline, the [ROADMAP](../ROADMAP.md#L14-L36)
-marked M1–M15 implemented within their stated scopes and M16
-**PLANNED / NOT IMPLEMENTED**. Relevant first-parent
+The [ROADMAP](../ROADMAP.md#L14-L36) marks M1–M15 implemented, within their
+stated scopes, and M16 **PLANNED / NOT IMPLEMENTED**. Relevant first-parent
 merges on authoritative `main` are:
 
 | Change | Main merge | Audit significance |
@@ -446,10 +445,9 @@ examined 55 links, and every local linked file and anchor resolved.
 its changed-file list were rechecked; no M16 or biological execution was
 attempted.
 
-## 10. Post-prerequisite reconciliation (historical pre-implementation disposition)
+## 10. Post-prerequisite reconciliation
 
-This section records the disposition as of 2026-10-05, based on authoritative
-`main` at
+This section is the current disposition, based on authoritative `main` at
 `c620834c78c51b33989880ce78f5bcb36f0e9845` (tree
 `b4ebcb31ca412ac01e1f3a54d700099f3e5c7eea`) and the existing M16 clarification
 identified in §2. The clarification is available in local Git history at
@@ -631,4 +629,4 @@ change the M16/M15 freezes, any M1–M15 production code or tests, CI, README,
 ROADMAP, data/tool configuration, or biological inputs. This task made no
 implementation changes and opened no implementation PR.
 
-**M16 POST-PREREQUISITE RECONCILIATION: READY FOR IMPLEMENTATION AS OF 2026-10-05**
+**M16 POST-PREREQUISITE RECONCILIATION: READY FOR IMPLEMENTATION**
