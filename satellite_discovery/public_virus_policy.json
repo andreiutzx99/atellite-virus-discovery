@@ -12,5 +12,6 @@
       "identity_attribute_keys": ["virus", "virus species", "infecting virus", "viral species", "pathogen"]
     }
   },
-  "excluded_mentions": ["SARS-CoV", "SARS-CoV-2", "SARS coronavirus", "Severe acute respiratory syndrome", "MERS", "Middle East respiratory syndrome", "H5N1", "H5N6", "H7N9", "H7N7", "highly pathogenic", "Ebola", "Marburg", "Nipah", "Hendra", "Variola"]
+  "excluded_mentions": ["SARS-CoV", "SARS-CoV-2", "SARS coronavirus", "Severe acute respiratory syndrome", "MERS", "Middle East respiratory syndrome", "H5N1", "H5N6", "H7N9", "H7N7", "highly pathogenic", "Ebola", "Marburg", "Nipah", "Hendra", "Variola"],
+  "review_mentions": ["reassortant", "recombinant", "chimeric", "engineered", "reverse genetics", "coinfection", "co-infection", "mixed infection", "mouse-adapted", "mouse adapted", "modified", "mutant"]
 }

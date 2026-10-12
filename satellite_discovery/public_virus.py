@@ -8,7 +8,7 @@ from .database_query import Client
 from .metadata import parse_packages, enrich_ena
 from .metadata_filter import assess
 from .model_scope import mentions
-from .sequence_downloader import make_plan
+from .sequence_downloader import files_for_run
 
 POLICY_PATH = Path(__file__).with_name("public_virus_policy.json")
 POLICY = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
@@ -27,21 +27,69 @@ def assess_identity(row, virus):
                         ("organism", "sample_title", "experiment_title", "study_title"))
     context += "\n" + "\n".join(str(v) for v in attrs.values())
     excluded = [term for term in POLICY["excluded_mentions"] if mentions(context, term)]
+    terms = item["identity_terms"]
+    organism = str(row.get("organism") or "")
+    organism_evidence = [term for term in terms if mentions(organism, term)]
+    accepted_keys = {k.casefold() for k in item["identity_attribute_keys"]}
+    attribute_evidence = [
+        {"key": str(key), "term": term}
+        for key, value in attrs.items()
+        if str(key).strip().casefold() in accepted_keys
+        for term in terms if mentions(str(value), term)
+    ]
+    review_evidence = []
+    review_terms = POLICY.get("review_mentions", [])
+    def add_review_text(field, value):
+        for term in review_terms:
+            if mentions(str(value), term):
+                review_evidence.append({"field": field, "term": term})
+    sample_context_fields = ("organism", "sample_title", "experiment_title")
+    for field in sample_context_fields:
+        add_review_text(field, row.get(field) or "")
+    for key, value in attrs.items():
+        add_review_text("attribute:" + str(key), value)
+    # Study titles are broad context, not sample-level evidence. Only explicit
+    # mixed/modified terms there trigger review; ordinary multi-virus discussion
+    # does not prove a mixed sample.
+    study_title = str(row.get("study_title") or "")
+    add_review_text("study_title", study_title)
+    flag_keys = {
+        "infection type", "infection", "coinfection", "co infection",
+        "mixed infection", "mixed infection status", "sample composition",
+    }
+    flag_values = {"yes", "true", "1", "mixed", "coinfection", "co-infection",
+                   "co infection", "mixed infection", "multiple infections"}
+    target_supported = bool(organism_evidence or attribute_evidence)
+    for key, value in attrs.items():
+        normalized_key = str(key).strip().casefold().replace("_", " ").replace("-", " ")
+        normalized_value = str(value).strip().casefold()
+        if normalized_key in flag_keys and (
+                normalized_value in flag_values or
+                any(mentions(normalized_value, term) for term in review_terms)):
+            review_evidence.append({"field": "attribute:" + str(key), "term": "explicit_mixed_flag"})
+        if normalized_key in {"additional pathogen", "co infecting pathogen",
+                              "coinfecting pathogen", "secondary pathogen"} and normalized_value:
+            review_evidence.append({"field": "attribute:" + str(key), "term": "additional_pathogen"})
+    # An explicitly typed pathogen/virus field naming multiple agents is
+    # ambiguous even when the second agent is outside this two-virus profile.
+    for key, value in attrs.items():
+        normalized_key = str(key).strip().casefold().replace("_", " ")
+        text = str(value)
+        if normalized_key in {"pathogen", "virus", "virus species", "infecting virus", "viral species"}:
+            target_hits = [term for term in terms if mentions(text, term)]
+            separators = re.search(r"[;,/]|\band\b|\bwith\b", text, re.I)
+            known_other_hits = [
+                term for other_key, other in POLICY["viruses"].items() if other_key != virus
+                for term in other["identity_terms"] if mentions(text, term)
+            ]
+            if (target_supported and not target_hits and not known_other_hits) or (
+                    target_hits and separators):
+                review_evidence.append({"field": "attribute:" + str(key), "term": "multiple_pathogens_in_typed_field"})
     if excluded:
         status, reason = "excluded", "excluded_pathogen_mentioned_in_metadata"
     else:
-        terms = item["identity_terms"]
-        organism = str(row.get("organism") or "")
         # Sample taxonomy can establish virus identity only when it names the virus;
         # host taxonomy and free-text titles never do.
-        organism_evidence = [term for term in terms if mentions(organism, term)]
-        accepted_keys = {k.casefold() for k in item["identity_attribute_keys"]}
-        attribute_evidence = [
-            {"key": str(key), "term": term}
-            for key, value in attrs.items()
-            if str(key).strip().casefold() in accepted_keys
-            for term in terms if mentions(str(value), term)
-        ]
         other_virus_evidence = []
         for other_key, other in POLICY["viruses"].items():
             if other_key == virus:
@@ -51,7 +99,9 @@ def assess_identity(row, virus):
                     any(mentions(str(value), term) for term in other["identity_terms"])
                     for key, value in attrs.items()):
                 other_virus_evidence.append(other_key)
-        if (organism_evidence or attribute_evidence) and other_virus_evidence:
+        if review_evidence:
+            status, reason = "review_required", "mixed_or_modified_sample_metadata_requires_review"
+        elif (organism_evidence or attribute_evidence) and other_virus_evidence:
             status, reason = "conflicting", "multiple_public_virus_identities"
         elif other_virus_evidence:
             status, reason = "conflicting", "archive_identity_conflicts_with_selected_virus"
@@ -63,14 +113,17 @@ def assess_identity(row, virus):
         "profile": POLICY["policy_version"], "policy_sha256": POLICY_SHA256,
         "virus": virus, "status": status, "reason": reason,
         "archive_identity_evidence": {
-            "organism_terms": locals().get("organism_evidence", []) if not excluded else [],
-            "attributes": locals().get("attribute_evidence", []) if not excluded else [],
+            "organism_terms": organism_evidence if not excluded else [],
+            "attributes": attribute_evidence if not excluded else [],
         },
+        "review_evidence": review_evidence,
         "strain": _attribute_value(attrs, {"strain", "virus strain", "viral strain", "strain designation"}),
         "isolate": _attribute_value(attrs, {"isolate", "isolate name"}),
         "laboratory_stock_catalogue": _attribute_value(
-            attrs, {"stock", "catalogue", "catalog", "strain designation"}),
-        "laboratory": row.get("laboratory"),
+            attrs, {"stock", "stock number", "catalogue", "catalog", "catalogue number", "catalog number"}),
+        "archive_center_name": row.get("archive_center_name") or row.get("laboratory") or "UNKNOWN",
+        "experimental_laboratory": _attribute_value(
+            attrs, {"experimental laboratory", "sample preparation laboratory", "laboratory that prepared sample"}),
         "preparation": _attribute_value(attrs, {"preparation", "preparation method"}),
         "passage": _attribute_value(attrs, {"passage", "passage history"}),
         "batch": _attribute_value(attrs, {"batch", "preparation batch"}),
@@ -116,6 +169,11 @@ def verify_snapshot_index(raw_directory, entries):
 
 
 def verify_public_record(document, raw_directory):
+    """Check local digest consistency only; this is not authentication or authorization.
+
+    The verifier does not rederive normalized metadata or identity decisions from
+    original archive responses and must never gate read download or QC.
+    """
     manifest = document.get("manifest") or {}
     row = document.get("record") or {}
     if manifest.get("schema") != "public-virus-accession-manifest-v1":
@@ -155,6 +213,9 @@ def retrieve_accession(accession, virus, output, offline=False):
     except (RuntimeError, ValueError) as exc:
         row["ena_status"] = "failed"
         archive_errors.append({"source": "ENA", "reason": str(exc)})
+    # Preserve the archive submitter centre separately without changing the
+    # legacy parser's source field or its exact-model behavior.
+    row["archive_center_name"] = row.get("laboratory") or "UNKNOWN"
     assessed = assess(dict(row), min_spots=0)
     row.update({key: assessed[key] for key in ("selection", "exclusion_reasons", "warnings")})
     identity = assess_identity(row, virus)
@@ -163,35 +224,50 @@ def retrieve_accession(accession, virus, output, offline=False):
             **identity, "status": "unresolved",
             "reason": "offline_archive_snapshot_not_independently_authenticated",
         }
-    reasons = list(assessed["exclusion_reasons"])
-    if identity["status"] != "accepted_for_technical_review":
-        reasons.append(identity["reason"])
     row["public_virus"] = identity
-    plan = make_plan([row], 1, 1_000_000_000)
-    exact_size = row.get("fastq_bytes") and row.get("raw_read_availability") == "ena_fastq_listed"
-    fits_budget = bool(plan["selected"] and exact_size
-                       and plan["selected"][0]["accession"] not in plan.get("unknown_size_accessions", []))
-    technical_status = "eligible_for_review" if fits_budget else "excluded"
-    if not fits_budget:
-        reasons.extend(item.get("reason", "No verified complete run fits the budget")
-                       for item in plan["skipped"])
-        if not reasons:
-            reasons.append("verified_fastq_size_or_availability_missing")
+    library_reasons = list(assessed["exclusion_reasons"])
+    library_ok = not library_reasons
+    fastq_reasons = []
+    fastq_files = []
+    try:
+        if row.get("raw_read_availability") != "ena_fastq_listed":
+            raise ValueError("ena_fastq_not_listed")
+        fastq_files = files_for_run(row)
+    except ValueError as exc:
+        fastq_reasons.append(str(exc) if str(exc) else "fastq_metadata_incomplete")
+    total_fastq_bytes = sum(item["bytes"] for item in fastq_files)
+    fastq_complete = bool(fastq_files)
+    fits_budget = fastq_complete and total_fastq_bytes <= 1_000_000_000
+    if fastq_complete and not fits_budget:
+        fastq_reasons.append("complete_fastq_exceeds_1gb_budget")
+    elif not fastq_reasons and not fastq_complete:
+        fastq_reasons.append("verified_fastq_size_or_availability_missing")
+    failed_gates = []
+    if identity["status"] != "accepted_for_technical_review":
+        failed_gates.append(identity["reason"])
+    failed_gates.extend(library_reasons)
+    failed_gates.extend(fastq_reasons)
     pilot_readiness = (
-        "eligible_for_review"
-        if identity["status"] == "accepted_for_technical_review" and fits_budget
-        else "held_for_identity_review"
-        if identity["status"] == "insufficient"
-        else "excluded"
+        "eligible_for_review" if not failed_gates else
+        "held_for_identity_review" if identity["status"] in {"insufficient", "unresolved", "review_required"} else
+        "excluded" if library_reasons or fastq_reasons or identity["status"] in {"excluded", "conflicting"} else
+        "review_required"
     )
     row["technical_suitability"] = {
-        "status": technical_status, "fits_1gb_budget": fits_budget,
-        "reasons": list(dict.fromkeys(reasons)),
+        "status": "eligible_for_review" if library_ok else "excluded",
+        "reasons": library_reasons,
         "warnings": assessed["warnings"], "archive_errors": archive_errors,
+    }
+    row["fastq_assessment"] = {
+        "status": "complete_within_budget" if fastq_complete and fits_budget else
+                  "complete_over_budget" if fastq_complete else "unverified_or_incomplete",
+        "complete": fastq_complete, "total_bytes": total_fastq_bytes if fastq_complete else None,
+        "budget_bytes": 1_000_000_000, "fits_budget": bool(fits_budget),
+        "reasons": fastq_reasons,
     }
     row["pilot_readiness"] = {
         "status": pilot_readiness,
-        "reason": identity["reason"] if pilot_readiness != "eligible_for_review" else "identity_and_metadata_budget_gates_passed",
+        "reasons": list(dict.fromkeys(failed_gates)),
     }
     row["curator_evidence"] = {
         "status": "pending_review", "may_authorize": False,

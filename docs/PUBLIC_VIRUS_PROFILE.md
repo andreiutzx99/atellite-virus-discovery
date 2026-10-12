@@ -27,19 +27,37 @@ title, and an untyped free-text claim do not establish it. A matching identity
 is reported as `accepted_for_technical_review`, never as biological
 confirmation. Missing identity is `insufficient`; contradictory virus identity
 is `conflicting`; configured excluded-pathogen mentions are `excluded`.
-Strain, isolate, catalogue, passage, batch, laboratory, and replicate values
-are retained separately when present and otherwise remain `UNKNOWN`.
+Explicit sample-level mixed/coinfection or modified/recombinant evidence is
+`review_required`, a hold rather than a claim of confirmed coinfection. Typed
+pathogen fields and explicit additional-pathogen fields are checked even when
+the named pathogen is outside this two-virus profile. Study titles are broad
+context: mentioning multiple viruses alone does not establish a mixed sample.
+Incomplete archive metadata means screening cannot detect every possible
+coinfection.
 
-Library suitability is a separate decision. For example, OC43 amplicon runs
-can have archive-supported OC43 identity while being excluded as unsuitable for
-unbiased discovery. The output does not assign positive/negative biological
-labels, infer infection, or establish independence between runs.
+Strain, isolate, stock/catalogue, passage, batch, experimental laboratory,
+archive submission centre, and replicate values are retained separately when
+supported and otherwise remain `UNKNOWN`. Archive `center_name` is not
+evidence of the laboratory that prepared a biological sample.
+
+Identity, library suitability, complete FASTQ availability/size, and overall
+pilot readiness are separate decisions. For example, OC43 amplicon runs can
+have archive-supported identity while being excluded as unsuitable for
+unbiased discovery. Reasons attach to each failed gate; an identity hold does
+not contaminate an otherwise passing technical assessment. The output does not
+assign positive/negative biological labels, infer infection, or establish
+independence between runs.
 
 Curator evidence is recorded as pending and cannot promote an accession.
 Metadata from edited `datasets.json`, CSV, or JSON is not accepted as input to
 this route. Snapshot hashes detect changes relative to the local manifest;
 they are not a cryptographic signature and do not resist an actor able to edit
-both files. No claim of archive signature verification is made.
+both files. `verify_public_record()` is only a local consistency diagnostic: it
+does not rederive normalized metadata or identity decisions from original
+archive responses, authenticate those responses, or authorize acquisition. No
+code in this profile treats successful verification as permission to download.
+A later acquisition integration must rederive eligibility from bound archive
+evidence or use a separately reviewed authenticated trust mechanism.
 
 This profile intentionally does not enable downloads, read QC, or downstream
 analysis. Those require a later reviewed integration that revalidates the

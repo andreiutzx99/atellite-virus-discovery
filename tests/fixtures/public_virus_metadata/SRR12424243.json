@@ -1,0 +1,28 @@
+{
+  "source": "ENA read_run filereport and NCBI SRA RunInfo; metadata-only, retrieved 2026-10-12",
+  "source_accession": "SRR12424243",
+  "record": {
+    "run_accession": "SRR12424243",
+    "experiment_accession": "SRX8920116",
+    "sample_accession": "SAMN15776103",
+    "study_accession": "PRJNA656274",
+    "organism": "Homo sapiens",
+    "attributes": {"host": "Homo sapiens"},
+    "platform": "ILLUMINA",
+    "library_strategy": "RNA-Seq",
+    "library_source": "TRANSCRIPTOMIC",
+    "library_selection": "cDNA",
+    "layout": "SINGLE",
+    "total_spots": 24369783,
+    "raw_read_availability": "ena_fastq_listed",
+    "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/SRR124/043/SRR12424243/SRR12424243.fastq.gz",
+    "fastq_md5": "424739d537341d59ccbb4e1412446f0a",
+    "fastq_bytes": "728420078"
+  },
+  "expected": {
+    "identity": "insufficient",
+    "library": "eligible_for_review",
+    "fastq": "complete_within_budget",
+    "pilot": "held_for_identity_review"
+  }
+}
