@@ -6,7 +6,7 @@
 
 This project is building a reproducible, evidence-oriented workflow for
 investigating satellite/helper-dependent viral elements and other unexplained
-sequencing-derived candidates. The implemented M1–M15 software provides
+sequencing-derived candidates. The implemented M1–M16 software provides
 provenance-aware acquisition and reference records, registered assembly,
 typed artifact workflows, optional caller-specific DVG evidence,
 reference-scoped residual-read and read-back analysis, exact recurrence
@@ -19,8 +19,10 @@ caller-supplied candidate/helper observation frames and an M15 descriptive
 evidence dossier that preserves authenticated producer provenance, explicit
 states, missingness, and dependencies across supported upstream artifacts.
 
-M1–M15 implement scoped technical software stages. M13 imports explicitly
-referenced, validated M5/ViReMa artifacts and reports caller-scoped
+M1–M15 implement scoped technical software stages. M16 implements a synthetic
+software benchmarking, leakage/custody, and evaluation harness; it does not
+perform empirical biological validation or functional discovery. M13 imports
+explicitly referenced, validated M5/ViReMa artifacts and reports caller-scoped
 DVG-compatible computational evidence and differential context; it does not
 execute ViReMa or force a biological classification. M13 does not establish
 DVG identity, satellite identity, biological authenticity, biological absence,
@@ -71,7 +73,7 @@ do not validate this software's output or technical defaults. See
 - Project-specific defaults are technical settings, not biologically
   validated thresholds.
 
-## Implemented workflow — M1 to M15
+## Implemented workflow — M1 to M16
 
 | Milestone | Implemented software capability | Evidence boundary |
 | --- | --- | --- |
@@ -90,6 +92,7 @@ do not validate this software's output or technical defaults. See
 | M13 — M5/ViReMa evidence dossier and differential context | Imports explicitly referenced, validated M5/ViReMa artifacts and preserves run/event provenance and typed outcomes while presenting scoped DVG-compatible evidence and differential context. | Caller-scoped computational evidence only; does not execute ViReMa or establish DVG/satellite identity, biological authenticity, absence, helper dependence, novelty, or function. |
 | M14 — Descriptive candidate/helper observations | Validates caller-supplied observation frames and reports descriptive co-detection and completeness/status summaries. | Descriptive only; no statistical association, causality, or helper/replication dependence. |
 | M15 — Cross-stage evidence dossier | Validates typed producer references through the shared `producer-execution-ref-v1` verifier; preserves raw producer statuses, explicit evidence states, missingness, and provenance-verified dependencies in a deterministic dossier and result bundle, validated with synthetic/offline fixtures only; no biological datasets or external biological analysis were used. | Uses supported M5–M10 and M12–M14 artifacts; M11 is outside the frozen contract. Descriptive only: no ranking, scoring, weighting, tiers, classification, confirmation, or rejection. Integrity under the documented trust model is not signer authentication or biological truth. |
+| M16 — Synthetic benchmarking and leakage/custody harness | Validates generated synthetic fixtures, split/group leakage rules, blinding/custody transitions, and deterministic software-outcome accounting for frozen target outputs. | Synthetic software evaluation only. No empirical holdout evaluation, biological validation, biological-performance claim, functional discovery, or biological interpretation. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
@@ -155,7 +158,9 @@ M14 runs separately over caller-supplied candidate/helper observation frames;
 it is not downstream of M13 and reports descriptive counts/status only. M15
 is a separate dossier over supported, authenticated producer artifacts; it
 preserves provenance and evidence dependencies without ranking or biological
-classification. M16 remains planned and not implemented.
+classification. M16 is a synthetic software benchmark, leakage, custody, and
+evaluation harness; it does not perform biological validation or functional
+discovery.
 
 In paired data, a primary mapping for either mate excludes the whole fragment
 from the residual pool. M6 then applies read-length, ambiguity, entropy, and
@@ -173,13 +178,15 @@ contig.
 | Sequence similarity | A reported match under the supplied reference set and comparison settings. | Reference completeness, novelty from a no-hit, or taxonomy by itself. |
 | ORF/protein evidence | ORF hypotheses and local BLASTP matches under declared policies and a typed snapshot. | Expression, function, novelty, helper dependence, or candidate classification. |
 | Biological association | M14 co-detection summaries are descriptive; M15 preserves evidence and dependency links without treating them as independent votes. | Statistical association, causation, or helper/replication dependence. |
-| Biological classification | Not produced by the implemented M1–M15 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
+| Biological classification | Not produced by the implemented M1–M16 pipeline. | Satellite, DVG, helper, host, or contaminant identity. |
 | Experimental confirmation | Not produced by the software. | Replication, function, or biological significance. |
 
 ## Current status and future roadmap
 
-- **M1–M15: IMPLEMENTED** as scoped software milestones.
-- **M16: PLANNED / NOT IMPLEMENTED**.
+- **M1–M16: IMPLEMENTED** as scoped software milestones.
+- **M16 scope:** synthetic software benchmarking, leakage/custody mechanics,
+  and deterministic evaluation only—not biological validation or functional
+  discovery.
 
 The authoritative milestone register is [docs/ROADMAP.md](docs/ROADMAP.md).
 M9 is limited to protein-level computational evidence. M10 implements exact
@@ -213,10 +220,17 @@ model, not signer identity or biological truth. M15 does not establish
 satellite/DVG identity, biological authenticity or absence, helper or
 replication dependence, novelty, expression, or function.
 
-### Planned evidence layer (M16)
-- **M16 — Blinded benchmarking and validation:** evaluate frozen methods on
-  independent holdouts and use claim-appropriate biological or orthogonal
-  validation.
+### Implemented synthetic software evaluation harness (M16)
+M16 exercises benchmark grouping and leakage controls, blinded outcome
+handling, custody transitions, and deterministic software-outcome accounting
+on generated synthetic fixtures and frozen target outputs. It does not
+evaluate empirical biological holdouts, establish biological sensitivity or
+specificity, validate biological claims, or discover biological function.
+Synthetic expected outcomes are software-test expectations, not biological
+truth. The only enabled content adapter verifies authenticated M15 producer
+artifacts and preserves M15 dossier states through a lossless projection;
+M12–M14 content adapters are not implemented. See the
+[M16 contract freeze](docs/M16_CONTRACT_FREEZE.md).
 
 The [M8 homology specification](docs/M8_REFERENCE_AND_HOMOLOGY_SPEC.md) and
 [M8 benchmark fixture design](docs/M8_BENCHMARK_FIXTURE_DESIGN.md) document the

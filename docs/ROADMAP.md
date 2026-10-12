@@ -3,9 +3,10 @@
 This is the current milestone register for the source tree after the M15
 descriptive evidence-dossier milestone, following M14 descriptive observations
 and the M13 M5/ViReMa evidence dossier. It supersedes older roadmap snapshots
-where their status differs. M1–M15 are implemented as scoped software
-milestones; M16 remains planned and not implemented. A milestone marked
-implemented describes software behavior, not biological validation.
+where their status differs. M1–M16 are implemented as scoped software
+milestones. M16 is a synthetic software benchmark, leakage, custody, and
+evaluation harness. A milestone marked implemented describes software
+behavior, not biological validation.
 
 ## M1–M15 — implemented
 
@@ -27,13 +28,20 @@ implemented describes software behavior, not biological validation.
 | M14 — Descriptive candidate/helper observations | **IMPLEMENTED (SCOPED)** | Validates caller-supplied observation frames with explicit detection, missingness, source-resolution, and completeness states; reports descriptive co-detection summaries; validated with synthetic/offline fixtures. | Descriptive only: does not estimate statistical association or infer helper/replication dependence. It does not establish satellite or DVG identity, biological authenticity or absence, novelty, expression, or function. |
 | M15 — Cross-stage evidence dossier | **IMPLEMENTED (SCOPED)** | Uses the shared authenticated `producer-execution-ref-v1` mechanism to verify supported producer references; preserves raw status/schema, explicit evidence states, missingness, and provenance-verified dependencies in a deterministic dossier and result bundle. Supported artifacts are from M5–M10 and M12–M14; M11 is outside the frozen contract. Validated with synthetic/offline fixtures; no biological datasets or external biological analysis were used. | Descriptive only: no ranking, scoring, weighting, tiers, classification, confirmation, or rejection. Integrity checks establish consistency under the documented trust model, not signer authentication or biological truth. M15 does not establish satellite/DVG identity, biological authenticity or absence, helper/replication dependence, novelty, expression, or function. |
 
-## M16 — planned, not implemented
+## M16 — implemented (synthetic software harness)
 
-M16 remains planned and is not implemented.
+M16 is implemented for generated synthetic fixtures and frozen software
+outputs. It exercises grouping/split leakage controls, blinding and custody
+mechanics, and deterministic software-outcome accounting. It does not perform
+empirical holdout evaluation or biological validation, and it does not
+establish biological identity, sensitivity, specificity, helper dependence,
+function, or discovery performance. Its only enabled content adapter
+verifies authenticated M15 producer artifacts and emits a lossless M15
+dossier-state projection; M12–M14 content adapters are not implemented.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
-| M16 — Blinded benchmarking and claim-appropriate validation | **PLANNED / NOT IMPLEMENTED** | How does a frozen workflow perform on independent holdouts, and what biological claims receive orthogonal or experimental validation? | Requires justified positives/negatives, leakage controls, predeclared criteria, and appropriate assays; software benchmarks do not establish a candidate's identity or function. |
+| M16 — Blinded synthetic benchmarking and claim-appropriate evaluation mechanics | **IMPLEMENTED (SCOPED SOFTWARE)** | Do the frozen software workflow's synthetic benchmark, leakage controls, custody transitions, and outcome accounting behave as specified? | Synthetic software evaluation only. Empirical holdouts, biological validation, orthogonal/experimental assays, and biological or functional claims are outside this implementation. |
 
 M12 keeps `NO_SIGNAL_WITHIN_SCOPE` distinct from `NO_OBSERVATION`, `UNKNOWN`,
 `UNAVAILABLE`, `INCOMPLETE`, `FAILED`, `INTERRUPTED`, `NOT_EVALUATED`, and

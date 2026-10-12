@@ -1,10 +1,13 @@
 # Current project status
 
-The current milestone register is [ROADMAP.md](ROADMAP.md): **M1–M6 are
-implemented** as scoped software capabilities, while **M7–M16 remain
-planned**. This post-M6 consolidation updates documentation and adds M6
-boundary regression tests; it does not change M6 production behavior or
-thresholds.
+The current milestone register is [ROADMAP.md](ROADMAP.md): **M1–M16 are
+implemented** as scoped software capabilities. M16 is limited to synthetic
+software benchmarking, leakage/custody mechanics, and deterministic
+evaluation; its implementation and post-merge validation do not constitute
+empirical biological validation or functional discovery. Its only enabled
+content adapter verifies authenticated M15 producer artifacts and preserves
+M15 dossier states in a lossless projection; M12–M14 content adapters are not
+implemented.
 
 For the current overview, operating instructions, and scientific limitations,
 see the [README](../README.md), [M1–M6 milestone documents](M1_FOUNDATION.md),
