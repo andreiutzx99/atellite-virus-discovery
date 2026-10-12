@@ -35,7 +35,9 @@ outputs. It exercises grouping/split leakage controls, blinding and custody
 mechanics, and deterministic software-outcome accounting. It does not perform
 empirical holdout evaluation or biological validation, and it does not
 establish biological identity, sensitivity, specificity, helper dependence,
-function, or discovery performance.
+function, or discovery performance. Its only enabled content adapter
+verifies authenticated M15 producer artifacts and emits a lossless M15
+dossier-state projection; M12–M14 content adapters are not implemented.
 
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
