@@ -227,7 +227,10 @@ on generated synthetic fixtures and frozen target outputs. It does not
 evaluate empirical biological holdouts, establish biological sensitivity or
 specificity, validate biological claims, or discover biological function.
 Synthetic expected outcomes are software-test expectations, not biological
-truth. See the [M16 contract freeze](docs/M16_CONTRACT_FREEZE.md).
+truth. The only enabled content adapter verifies authenticated M15 producer
+artifacts and preserves M15 dossier states through a lossless projection;
+M12–M14 content adapters are not implemented. See the
+[M16 contract freeze](docs/M16_CONTRACT_FREEZE.md).
 
 The [M8 homology specification](docs/M8_REFERENCE_AND_HOMOLOGY_SPEC.md) and
 [M8 benchmark fixture design](docs/M8_BENCHMARK_FIXTURE_DESIGN.md) document the
