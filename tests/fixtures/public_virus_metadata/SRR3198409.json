@@ -1,0 +1,29 @@
+{
+  "source": "ENA read_run filereport and NCBI SRA RunInfo; metadata-only, retrieved 2026-10-12",
+  "source_accession": "SRR3198409",
+  "record": {
+    "run_accession": "SRR3198409",
+    "experiment_accession": "SRX1608585",
+    "sample_accession": "SRS1318115",
+    "biosample": "SAMN04526166",
+    "study_accession": "SRP071020",
+    "bioproject": "PRJNA313952",
+    "organism": "Human coronavirus OC43",
+    "attributes": {"isolate": "2"},
+    "platform": "ILLUMINA",
+    "library_strategy": "AMPLICON",
+    "library_source": "VIRAL RNA",
+    "library_selection": "RT-PCR",
+    "layout": "SINGLE",
+    "raw_read_availability": "ena_fastq_listed",
+    "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/SRR319/009/SRR3198409/SRR3198409.fastq.gz",
+    "fastq_md5": "58d302d290774df9a393d982d434f698",
+    "fastq_bytes": "150055056"
+  },
+  "expected": {
+    "identity": "accepted_for_technical_review",
+    "library": "excluded",
+    "fastq": "complete_within_budget",
+    "pilot": "excluded"
+  }
+}

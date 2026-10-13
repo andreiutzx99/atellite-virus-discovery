@@ -8,6 +8,7 @@ from .workflow import discover
 from .quality_control import QCConfig
 from .read_workflow import prepare_reads
 from .report_generator import write_reports
+from .public_virus import POLICY as PUBLIC_VIRUS_POLICY, retrieve_accession
 from . import __version__
 
 
@@ -15,6 +16,9 @@ def main():
     parser = argparse.ArgumentParser(description="Public sequencing metadata discovery and bounded FASTQ download/QC")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--helper", choices=HELPERS)
+    parser.add_argument("--public-virus-accession", help="One SRA/ENA run accession for metadata-only public-virus intake")
+    parser.add_argument("--public-virus", choices=sorted(PUBLIC_VIRUS_POLICY["viruses"]),
+                        help="Virus identity scope for --public-virus-accession")
     parser.add_argument("--limit", type=int, default=10, help="Maximum SRA experiments, not runs (1–1000)")
     parser.add_argument("--min-spots", type=int, default=1_000_000)
     parser.add_argument("--include-controls", action="store_true", help="Retrieve bounded same-study context; controls remain unverified")
@@ -28,6 +32,23 @@ def main():
     parser.add_argument("--query", help="Additional SRA filter within the selected exact-model scope")
     parser.add_argument("--wizard", action="store_true", help="Interactive prompts for beginners")
     args = parser.parse_args()
+    if args.public_virus_accession:
+        if not args.public_virus:
+            parser.error("--public-virus is required with --public-virus-accession")
+        if args.helper or args.wizard or args.stage != "metadata" or args.include_controls or args.query:
+            parser.error("Public-virus accession intake is metadata-only and cannot be combined with exact-model options")
+        args.output = args.output or "runs/public-virus-" + args.public_virus_accession
+        try:
+            result = retrieve_accession(args.public_virus_accession, args.public_virus,
+                                        args.output, args.offline)
+        except Exception as exc:
+            parser.exit(1, "Public-virus metadata intake failed: " + str(exc) + "\n")
+        print("Wrote " + str((Path(args.output) / "public_accession.json").resolve()))
+        print("Status: " + result["record"]["public_virus"]["status"])
+        print("Technical suitability: " + result["record"]["technical_suitability"]["status"])
+        return
+    if args.public_virus:
+        parser.error("--public-virus requires --public-virus-accession")
     if args.wizard:
         helpers = list(HELPERS)
         for i, helper in enumerate(helpers, 1):

@@ -20,6 +20,7 @@ include = ["satellite_discovery*"]
 satellite_discovery = [
     "helpers.json",
     "model_scope.json",
+    "public_virus_policy.json",
     "m12_legacy_cache_compatibility.txt",
     "m5_execution_outcome_cache_compatibility.txt",
     "stage_cache_identity_compatibility.txt",
