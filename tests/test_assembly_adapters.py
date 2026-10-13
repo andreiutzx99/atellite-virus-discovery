@@ -331,7 +331,13 @@ class AssemblyExecutionTests(unittest.TestCase):
             budget = FixtureSpadesAdapter('budget', max_bytes=10000)
             with self.assertRaisesRegex(ValueError, 'budget'):
                 budget.execute(inputs, root / 'budget-stage', config)
-            finalization_budget = FinalizationBudgetFixtureAdapter(max_bytes=15000)
+            budget_probe_output = root / 'budget-probe-stage'
+            budget_probe = FixtureSpadesAdapter()
+            budget_probe.execute(inputs, budget_probe_output, config)
+            stable_output_budget = budget_probe._output_bytes(budget_probe_output) + 1024
+            finalization_budget = FinalizationBudgetFixtureAdapter(
+                max_bytes=stable_output_budget,
+            )
             with self.assertRaisesRegex(ValueError, 'budget exceeded after output finalization'):
                 finalization_budget.execute(inputs, root / 'finalization-budget-stage', config)
             failed_assembly = json.loads(
