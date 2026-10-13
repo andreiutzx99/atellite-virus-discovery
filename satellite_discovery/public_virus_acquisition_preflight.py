@@ -4,6 +4,10 @@ This module never authorizes or performs data acquisition. A preflight plan is
 not an execution capability; a future downloader must repeat live checks and
 require a separate operator action.
 """
+import hashlib
+import json
+import re
+
 from . import public_virus, sequence_downloader
 from .public_virus_acquisition_review import (
     PILOT_BUDGET_BYTES, build_review_packet,
@@ -12,6 +16,7 @@ from .public_virus_acquisition_review import (
 
 SCHEMA = "public-virus-acquisition-preflight-v1"
 DECISION_SCHEMA = "public-virus-acquisition-review-decision-v1"
+FASTQ_MANIFEST_SCHEMA = "public-virus-fastq-manifest-v1"
 MAX_COMPRESSED_BYTES = PILOT_BUDGET_BYTES
 STORAGE_HEADROOM_FIXED_BYTES = 256 * 1024 * 1024
 
@@ -29,8 +34,43 @@ def _valid_uint(value, *, positive=False):
             and value >= (1 if positive else 0))
 
 
+def canonical_fastq_manifest_json(files):
+    """Return the canonical UTF-8 JSON text for validated FASTQ file metadata."""
+    if not isinstance(files, (list, tuple)) or not files:
+        raise ValueError("A nonempty validated FASTQ file list is required")
+    entries = []
+    for item in files:
+        if not isinstance(item, dict):
+            raise ValueError("FASTQ manifest entries must be objects")
+        url, name, role = item.get("url"), item.get("name"), item.get("role")
+        byte_count, md5 = item.get("bytes"), item.get("md5")
+        if (not all(isinstance(value, str) and value for value in (url, name, role))
+                or not _valid_uint(byte_count, positive=True)
+                or not isinstance(md5, str)
+                or not re.fullmatch(r"[0-9a-f]{32}", md5)):
+            raise ValueError("FASTQ manifest entry is missing validated fields")
+        entries.append({
+            "expected_bytes": byte_count,
+            "expected_md5": md5,
+            "name": name,
+            "role": role,
+            "url": url,
+        })
+    entries.sort(key=lambda entry: (entry["role"], entry["name"], entry["url"]))
+    return json.dumps(
+        {"files": entries, "schema": FASTQ_MANIFEST_SCHEMA},
+        ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    )
+
+
+def fastq_manifest_sha256(files):
+    """Hash the canonical manifest over UTF-8 bytes."""
+    return hashlib.sha256(canonical_fastq_manifest_json(files).encode("utf-8")).hexdigest()
+
+
 def _validate_decision(
-    decision, run_accession, virus, expected_bytes, policy_version, policy_sha256,
+    decision, run_accession, virus, expected_bytes, expected_manifest_sha256,
+    policy_version, policy_sha256,
 ):
     reasons = []
     if decision is None:
@@ -71,6 +111,28 @@ def _validate_decision(
         reasons.append(_reason(
             "human_review_policy_mismatch",
             "The review decision is not bound to the current policy version and digest.",
+        ))
+    approved_manifest_sha256 = decision.get("fastq_manifest_sha256")
+    if approved_manifest_sha256 is None or approved_manifest_sha256 == "":
+        reasons.append(_reason(
+            "human_review_fastq_manifest_missing",
+            "The review decision must include the exact FASTQ manifest SHA256.",
+        ))
+    elif (not isinstance(approved_manifest_sha256, str)
+          or not re.fullmatch(r"[0-9a-f]{64}", approved_manifest_sha256)):
+        reasons.append(_reason(
+            "human_review_fastq_manifest_malformed",
+            "The approved FASTQ manifest digest must be 64 lowercase hexadecimal characters.",
+        ))
+    elif expected_manifest_sha256 is None:
+        reasons.append(_reason(
+            "fastq_manifest_unavailable",
+            "The current complete FASTQ manifest could not be recomputed.",
+        ))
+    elif approved_manifest_sha256 != expected_manifest_sha256:
+        reasons.append(_reason(
+            "human_review_fastq_manifest_mismatch",
+            "The current complete FASTQ manifest differs from the reviewed manifest.",
         ))
 
     scope = decision.get("scope")
@@ -121,6 +183,7 @@ def build_acquisition_preflight(
     reasons = []
     files = []
     expected_bytes = None
+    current_manifest_sha256 = None
     required_storage_bytes = None
     review_eligible = review_packet.get("outcome") == "eligible_for_curator_review"
 
@@ -136,25 +199,31 @@ def build_acquisition_preflight(
                 gate_reason.get("detail", "Review-gate requirement was not satisfied."),
             ))
 
-    if review_eligible and isinstance(record, dict):
+    if isinstance(record, dict):
         try:
-            files = sequence_downloader.files_for_run(record)
-            if len({item["name"] for item in files}) != len(files):
+            validated_files = sequence_downloader.files_for_run(record)
+            if len({item["name"] for item in validated_files}) != len(validated_files):
                 raise ValueError("Duplicate FASTQ filenames")
-            expected_bytes = sum(item["bytes"] for item in files)
-            required_storage_bytes = (
-                3 * expected_bytes + STORAGE_HEADROOM_FIXED_BYTES
-            )
+            current_manifest_sha256 = fastq_manifest_sha256(validated_files)
+            if review_eligible:
+                files = validated_files
+                expected_bytes = sum(item["bytes"] for item in files)
+                required_storage_bytes = (
+                    3 * expected_bytes + STORAGE_HEADROOM_FIXED_BYTES
+                )
         except (KeyError, TypeError, ValueError):
             files = []
             expected_bytes = None
-            reasons.append(_reason(
-                "fastq_file_set_invalid",
-                "The complete single/paired FASTQ file set, checksums, or sizes are invalid.",
-            ))
+            current_manifest_sha256 = None
+            if review_eligible:
+                reasons.append(_reason(
+                    "fastq_file_set_invalid",
+                    "The complete single/paired FASTQ file set, checksums, or sizes are invalid.",
+                ))
 
     reasons.extend(_validate_decision(
         review_decision, run_accession, virus, expected_bytes,
+        current_manifest_sha256,
         public_virus.POLICY["policy_version"], public_virus.POLICY_SHA256,
     ))
 
@@ -223,6 +292,7 @@ def build_acquisition_preflight(
             }
             for item in files
         ],
+        "fastq_manifest_sha256": current_manifest_sha256,
         "expected_compressed_bytes": expected_bytes,
         "maximum_allowed_compressed_bytes": MAX_COMPRESSED_BYTES,
         "required_storage_headroom_bytes": required_storage_bytes,

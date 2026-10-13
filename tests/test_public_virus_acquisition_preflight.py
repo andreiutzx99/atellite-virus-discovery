@@ -11,6 +11,7 @@ from satellite_discovery.public_virus_acquisition_preflight import (
     MAX_COMPRESSED_BYTES,
     STORAGE_HEADROOM_FIXED_BYTES,
     build_acquisition_preflight,
+    fastq_manifest_sha256,
 )
 from satellite_discovery.sequence_downloader import files_for_run
 
@@ -93,7 +94,17 @@ def make_intake(raw_directory, *, attributes=None, organism="Human coronavirus 2
 
 def make_decision(*, run="SRR123456", virus="hcov-229e", state="approved",
                   max_compressed_bytes=MAX_COMPRESSED_BYTES,
-                  max_storage_bytes=10_000_000_000):
+                  max_storage_bytes=10_000_000_000,
+                  manifest_digest=None):
+    if manifest_digest is None:
+        manifest_digest = fastq_manifest_sha256(files_for_run({
+            "run_accession": "SRR123456", "layout": "SINGLE",
+            "fastq_ftp": (
+                "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/"
+                "SRR123456/SRR123456.fastq.gz"
+            ),
+            "fastq_md5": "a" * 32, "fastq_bytes": "728420078",
+        }))
     return {
         "schema": DECISION_SCHEMA,
         "reviewer_identifier": "reviewer:test",
@@ -102,6 +113,7 @@ def make_decision(*, run="SRR123456", virus="hcov-229e", state="approved",
         "approved_run_accession": run, "selected_virus": virus,
         "policy_version": public_virus.POLICY["policy_version"],
         "policy_sha256": public_virus.POLICY_SHA256,
+        "fastq_manifest_sha256": manifest_digest,
         "intended_pilot_purpose": "Synthetic compatibility test.",
         "scope": {
             "max_runs": 1,
@@ -143,6 +155,10 @@ class PublicVirusAcquisitionPreflightTests(unittest.TestCase):
         self.assertEqual(plan["fastq_files"][0]["expected_md5"], "a" * 32)
         self.assertEqual(plan["expected_compressed_bytes"], 728_420_078)
         self.assertEqual(
+            plan["fastq_manifest_sha256"],
+            make_decision()["fastq_manifest_sha256"],
+        )
+        self.assertEqual(
             plan["required_storage_headroom_bytes"],
             3 * 728_420_078 + STORAGE_HEADROOM_FIXED_BYTES,
         )
@@ -183,7 +199,8 @@ class PublicVirusAcquisitionPreflightTests(unittest.TestCase):
             self.raw, layout="PAIRED", fastq_ftp=first + ";" + second,
             fastq_md5="a" * 32 + ";" + "b" * 32, fastq_bytes="300;400",
         )
-        plan = self.plan(make_decision(), paired)
+        digest = fastq_manifest_sha256(files_for_run(paired["record"]))
+        plan = self.plan(make_decision(manifest_digest=digest), paired)
         self.assertEqual(plan["status"], "ready_for_operator_confirmation")
         self.assertEqual({item["role"] for item in plan["fastq_files"]}, {"R1", "R2"})
         self.assertEqual(plan["expected_compressed_bytes"], 700)
@@ -211,7 +228,8 @@ class PublicVirusAcquisitionPreflightTests(unittest.TestCase):
 
     def test_exact_budget_is_allowed_and_above_budget_is_blocked(self):
         exact = make_intake(self.raw, fastq_bytes=str(MAX_COMPRESSED_BYTES))
-        exact_plan = self.plan(make_decision(), exact)
+        exact_digest = fastq_manifest_sha256(files_for_run(exact["record"]))
+        exact_plan = self.plan(make_decision(manifest_digest=exact_digest), exact)
         self.assertEqual(exact_plan["status"], "ready_for_operator_confirmation")
         self.assertEqual(exact_plan["expected_compressed_bytes"], MAX_COMPRESSED_BYTES)
         above = make_intake(self.raw, fastq_bytes=str(MAX_COMPRESSED_BYTES + 1))
@@ -272,6 +290,85 @@ class PublicVirusAcquisitionPreflightTests(unittest.TestCase):
         stale_policy = self.plan(stale_decision)
         self.assertIn("human_review_policy_mismatch",
                       {x["code"] for x in stale_policy["reasons"]})
+
+    def test_manifest_digest_is_required_formatted_and_current(self):
+        missing = make_decision()
+        missing.pop("fastq_manifest_sha256")
+        missing_plan = self.plan(missing)
+        self.assertIn("human_review_fastq_manifest_missing",
+                      {x["code"] for x in missing_plan["reasons"]})
+        malformed = make_decision(manifest_digest="not-a-sha256")
+        malformed_plan = self.plan(malformed)
+        self.assertIn("human_review_fastq_manifest_malformed",
+                      {x["code"] for x in malformed_plan["reasons"]})
+        mismatch = make_decision(manifest_digest="0" * 64)
+        mismatch_plan = self.plan(mismatch)
+        self.assertIn("human_review_fastq_manifest_mismatch",
+                      {x["code"] for x in mismatch_plan["reasons"]})
+
+    def test_url_md5_and_within_budget_size_changes_break_approval_binding(self):
+        original_decision = make_decision()
+        changed_url = make_intake(
+            self.raw,
+            fastq_ftp=(
+                "ftp.ebi.ac.uk/vol1/fastq/SRR123/456/"
+                "SRR123456/SRR123456.fastq.gz"
+            ),
+        )
+        changed_md5 = make_intake(self.raw, fastq_md5="b" * 32)
+        changed_size = make_intake(self.raw, fastq_bytes="728420079")
+        for changed in (changed_url, changed_md5, changed_size):
+            with self.subTest(record=changed["record"]["fastq_ftp"]):
+                plan = self.plan(original_decision, changed)
+                self.assertIn(
+                    "human_review_fastq_manifest_mismatch",
+                    {x["code"] for x in plan["reasons"]},
+                )
+                self.assertEqual(plan["status"], "blocked")
+
+    def test_changes_to_either_paired_mate_break_approval_binding(self):
+        first = "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/SRR123456_1.fastq.gz"
+        second = "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/SRR123456_2.fastq.gz"
+        original = make_intake(
+            self.raw, layout="PAIRED", fastq_ftp=first + ";" + second,
+            fastq_md5="a" * 32 + ";" + "b" * 32, fastq_bytes="300;400",
+        )
+        original_digest = fastq_manifest_sha256(files_for_run(original["record"]))
+        decision = make_decision(manifest_digest=original_digest)
+        changed_r1 = make_intake(
+            self.raw, layout="PAIRED",
+            fastq_ftp=(
+                "ftp.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/SRR123456_1.fastq.gz"
+                ";" + second
+            ),
+            fastq_md5="a" * 32 + ";" + "b" * 32, fastq_bytes="300;400",
+        )
+        changed_r2 = make_intake(
+            self.raw, layout="PAIRED", fastq_ftp=first + ";" + second,
+            fastq_md5="a" * 32 + ";" + "c" * 32, fastq_bytes="300;400",
+        )
+        for changed in (changed_r1, changed_r2):
+            with self.subTest(urls=changed["record"]["fastq_ftp"]):
+                plan = self.plan(decision, changed)
+                self.assertIn(
+                    "human_review_fastq_manifest_mismatch",
+                    {x["code"] for x in plan["reasons"]},
+                )
+
+    def test_equivalent_file_order_has_the_same_canonical_digest(self):
+        paired = make_intake(
+            self.raw, layout="PAIRED",
+            fastq_ftp=(
+                "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/SRR123456_1.fastq.gz;"
+                "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/SRR123456_2.fastq.gz"
+            ),
+            fastq_md5="a" * 32 + ";" + "b" * 32, fastq_bytes="300;400",
+        )
+        files = files_for_run(paired["record"])
+        self.assertEqual(
+            fastq_manifest_sha256(files),
+            fastq_manifest_sha256(list(reversed(files))),
+        )
 
     def test_missing_provenance_preserves_unknown_independence(self):
         plan = self.plan(make_decision())

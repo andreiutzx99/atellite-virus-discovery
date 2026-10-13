@@ -32,6 +32,8 @@ and the fields below:
 - Exact `approved_run_accession` and `selected_virus`
 - Current `policy_version` and `policy_sha256` to bind the decision to the
   policy reviewed
+- `fastq_manifest_sha256`, binding approval to the complete current set of
+  FASTQ URLs, names, roles, compressed sizes, and MD5 checksums
 - Nonempty `intended_pilot_purpose`
 - `state`: `approved`, `rejected`, or `pending`
 - `scope`: `max_runs` must be `1`; `max_compressed_bytes` must be a positive
@@ -42,6 +44,26 @@ Approval is blocked when the run, virus, expected compressed bytes, or required
 storage headroom exceeds the supplied scope, or when the decision's policy
 version/digest is stale. A missing, malformed, pending, or rejected decision
 cannot produce a ready plan.
+
+## FASTQ manifest digest
+
+The manifest is recomputed from the current record using `files_for_run()`.
+Canonical JSON uses schema `public-virus-fastq-manifest-v1` and this structure:
+
+```json
+{"files":[{"expected_bytes":728420078,"expected_md5":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","name":"SRR123456.fastq.gz","role":"single","url":"https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/SRR123456.fastq.gz"}],"schema":"public-virus-fastq-manifest-v1"}
+```
+
+Before encoding, each validated file is represented by exactly
+`expected_bytes`, `expected_md5`, `name`, `role`, and `url`. The file array is
+sorted by `(role, name, url)`. JSON uses lexicographically sorted object keys,
+UTF-8 characters without ASCII escaping, no insignificant whitespace, and no
+trailing newline. `fastq_manifest_sha256` is the lowercase hexadecimal SHA256
+of those canonical JSON UTF-8 bytes. Thus, input ordering does not change the
+digest, while a changed URL, filename, role, size, or MD5 does.
+
+This digest binds locally reviewed FASTQ metadata to the decision, but does not
+authenticate the reviewer or the archive source.
 
 **This locally editable record is not authenticated authorization.** A decision
 record, its local digest, or a ready plan never permits or triggers a download.
