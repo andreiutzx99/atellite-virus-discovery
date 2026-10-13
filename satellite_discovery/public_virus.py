@@ -2,7 +2,6 @@
 import hashlib
 import json
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from .database_query import Client
@@ -15,53 +14,134 @@ POLICY_PATH = Path(__file__).with_name("public_virus_policy.json")
 POLICY = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
 POLICY_SHA256 = hashlib.sha256(POLICY_PATH.read_bytes()).hexdigest()
 RUN_ACCESSION = re.compile(r"^[SED]RR[0-9]+$")
-ACCESSION_PATTERNS = {
-    "run_accession": RUN_ACCESSION,
+SRA_ACCESSION_PATTERNS = {
+    "run_accession": re.compile(r"^[SED]RR[0-9]+$"),
     "experiment_accession": re.compile(r"^[SED]RX[0-9]+$"),
     "sample_accession": re.compile(r"^[SED]RS[0-9]+$"),
     "study_accession": re.compile(r"^[SED]RP[0-9]+$"),
-    "biosample": re.compile(r"^SAM[END][0-9]+$"),
-    "bioproject": re.compile(r"^PRJ(?:NA|EB|DB)[0-9]+$"),
 }
+BIOSAMPLE_ACCESSION = re.compile(r"^SAM(?:N|D|EA)[0-9]+$")
+BIOPROJECT_ACCESSION = re.compile(r"^PRJ(?:NA|EB|DB)[0-9]+$")
 TYPED_PATHOGEN_KEYS = {
     "pathogen", "virus", "virus species", "infecting virus", "viral species",
 }
-PATHOGEN_SEPARATORS = re.compile(r"\s*(?:\+|;|,|/|\band\b)\s*", re.I)
-STRAIN_QUALIFIER = re.compile(
-    r"^(?:strain|isolate|variant|lineage|serotype|subtype|genotype|clade|mutant)\b",
-    re.I,
+MULTI_AGENT_SEPARATORS = re.compile(
+    r"\s*(?:\+\s*|\band\b|\bwith\b|\balongside\b|\btogether\s+with\b|"
+    r"\bplus\b|[;,/&])\s*",
+    re.IGNORECASE,
 )
+STRAIN_DESCRIPTORS = (
+    "strain", "isolate", "lineage", "variant", "genotype", "serotype",
+    "subtype", "sublineage", "clade", "passage",
+)
+UNKNOWN_METADATA_VALUES = {"", "unknown", "unspecified", "not specified", "none", "na", "n/a"}
+NON_PATHOGEN_CONTEXT_SEGMENTS = {
+    "infected", "infection", "infected sample", "sample", "specimen",
+    "positive", "positive for", "isolated from",
+}
+
+
+def _typed_pathogen_review(attrs, virus, terms, target_supported):
+    """Return evidence for explicit or ambiguous multi-agent typed metadata."""
+    evidence = []
+    typed_values = [
+        (str(key), str(value).strip())
+        for key, value in attrs.items()
+        if str(key).strip().casefold().replace("_", " ") in TYPED_PATHOGEN_KEYS
+        and str(value).strip().casefold() not in UNKNOWN_METADATA_VALUES
+    ]
+    all_terms = {
+        key: item["identity_terms"] for key, item in POLICY["viruses"].items()
+    }
+    for field, value in typed_values:
+        normalized = value.casefold()
+        target_hits = [term for term in terms if mentions(value, term)]
+        other_hits = [
+            term for other_key, other_terms in all_terms.items() if other_key != virus
+            for term in other_terms if mentions(value, term)
+        ]
+        if target_hits and other_hits:
+            evidence.append({
+                "field": "attribute:" + field, "value": value,
+                "term": "multiple_known_pathogens", "evidence_type": "typed_pathogen",
+            })
+            continue
+        # Strip explicit strain/isolate descriptors before interpreting a
+        # connected remainder as another pathogen (e.g. "with strain VR-740").
+        for descriptor in STRAIN_DESCRIPTORS:
+            normalized = re.sub(
+                rf"\b{descriptor}(?:\s+(?:designation|number|name|id))?\s+[a-z0-9._/-]+\b",
+                " ", normalized, flags=re.IGNORECASE,
+            )
+            normalized = re.sub(
+                rf"\b[\w.-]+\s+{descriptor}\b", " ", normalized, flags=re.IGNORECASE,
+            )
+        segments = [
+            part.strip() for part in MULTI_AGENT_SEPARATORS.split(normalized)
+            if part.strip() and part.strip() not in NON_PATHOGEN_CONTEXT_SEGMENTS
+        ]
+        if len(segments) > 1:
+            target_segments = [
+                part for part in segments
+                if any(mentions(part, term) for term in terms)
+            ]
+            other_segments = [part for part in segments if part not in target_segments]
+            if target_segments and other_segments:
+                # Repeated names/isolates of the same supported virus are not
+                # treated as multiple pathogen species.
+                same_virus_only = all(
+                    any(mentions(part, term) for term in terms)
+                    for part in other_segments
+                )
+                if not same_virus_only:
+                    evidence.append({
+                        "field": "attribute:" + field, "value": value,
+                        "term": "multiple_or_ambiguous_pathogens_in_typed_field",
+                        "evidence_type": "typed_pathogen",
+                    })
+                    continue
+        if target_supported and not target_hits and not other_hits:
+            evidence.append({
+                "field": "attribute:" + field, "value": value,
+                "term": "ambiguous_additional_typed_pathogen",
+                "evidence_type": "typed_pathogen",
+            })
+    return evidence
+
+
+def _validate_archive_accessions(row):
+    for field, pattern in SRA_ACCESSION_PATTERNS.items():
+        value = row.get(field)
+        if not isinstance(value, str) or not pattern.fullmatch(value):
+            raise ValueError(f"Invalid or missing SRA {field}")
+    for field, pattern in (
+        ("biosample", BIOSAMPLE_ACCESSION),
+        ("bioproject", BIOPROJECT_ACCESSION),
+    ):
+        value = row.get(field)
+        if value and (not isinstance(value, str) or not pattern.fullmatch(value)):
+            raise ValueError(f"Invalid {field} accession namespace")
 
 
 def assess_identity(row, virus):
     if virus not in POLICY["viruses"]:
         raise ValueError("Unsupported public-virus-v1 virus")
     item = POLICY["viruses"][virus]
-    attrs = row.get("attributes")
-    if attrs is None:
-        attrs = {}
+    attrs = row.get("attributes") or {}
     if not isinstance(attrs, dict):
         raise ValueError("Sample attributes must be a dictionary")
-    attribute_entries = row.get("public_virus_attribute_entries")
-    if attribute_entries is None:
-        attribute_entries = [{"key": key, "value": value} for key, value in attrs.items()]
-    if not isinstance(attribute_entries, list) or any(
-            not isinstance(entry, dict) or "key" not in entry or "value" not in entry
-            for entry in attribute_entries):
-        raise ValueError("Public-virus sample attribute evidence must be a list of key/value records")
     context = "\n".join(str(row.get(k) or "") for k in
                         ("organism", "sample_title", "experiment_title", "study_title"))
-    context += "\n" + "\n".join(str(entry["value"]) for entry in attribute_entries)
+    context += "\n" + "\n".join(str(v) for v in attrs.values())
     excluded = [term for term in POLICY["excluded_mentions"] if mentions(context, term)]
     terms = item["identity_terms"]
     organism = str(row.get("organism") or "")
     organism_evidence = [term for term in terms if mentions(organism, term)]
-    accepted_keys = {_normalize_attribute_key(k) for k in item["identity_attribute_keys"]}
+    accepted_keys = {k.casefold() for k in item["identity_attribute_keys"]}
     attribute_evidence = [
-        {"key": str(entry["key"]), "term": term}
-        for entry in attribute_entries
-        for key, value in [(entry["key"], entry["value"])]
-        if _normalize_attribute_key(key) in accepted_keys
+        {"key": str(key), "term": term}
+        for key, value in attrs.items()
+        if str(key).strip().casefold() in accepted_keys
         for term in terms if mentions(str(value), term)
     ]
     review_evidence = []
@@ -70,14 +150,13 @@ def assess_identity(row, virus):
         for term in review_terms:
             if mentions(str(value), term):
                 review_evidence.append({
-                    "field": field, "term": term,
-                    "reason": "mixed_or_modified_sample_metadata",
+                    "field": field, "value": str(value), "term": term,
+                    "evidence_type": "sample_or_study_text",
                 })
     sample_context_fields = ("organism", "sample_title", "experiment_title")
     for field in sample_context_fields:
         add_review_text(field, row.get(field) or "")
-    for entry in attribute_entries:
-        key, value = entry["key"], entry["value"]
+    for key, value in attrs.items():
         add_review_text("attribute:" + str(key), value)
     # Study titles are broad context, not sample-level evidence. Only explicit
     # mixed/modified terms there trigger review; ordinary multi-virus discussion
@@ -90,47 +169,24 @@ def assess_identity(row, virus):
     }
     flag_values = {"yes", "true", "1", "mixed", "coinfection", "co-infection",
                    "co infection", "mixed infection", "multiple infections"}
-    for entry in attribute_entries:
-        key, value = entry["key"], entry["value"]
-        normalized_key = _normalize_attribute_key(key)
+    target_supported = bool(organism_evidence or attribute_evidence)
+    for key, value in attrs.items():
+        normalized_key = str(key).strip().casefold().replace("_", " ").replace("-", " ")
         normalized_value = str(value).strip().casefold()
         if normalized_key in flag_keys and (
                 normalized_value in flag_values or
                 any(mentions(normalized_value, term) for term in review_terms)):
             review_evidence.append({
-                "field": "attribute:" + str(key), "term": "explicit_mixed_flag",
-                "reason": "explicit_mixed_flag", "value": str(value),
+                "field": "attribute:" + str(key), "value": str(value),
+                "term": "explicit_mixed_flag", "evidence_type": "structured_flag",
             })
         if normalized_key in {"additional pathogen", "co infecting pathogen",
                               "coinfecting pathogen", "secondary pathogen"} and normalized_value:
             review_evidence.append({
-                "field": "attribute:" + str(key), "term": "additional_pathogen",
-                "reason": "explicit_additional_pathogen", "value": str(value),
+                "field": "attribute:" + str(key), "value": str(value),
+                "term": "additional_pathogen", "evidence_type": "structured_pathogen",
             })
-    # An explicitly typed pathogen/virus field naming multiple agents is
-    # ambiguous even when the second agent is outside this two-virus profile.
-    typed_values = {}
-    for entry in attribute_entries:
-        key, value = entry["key"], entry["value"]
-        normalized_key = _normalize_attribute_key(key)
-        if normalized_key in TYPED_PATHOGEN_KEYS and str(value).strip():
-            typed_values.setdefault(normalized_key, []).append(str(value).strip())
-            if _explicit_multiple_pathogens(str(value)):
-                review_evidence.append({
-                    "field": "attribute:" + str(key),
-                    "term": "multiple_pathogens_in_typed_field",
-                    "reason": "explicit_multiple_pathogens",
-                    "value": str(value),
-                })
-    for normalized_key, values in typed_values.items():
-        if len(set(value.casefold() for value in values)) > 1 and _explicit_multiple_pathogens(
-                " ; ".join(values)):
-            review_evidence.append({
-                "field": "attribute:" + normalized_key,
-                "term": "multiple_pathogens_in_typed_field",
-                "reason": "conflicting_repeated_typed_pathogen_values",
-                "value": values,
-            })
+    review_evidence.extend(_typed_pathogen_review(attrs, virus, terms, target_supported))
     if excluded:
         status, reason = "excluded", "excluded_pathogen_mentioned_in_metadata"
     else:
@@ -141,12 +197,21 @@ def assess_identity(row, virus):
             if other_key == virus:
                 continue
             if any(mentions(organism, term) for term in other["identity_terms"]) or any(
-                    _normalize_attribute_key(key) in accepted_keys and
+                    str(key).strip().casefold() in accepted_keys and
                     any(mentions(str(value), term) for term in other["identity_terms"])
                     for key, value in attrs.items()):
                 other_virus_evidence.append(other_key)
         if review_evidence:
-            status, reason = "review_required", "mixed_or_modified_sample_metadata_requires_review"
+            status = "review_required"
+            if any(item["term"] in {
+                    "explicit_mixed_flag", "additional_pathogen",
+                    "multiple_known_pathogens",
+                    "multiple_or_ambiguous_pathogens_in_typed_field",
+                    "ambiguous_additional_typed_pathogen",
+            } for item in review_evidence):
+                reason = "multiple_or_ambiguous_pathogen_metadata_requires_review"
+            else:
+                reason = "mixed_or_modified_sample_metadata_requires_review"
         elif (organism_evidence or attribute_evidence) and other_virus_evidence:
             status, reason = "conflicting", "multiple_public_virus_identities"
         elif other_virus_evidence:
@@ -176,82 +241,6 @@ def assess_identity(row, virus):
         "replicate": _replicate_metadata(attrs),
         "uncertainty": "Archive metadata screening only; not biological confirmation or infection evidence.",
     }
-
-
-def _normalize_attribute_key(key):
-    return " ".join(str(key).strip().casefold().replace("_", " ").replace("-", " ").split())
-
-
-def _explicit_multiple_pathogens(value):
-    """Detect explicit typed lists without treating strain labels as pathogens."""
-    if not PATHOGEN_SEPARATORS.search(value):
-        return False
-    # A common notation lists strains/isolates of the same virus with a slash;
-    # do not turn the suffix labels into a second pathogen.
-    if re.search(
-            r"\b(?:strain|isolate|variant|lineage)\s+[A-Za-z0-9.-]+\s*"
-            r"(?:[/,;+]|\band\b)\s*(?:(?:strain|isolate|variant|lineage)\s+)?"
-            r"[A-Za-z0-9.-]+\s*$", value, re.I):
-        return False
-    segments = [part.strip(" \t\r\n()[]{}") for part in PATHOGEN_SEPARATORS.split(value)]
-    segments = [part for part in segments if part]
-    if len(segments) < 2:
-        # A dangling delimiter in a typed identity field is unresolved input.
-        return bool(segments)
-    meaningful = [part for part in segments if not STRAIN_QUALIFIER.match(part)]
-    if len(meaningful) < 2:
-        return False
-    virus_hits = []
-    for part in meaningful:
-        hits = {
-            key for key, config in POLICY["viruses"].items()
-            if any(mentions(part, term) for term in config["identity_terms"])
-        }
-        virus_hits.append(hits)
-    recognized = set().union(*virus_hits)
-    if len(recognized) > 1:
-        return True
-    # Repeated mentions of one configured virus are not evidence of multiple
-    # pathogens; additional unrecognized labels in a typed field are.
-    if len(recognized) == 1:
-        matching_parts = sum(bool(hits) for hits in virus_hits)
-        return matching_parts < len(meaningful)
-    return True
-
-
-def _sample_attribute_entries(xml, run_accession):
-    """Retain repeated raw sample attributes for public-virus identity review."""
-    root = ET.fromstring(xml)
-    packages = [root] if root.tag.split("}")[-1] == "EXPERIMENT_PACKAGE" else [
-        node for node in root.iter() if node.tag.split("}")[-1] == "EXPERIMENT_PACKAGE"
-    ]
-    matches = []
-    for package in packages:
-        runs = [node for node in package.iter() if node.tag.split("}")[-1] == "RUN"]
-        if not any(run.get("accession") == run_accession for run in runs):
-            continue
-        sample = next((node for node in package.iter() if node.tag.split("}")[-1] == "SAMPLE"), None)
-        if sample is None:
-            continue
-        for node in sample.iter():
-            if node.tag.split("}")[-1] != "SAMPLE_ATTRIBUTE":
-                continue
-            key = next((child.text or "" for child in node
-                        if child.tag.split("}")[-1] == "TAG"), "")
-            value = next((child.text or "" for child in node
-                          if child.tag.split("}")[-1] == "VALUE"), "")
-            matches.append({"key": key.strip().lower(), "value": value})
-    return matches
-
-
-def _validate_accession_relationships(row):
-    required = ("run_accession", "experiment_accession", "sample_accession", "study_accession")
-    if any(not row.get(field) for field in required):
-        raise ValueError("Archive run/experiment/sample/study linkage is incomplete")
-    for field, pattern in ACCESSION_PATTERNS.items():
-        value = row.get(field)
-        if value and not pattern.fullmatch(str(value)):
-            raise ValueError(f"Invalid {field} accession namespace or format")
 
 
 def _attribute_value(attrs, names):
@@ -326,8 +315,10 @@ def retrieve_accession(accession, virus, output, offline=False):
     if len(matches) != 1:
         raise ValueError("SRA response does not contain exactly one matching run")
     row = matches[0]
-    _validate_accession_relationships(row)
-    attribute_entries = _sample_attribute_entries(xml, accession)
+    required = ("experiment_accession", "sample_accession", "study_accession")
+    if any(not row.get(field) for field in required):
+        raise ValueError("Archive run/experiment/sample/study linkage is incomplete")
+    _validate_archive_accessions(row)
     archive_errors = []
     try:
         enrich_ena(client, row)
@@ -337,12 +328,9 @@ def retrieve_accession(accession, virus, output, offline=False):
     # Preserve the archive submitter centre separately without changing the
     # legacy parser's source field or its exact-model behavior.
     row["archive_center_name"] = row.get("laboratory") or "UNKNOWN"
-    row.pop("laboratory", None)
     assessed = assess(dict(row), min_spots=0)
     row.update({key: assessed[key] for key in ("selection", "exclusion_reasons", "warnings")})
-    identity = assess_identity({
-        **row, "public_virus_attribute_entries": attribute_entries,
-    }, virus)
+    identity = assess_identity(row, virus)
     if offline and identity["status"] == "accepted_for_technical_review":
         identity = {
             **identity, "status": "unresolved",

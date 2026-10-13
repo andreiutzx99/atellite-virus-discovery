@@ -7,7 +7,7 @@ change its policy or acceptance rules.
 Run one archive accession at a time:
 
 ```sh
-python -m satellite_discovery \
+python -m satellite_discovery.cli \
   --public-virus-accession SRR12424243 \
   --public-virus hcov-229e \
   --output runs/public-virus-SRR12424243
@@ -35,13 +35,21 @@ context: mentioning multiple viruses alone does not establish a mixed sample.
 Incomplete archive metadata means screening cannot detect every possible
 coinfection.
 
+Typed pathogen fields are parsed conservatively across explicit list separators
+and conjunctions. Ambiguous additional agents are held for review with the
+original field and value recorded; recognized strain/isolate/lineage metadata
+and an ordinary “infected with HCoV-229E” phrase are not themselves a second
+pathogen. This bounded parser is not comprehensive pathogen recognition.
+
+SRA run, experiment, sample, and study IDs are validated in their distinct
+INSDC namespaces. BioSample (`SAMN`, `SAMEA`, `SAMD`) and BioProject
+(`PRJNA`, `PRJEB`, `PRJDB`) IDs are validated when present, but remain optional
+and are never substituted for SRA sample or study accessions.
+
 Strain, isolate, stock/catalogue, passage, batch, experimental laboratory,
 archive submission centre, and replicate values are retained separately when
-supported and otherwise remain `UNKNOWN`. SRA sample/study accessions
-(`SRS`/`SRP`) remain distinct from BioSample/BioProject accessions
-(`SAM*`/`PRJ*`). Archive `center_name` is not evidence of the laboratory that
-prepared a biological sample and is never serialized as an unqualified
-`laboratory` value in this profile.
+supported and otherwise remain `UNKNOWN`. Archive `center_name` is not
+evidence of the laboratory that prepared a biological sample.
 
 Identity, library suitability, complete FASTQ availability/size, and overall
 pilot readiness are separate decisions. For example, OC43 amplicon runs can
@@ -78,4 +86,5 @@ consume versioned, provenance-bound sample groups and frozen references, split
 at study/family level before analysis, and report recurrence separately from
 helper dependence or biological confirmation. Preserve existing M7 recurrence
 behavior; do not add cross-strain matching, clustering, ranking, or
-classification in this profile.
+classification in this profile. Collecting multiple strains and isolates does
+not establish independent biological recurrence.

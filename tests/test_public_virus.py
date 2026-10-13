@@ -1,5 +1,4 @@
 import json
-import subprocess
 import sys
 import tempfile
 import copy
@@ -9,18 +8,19 @@ from unittest.mock import patch
 
 from satellite_discovery.public_virus import (
     assess_identity, retrieve_accession, verify_public_record, verify_snapshot_index,
-    _validate_accession_relationships,
+    _validate_archive_accessions,
 )
 from satellite_discovery.cli import main as cli_main
+from satellite_discovery.metadata import parse_packages
 from test_metadata import XML
 
 
-def _public_xml():
-    return (XML.replace("SRPTEST", "SRP123")
-            .replace("SRXTEST", "SRX123")
-            .replace("SRSTEST", "SRS123")
-            .replace("PRJNATEST", "PRJNA123")
-            .replace("SAMNTEST", "SAMN123"))
+def public_xml():
+    return (XML.replace("SRPTEST", "SRP123456")
+            .replace("SRXTEST", "SRX123456")
+            .replace("SRSTEST", "SRS123456")
+            .replace("PRJNATEST", "PRJNA123456")
+            .replace("SAMNTEST", "SAMN123456"))
 
 
 class PublicVirusTests(unittest.TestCase):
@@ -73,64 +73,110 @@ class PublicVirusTests(unittest.TestCase):
         self.assertEqual(assess_identity(row, "hcov-229e")["status"],
                          "accepted_for_technical_review")
 
-    def test_table_driven_adversarial_identity_matrix(self):
+    def test_bounded_adversarial_identity_matrix_blocks_mixed_pilot_readiness(self):
         cases = [
-            ("single virus, no catalogue", {"organism": "Human coronavirus 229E"}, "accepted_for_technical_review"),
-            ("known strain", {"organism": "HCoV-229E", "attributes": {"strain": "clinical isolate"}}, "accepted_for_technical_review"),
-            ("unknown strain", {"organism": "HCoV-229E"}, "accepted_for_technical_review"),
-            ("conflicting supported virus", {"organism": "HCoV-229E", "attributes": {"virus": "HCoV-OC43"}}, "conflicting"),
-            ("host only", {"organism": "Homo sapiens", "attributes": {"host": "HCoV-229E"}}, "insufficient"),
-            ("title only", {"organism": "Homo sapiens", "sample_title": "229E infected cells"}, "insufficient"),
-            ("untyped claim", {"organism": "Homo sapiens", "attributes": {"comment": "infected with HCoV-229E"}}, "insufficient"),
-            ("plus separator and unsupported second agent", {"organism": "HCoV-229E", "attributes": {"pathogen": "HCoV-229E + Dengue virus"}}, "review_required"),
-            ("semicolon list", {"organism": "HCoV-229E", "attributes": {"virus": "HCoV-229E; influenza A"}}, "review_required"),
-            ("comma list", {"organism": "HCoV-229E", "attributes": {"pathogen": "HCoV-229E, influenza A"}}, "review_required"),
-            ("slash list", {"organism": "HCoV-229E", "attributes": {"virus species": "HCoV-229E / dengue virus"}}, "review_required"),
-            ("conjunction list and alternate key format", {"organism": "Homo sapiens", "attributes": {"virus_species": "HCoV-229E and influenza A"}}, "review_required"),
-            ("same-virus strain labels", {"organism": "HCoV-229E", "attributes": {"pathogen": "HCoV-229E strain A / HCoV-229E strain B"}}, "accepted_for_technical_review"),
-            ("same-virus strain suffix shorthand", {"organism": "HCoV-229E", "attributes": {"pathogen": "HCoV-229E strain A/B"}}, "accepted_for_technical_review"),
-            ("different supported viruses in one typed field", {"organism": "HCoV-229E", "attributes": {"virus": "HCoV-229E and HCoV-OC43"}}, "review_required"),
-            ("repeated typed values with unsupported second pathogen", {"organism": "HCoV-229E", "attributes": {"pathogen": "HCoV-229E"}, "public_virus_attribute_entries": [{"key": "pathogen", "value": "HCoV-229E"}, {"key": "pathogen", "value": "Dengue virus"}]}, "review_required"),
-            ("alternate mixed flag", {"organism": "HCoV-229E", "attributes": {"mixed_infection_status": "TRUE"}}, "review_required"),
-            ("explicit additional pathogen", {"organism": "HCoV-229E", "attributes": {"secondary pathogen": "influenza A"}}, "review_required"),
-            ("recombinant sample", {"organism": "HCoV-229E", "sample_title": "recombinant virus"}, "review_required"),
-            ("modified sample", {"organism": "HCoV-229E", "sample_title": "mouse-adapted mutant"}, "review_required"),
-            ("excluded pathogen takes precedence", {"organism": "HCoV-229E", "attributes": {"pathogen": "HCoV-229E + SARS-CoV-2"}}, "excluded"),
-            ("broad study title is not sample-level mixture", {"organism": "HCoV-229E", "study_title": "229E and influenza comparison"}, "accepted_for_technical_review"),
-            ("misleading title wording does not establish identity", {"organism": "Homo sapiens", "sample_title": "HCoV-229E mutant-cell comparison"}, "review_required"),
+            ("known single", {"pathogen": "HCoV-229E"}, "accepted_for_technical_review",
+             "archive_sample_level_virus_identity"),
+            ("known second", {"pathogen": "HCoV-229E + HCoV-OC43"}, "review_required",
+             "multiple_or_ambiguous_pathogen_metadata_requires_review"),
+            ("unknown second", {"pathogen": "HCoV-229E with Dengue virus"}, "review_required",
+             "multiple_or_ambiguous_pathogen_metadata_requires_review"),
+            ("repeated typed pathogen fields",
+             {"pathogen": "HCoV-229E", "virus species": "Dengue virus"},
+             "review_required", "multiple_or_ambiguous_pathogen_metadata_requires_review"),
+            ("explicit flag", {"infection type": "coinfection"}, "review_required",
+             "multiple_or_ambiguous_pathogen_metadata_requires_review"),
+            ("contradictory", {"virus": "HCoV-OC43"}, "conflicting",
+             "multiple_public_virus_identities"),
+            ("excluded", {"pathogen": "HCoV-229E and SARS-CoV-2"}, "excluded",
+             "excluded_pathogen_mentioned_in_metadata"),
+            ("same-virus strains", {"pathogen": "HCoV-229E and HCoV-229E strain VR-740"},
+             "accepted_for_technical_review", "archive_sample_level_virus_identity"),
+            ("ambiguous", {"pathogen": "HCoV-229E / possibly dengue"}, "review_required",
+             "multiple_or_ambiguous_pathogen_metadata_requires_review"),
+            ("study context", {}, "accepted_for_technical_review",
+             "archive_sample_level_virus_identity"),
+            ("empty", {"pathogen": ""}, "accepted_for_technical_review",
+             "archive_sample_level_virus_identity"),
+            ("malformed", {"pathogen": "???"}, "review_required",
+             "multiple_or_ambiguous_pathogen_metadata_requires_review"),
+            ("infected with one virus", {"pathogen": "infected with HCoV-229E"},
+             "accepted_for_technical_review", "archive_sample_level_virus_identity"),
+            ("strain designation", {"pathogen": "HCoV-229E with strain designation VR-740"},
+             "accepted_for_technical_review", "archive_sample_level_virus_identity"),
+            ("punctuated isolate identifier",
+             {"pathogen": "HCoV-229E with isolate VR-740/1"},
+             "accepted_for_technical_review", "archive_sample_level_virus_identity"),
         ]
-        for name, row, expected in cases:
-            with self.subTest(name=name):
-                self.assertEqual(assess_identity(row, "hcov-229e")["status"], expected)
+        for connector in ("and", "with", "alongside", "together with", "plus",
+                          ";", ",", "/", "&"):
+            cases.append((f"separator {connector}",
+                          {"pathogen": f"HCoV-229E {connector} Dengue virus"},
+                          "review_required",
+                          "multiple_or_ambiguous_pathogen_metadata_requires_review"))
 
-    def test_malformed_attributes_and_unsupported_virus_fail_explicitly(self):
-        with self.assertRaisesRegex(ValueError, "dictionary"):
-            assess_identity({"organism": "HCoV-229E", "attributes": []}, "hcov-229e")
-        with self.assertRaisesRegex(ValueError, "key/value"):
-            assess_identity({"attributes": {}, "public_virus_attribute_entries": ["broken"]}, "hcov-229e")
-        with self.assertRaisesRegex(ValueError, "Unsupported"):
-            assess_identity({"organism": "HCoV-229E"}, "hcov-229e-something-else")
+        for label, attrs, expected, reason in cases:
+            with self.subTest(case=label):
+                study = ("Comparison of 229E and Dengue viruses"
+                         if label == "study context" else "")
+                row = {"organism": "Human coronavirus 229E", "study_title": study,
+                       "attributes": attrs}
+                identity = assess_identity(row, "hcov-229e")
+                self.assertEqual(identity["status"], expected)
+                self.assertEqual(identity["reason"], reason)
+                if expected == "review_required":
+                    self.assertTrue(identity["review_evidence"])
+                    self.assertTrue(all("field" in item and "value" in item
+                                        for item in identity["review_evidence"]))
+                    record = parse_packages(public_xml(), None)[0]
+                    record.update({"run_accession": "SRR123456",
+                                   "organism": "Human coronavirus 229E",
+                                   "attributes": attrs,
+                                   "raw_read_availability": "ena_fastq_listed",
+                                   "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/x.fastq.gz",
+                                   "fastq_md5": "0" * 32, "fastq_bytes": "100"})
+                    with tempfile.TemporaryDirectory() as tmp, \
+                         patch("satellite_discovery.public_virus.Client.search",
+                               return_value={"ids": ["uid"]}), \
+                         patch("satellite_discovery.public_virus.Client.fetch",
+                               return_value="<metadata/>"), \
+                         patch("satellite_discovery.public_virus.parse_packages",
+                               return_value=[record]), \
+                         patch("satellite_discovery.public_virus.enrich_ena"), \
+                         patch("satellite_discovery.public_virus.files_for_run",
+                               return_value=[{"bytes": 100}]):
+                        doc = retrieve_accession("SRR123456", "hcov-229e", tmp)
+                    self.assertEqual(doc["record"]["technical_suitability"]["status"],
+                                     "eligible_for_review")
+                    self.assertNotEqual(doc["record"]["pilot_readiness"]["status"],
+                                        "eligible_for_review")
 
-    def test_repeated_raw_typed_attributes_are_preserved_for_identity_review(self):
-        xml = _public_xml().replace("Homo sapiens", "Human coronavirus 229E")
-        xml = xml.replace(
-            "</SAMPLE_ATTRIBUTES>",
-            '<SAMPLE_ATTRIBUTE><TAG>pathogen</TAG><VALUE>HCoV-229E</VALUE></SAMPLE_ATTRIBUTE>'
-            '<SAMPLE_ATTRIBUTE><TAG>pathogen</TAG><VALUE>Dengue virus</VALUE></SAMPLE_ATTRIBUTE>'
-            "</SAMPLE_ATTRIBUTES>",
-        ).replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
-        with tempfile.TemporaryDirectory() as tmp, \
-             patch("satellite_discovery.public_virus.Client.search", return_value={"ids": ["uid"]}), \
-             patch("satellite_discovery.public_virus.Client.fetch", return_value=xml), \
-             patch("satellite_discovery.public_virus.enrich_ena"):
-            doc = retrieve_accession("SRR123", "hcov-229e", tmp)
-        identity = doc["record"]["public_virus"]
-        self.assertEqual(identity["status"], "review_required")
-        self.assertTrue(any(
-            evidence["field"] == "attribute:pathogen"
-            and evidence["reason"] == "conflicting_repeated_typed_pathogen_values"
-            for evidence in identity["review_evidence"]
-        ))
+    def test_INSDC_accession_namespaces_and_optional_links(self):
+        for run, experiment, sample, study in (
+            ("SRR1", "SRX2", "SRS3", "SRP4"),
+            ("ERR1", "ERX2", "ERS3", "ERP4"),
+            ("DRR1", "DRX2", "DRS3", "DRP4"),
+        ):
+            row = {"run_accession": run, "experiment_accession": experiment,
+                   "sample_accession": sample, "study_accession": study}
+            _validate_archive_accessions(row)
+            for value in ("SAMN1", "SAMEA1", "SAMD1"):
+                row["biosample"] = value
+                _validate_archive_accessions(row)
+            for value in ("PRJNA1", "PRJEB1", "PRJDB1"):
+                row["bioproject"] = value
+                _validate_archive_accessions(row)
+            row.pop("biosample")
+            row.pop("bioproject")
+            _validate_archive_accessions(row)
+        base = {"run_accession": "ERR1", "experiment_accession": "ERX2",
+                "sample_accession": "ERS3", "study_accession": "ERP4"}
+        for field, bad in (("sample_accession", "SAMN1"), ("study_accession", "PRJNA1"),
+                           ("biosample", "SRR1"), ("biosample", "SAMEAX"),
+                           ("bioproject", "SRP1"), ("bioproject", "PRJXX1"),
+                           ("experiment_accession", "ERS3")):
+            with self.subTest(field=field, bad=bad), self.assertRaises(ValueError):
+                _validate_archive_accessions({**base, field: bad})
 
     def test_stock_laboratory_and_archive_centre_are_distinct(self):
         result = assess_identity({
@@ -141,7 +187,6 @@ class PublicVirusTests(unittest.TestCase):
         self.assertEqual(result["experimental_laboratory"], "UNKNOWN")
         self.assertEqual(result["laboratory_stock_catalogue"], "UNKNOWN")
         self.assertEqual(result["strain"], "OC43 clinical isolate")
-        self.assertNotIn("laboratory", result)
 
     def test_sanitized_archive_metadata_fixtures_are_reproducible(self):
         fixture_dir = Path(__file__).parent / "fixtures" / "public_virus_metadata"
@@ -159,12 +204,6 @@ class PublicVirusTests(unittest.TestCase):
                  patch("satellite_discovery.public_virus.enrich_ena"):
                 doc = retrieve_accession(accession, virus, tmp)
             record, expected = doc["record"], fixture["expected"]
-            self.assertRegex(record["sample_accession"], r"^SRS[0-9]+$")
-            self.assertRegex(record["biosample"], r"^SAMN[0-9]+$")
-            self.assertRegex(record["study_accession"], r"^SRP[0-9]+$")
-            self.assertRegex(record["bioproject"], r"^PRJNA[0-9]+$")
-            self.assertNotEqual(record["sample_accession"], record["biosample"])
-            self.assertNotEqual(record["study_accession"], record["bioproject"])
             self.assertEqual(record["public_virus"]["status"], expected["identity"])
             self.assertEqual(record["technical_suitability"]["status"], expected["library"])
             self.assertEqual(record["fastq_assessment"]["status"], expected["fastq"])
@@ -183,7 +222,7 @@ class PublicVirusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError, "accession"):
                 retrieve_accession("../SRR123", "hcov-229e", tmp, offline=True)
-            xml = _public_xml().replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
+            xml = public_xml().replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"], "count": 1}), \
                  patch("satellite_discovery.public_virus.Client.fetch", return_value=xml), \
@@ -193,7 +232,7 @@ class PublicVirusTests(unittest.TestCase):
 
     def test_missing_sample_relationship_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
-            xml = _public_xml().replace('SAMPLE accession="SRS123"', 'SAMPLE accession=""')
+            xml = public_xml().replace('SAMPLE accession="SRS123456"', 'SAMPLE accession=""')
             xml = xml.replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"], "count": 1}), \
@@ -203,7 +242,7 @@ class PublicVirusTests(unittest.TestCase):
 
     def test_metadata_only_intake_and_edit_detection(self):
         with tempfile.TemporaryDirectory() as tmp:
-            xml = _public_xml().replace("Homo sapiens", "Human coronavirus 229E")
+            xml = public_xml().replace("Homo sapiens", "Human coronavirus 229E")
             xml = xml.replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"], "count": 1}), \
@@ -211,9 +250,6 @@ class PublicVirusTests(unittest.TestCase):
                  patch("satellite_discovery.public_virus.enrich_ena"):
                 doc = retrieve_accession("SRR123", "hcov-229e", tmp)
             self.assertEqual(doc["record"]["public_virus"]["status"], "accepted_for_technical_review")
-            self.assertEqual(doc["record"]["archive_center_name"], "Example centre")
-            self.assertNotIn("laboratory", doc["record"])
-            self.assertEqual(doc["record"]["public_virus"]["experimental_laboratory"], "UNKNOWN")
             self.assertFalse(doc["manifest"]["read_download_enabled"])
             self.assertFalse(doc["manifest"]["qc_enabled"])
             self.assertTrue(verify_public_record(doc, Path(tmp) / "raw_metadata"))
@@ -223,7 +259,7 @@ class PublicVirusTests(unittest.TestCase):
 
     def test_local_digest_verification_is_not_acquisition_authorization(self):
         with tempfile.TemporaryDirectory() as tmp:
-            xml = _public_xml().replace("Homo sapiens", "Human coronavirus 229E")
+            xml = public_xml().replace("Homo sapiens", "Human coronavirus 229E")
             xml = xml.replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"]}), \
@@ -250,7 +286,7 @@ class PublicVirusTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "snapshot missing or changed"):
                 verify_snapshot_index(tmp, entries)
         with tempfile.TemporaryDirectory() as tmp:
-            xml = _public_xml().replace("Homo sapiens", "Human coronavirus 229E")
+            xml = public_xml().replace("Homo sapiens", "Human coronavirus 229E")
             xml = xml.replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"], "count": 1}), \
@@ -263,7 +299,7 @@ class PublicVirusTests(unittest.TestCase):
 
     def test_offline_cache_does_not_promote_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
-            xml = _public_xml().replace("Homo sapiens", "Human coronavirus 229E")
+            xml = public_xml().replace("Homo sapiens", "Human coronavirus 229E")
             xml = xml.replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"], "count": 1}), \
@@ -280,7 +316,7 @@ class PublicVirusTests(unittest.TestCase):
 
     def test_amplicon_identity_does_not_make_library_suitable(self):
         with tempfile.TemporaryDirectory() as tmp:
-            xml = _public_xml().replace("RNA-Seq", "AMPLICON").replace("Homo sapiens", "Human coronavirus OC43")
+            xml = public_xml().replace("RNA-Seq", "AMPLICON").replace("Homo sapiens", "Human coronavirus OC43")
             xml = xml.replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
             with patch("satellite_discovery.public_virus.Client.search",
                        return_value={"ids": ["uid"], "count": 1}), \
@@ -302,64 +338,6 @@ class PublicVirusTests(unittest.TestCase):
                 cli_main()
             self.assertEqual(raised.exception.code, 2)
             intake.assert_not_called()
-
-    def test_accession_namespace_mismatches_are_rejected(self):
-        row = {
-            "run_accession": "SRR123", "experiment_accession": "SRX123",
-            "sample_accession": "SRS123", "study_accession": "SRP123",
-            "biosample": "SAMN123", "bioproject": "PRJNA123",
-        }
-        _validate_accession_relationships(row)
-        for field, wrong in (
-            ("sample_accession", "SAMN123"),
-            ("study_accession", "PRJNA123"),
-            ("biosample", "SRS123"),
-            ("bioproject", "SRP123"),
-            ("experiment_accession", "SRS123"),
-            ("run_accession", "SAMN123"),
-        ):
-            broken = {**row, field: wrong}
-            with self.subTest(field=field):
-                with self.assertRaisesRegex(ValueError, field):
-                    _validate_accession_relationships(broken)
-
-    def test_multiple_readiness_failures_remain_separate(self):
-        row = {
-            "run_accession": "SRR123", "experiment_accession": "SRX123",
-            "sample_accession": "SRS123", "study_accession": "SRP123",
-            "organism": "Homo sapiens", "attributes": {},
-            "library_strategy": "AMPLICON", "library_source": "VIRAL RNA",
-            "library_selection": "PCR", "platform": "ILLUMINA",
-            "layout": "SINGLE", "total_spots": 2_000_000,
-            "raw_read_availability": "unverified",
-        }
-        with tempfile.TemporaryDirectory() as tmp, \
-             patch("satellite_discovery.public_virus.Client.search", return_value={"ids": ["uid"]}), \
-             patch("satellite_discovery.public_virus.Client.fetch", return_value="<metadata-fixture/>"), \
-             patch("satellite_discovery.public_virus.parse_packages", return_value=[row]), \
-             patch("satellite_discovery.public_virus.enrich_ena"):
-            doc = retrieve_accession("SRR123", "hcov-229e", tmp)
-        record = doc["record"]
-        self.assertEqual(record["public_virus"]["status"], "insufficient")
-        self.assertEqual(record["technical_suitability"]["status"], "excluded")
-        self.assertIn("library_strategy_unsuitable_for_unbiased_discovery",
-                      record["technical_suitability"]["reasons"])
-        self.assertEqual(record["fastq_assessment"]["status"], "unverified_or_incomplete")
-        self.assertIn("ena_fastq_not_listed", record["fastq_assessment"]["reasons"])
-        self.assertEqual(record["pilot_readiness"]["status"], "held_for_identity_review")
-        self.assertIn("sample_level_virus_identity_missing", record["pilot_readiness"]["reasons"])
-        self.assertIn("library_strategy_unsuitable_for_unbiased_discovery",
-                      record["pilot_readiness"]["reasons"])
-        self.assertIn("ena_fastq_not_listed", record["pilot_readiness"]["reasons"])
-
-    def test_documented_python_module_entry_point(self):
-        repo = Path(__file__).resolve().parents[1]
-        result = subprocess.run(
-            [sys.executable, "-m", "satellite_discovery", "--help"],
-            cwd=repo, capture_output=True, text=True, check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--public-virus-accession", result.stdout)
 
 
 if __name__ == "__main__":

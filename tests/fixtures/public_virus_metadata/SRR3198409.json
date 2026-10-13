@@ -1,5 +1,5 @@
 {
-  "source": "ENA read_run filereport; metadata-only, retrieved 2026-10-12",
+  "source": "ENA read_run filereport and NCBI SRA RunInfo; metadata-only, retrieved 2026-10-12",
   "source_accession": "SRR3198409",
   "record": {
     "run_accession": "SRR3198409",
