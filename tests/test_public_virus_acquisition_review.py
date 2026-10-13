@@ -1,20 +1,37 @@
 import hashlib
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from satellite_discovery import metadata_filter, public_virus
 from satellite_discovery.public_virus_acquisition_review import (
     MAX_PACKET_BYTES,
     AcquisitionReviewError,
-    build_review_packet,
+    build_review_packet as _build_review_packet,
     serialize_review_packet,
 )
 from satellite_discovery.public_virus_provenance import create_document
 from satellite_discovery.sequence_downloader import files_for_run
 
 
+_SNAPSHOT_TEMP = tempfile.TemporaryDirectory(prefix="public-virus-review-test-")
+_SNAPSHOT_DIR = Path(_SNAPSHOT_TEMP.name)
+_SNAPSHOT_NAME = "synthetic-sra-response.xml"
+_SNAPSHOT_BYTES = b"<SRA>synthetic source response</SRA>\n"
+
+
+def build_review_packet(document, provenance_document=None, *, raw_metadata_directory=_SNAPSHOT_DIR):
+    return _build_review_packet(
+        document, provenance_document,
+        raw_metadata_directory=raw_metadata_directory,
+    )
+
+
 def make_intake(*, virus="hcov-229e", organism="Human coronavirus 229E",
                 attributes=None, **overrides):
+    snapshot_path = _SNAPSHOT_DIR / _SNAPSHOT_NAME
+    snapshot_path.write_bytes(_SNAPSHOT_BYTES)
     record = {
         "run_accession": "SRR123456",
         "experiment_accession": "SRX123456",
@@ -91,7 +108,10 @@ def make_intake(*, virus="hcov-229e", organism="Human coronavirus 229E",
         "policy_sha256": public_virus.POLICY_SHA256,
         "archive_source": "NCBI SRA / ENA",
         "retrieval_mode": "archive_client",
-        "snapshot_index": [],
+        "snapshot_index": [{
+            "name": _SNAPSHOT_NAME,
+            "sha256": hashlib.sha256(_SNAPSHOT_BYTES).hexdigest(),
+        }],
         "archive_errors": [],
         "archive_snapshot_integrity": "digest_checked_against_local_manifest_only",
         "biological_confirmation": "not_performed",
@@ -210,22 +230,41 @@ class PublicVirusAcquisitionReviewTests(unittest.TestCase):
         self.assertEqual(packet["outcome"], "held_for_review")
         self.assertIn("offline_or_unverified_metadata",
                       {item["code"] for item in packet["reasons"]})
-        with_snapshot = make_intake()
-        with_snapshot["manifest"]["snapshot_index"] = [
-            {"name": "response.xml", "sha256": "a" * 64}
+        empty_index = make_intake()
+        empty_index["manifest"]["snapshot_index"] = []
+        empty_packet = build_review_packet(empty_index)
+        self.assertEqual(empty_packet["outcome"], "held_for_review")
+        self.assertIn("source_snapshots_missing", {
+            item["code"] for item in empty_packet["reasons"]
+        })
+        no_directory = make_intake()
+        self.assertIn("snapshot_directory_not_supplied", {
+            item["code"] for item in build_review_packet(
+                no_directory, raw_metadata_directory=None)["reasons"]
+        })
+        missing_file = make_intake()
+        missing_file["manifest"]["snapshot_index"] = [
+            {"name": "missing-response.xml", "sha256": "a" * 64}
         ]
-        with_snapshot["manifest"]["record_sha256"] = hashlib.sha256(
-            json.dumps(with_snapshot["record"], sort_keys=True,
-                       separators=(",", ":")).encode()
-        ).hexdigest()
-        self.assertIn("snapshot_files_not_verified", {
-            item["code"] for item in build_review_packet(with_snapshot)["reasons"]
+        self.assertIn("snapshot_files_missing", {
+            item["code"] for item in build_review_packet(missing_file)["reasons"]
+        })
+        wrong_hash = make_intake()
+        wrong_hash["manifest"]["snapshot_index"][0]["sha256"] = "a" * 64
+        self.assertIn("snapshot_hash_mismatch", {
+            item["code"] for item in build_review_packet(wrong_hash)["reasons"]
+        })
+        duplicate = make_intake()
+        entry = duplicate["manifest"]["snapshot_index"][0]
+        duplicate["manifest"]["snapshot_index"] = [entry, dict(entry)]
+        self.assertIn("snapshot_index_ambiguous", {
+            item["code"] for item in build_review_packet(duplicate)["reasons"]
         })
         traversal = make_intake()
         traversal["manifest"]["snapshot_index"] = [
             {"name": "../outside.txt", "sha256": "a" * 64}
         ]
-        self.assertIn("snapshot_index_missing_or_malformed", {
+        self.assertIn("snapshot_index_malformed", {
             item["code"] for item in build_review_packet(traversal)["reasons"]
         })
         stale = make_intake()

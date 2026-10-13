@@ -38,12 +38,13 @@ references. These references improve traceability but do not authenticate
 curators or establish biological truth. Unresolved direct identity conflicts
 are surfaced as `CONFLICTING`.
 
-The intake manifest's local SHA256 values detect local inconsistency only; they
-do not authenticate NCBI/ENA metadata or confer download authority. When the
-manifest lists raw snapshot files, provide their directory using
-`raw_metadata_directory` for local verification; without it, the packet is
-held. The current accession format has no independently authenticated
-retrieval timestamp, so metadata age cannot be certified.
+The gate requires a nonempty, unambiguous snapshot index and a supplied
+`raw_metadata_directory` containing every indexed file with its recorded
+SHA256. Missing indexes, directories, files, duplicate names, unsafe paths, and
+digest mismatches have distinct hold reasons. Local snapshot verification
+detects inconsistency only; it does not authenticate NCBI/ENA metadata or
+confer download authority. The current accession format has no independently
+authenticated retrieval timestamp, so metadata age cannot be certified.
 
 A later PR must add a separately reviewed, explicit acquisition-authorization
 step. It must define the approver and scope, revalidate current archive

@@ -7,7 +7,6 @@ import hashlib
 import json
 import math
 import re
-import tempfile
 from pathlib import Path
 
 from . import metadata_filter, public_virus
@@ -169,32 +168,44 @@ def _record_identity_matches(record, virus):
 def _verify_local_manifest(document, manifest, raw_metadata_directory):
     snapshot_index = manifest.get("snapshot_index")
     if not isinstance(snapshot_index, list):
-        raise ValueError("snapshot_index_missing_or_malformed")
+        raise ValueError("source_snapshots_missing")
+    if not snapshot_index:
+        raise ValueError("source_snapshots_missing")
+    if raw_metadata_directory is None:
+        raise ValueError("snapshot_directory_not_supplied")
+    names = set()
     for entry in snapshot_index:
         if not isinstance(entry, dict):
-            raise ValueError("snapshot_index_missing_or_malformed")
+            raise ValueError("snapshot_index_malformed")
         name, digest = entry.get("name"), entry.get("sha256")
+        if set(entry) != {"name", "sha256"}:
+            raise ValueError("snapshot_index_ambiguous")
         if (not isinstance(name, str) or name in {"", ".", ".."}
                 or Path(name).name != name
                 or not re.fullmatch(r"[A-Za-z0-9._-]{1,255}", name)
                 or not isinstance(digest, str)
                 or not re.fullmatch(r"[0-9a-f]{64}", digest)):
-            raise ValueError("snapshot_index_missing_or_malformed")
-    if raw_metadata_directory is None and snapshot_index:
-        raise ValueError("snapshot_files_not_verified")
-    if raw_metadata_directory is not None:
-        root = Path(raw_metadata_directory)
-        for entry in snapshot_index:
-            path = root / entry["name"]
-            try:
-                if path.is_symlink() or not path.is_file() or path.resolve().parent != root.resolve():
-                    raise ValueError("snapshot_index_missing_or_malformed")
-            except OSError as exc:
-                raise ValueError("snapshot_index_missing_or_malformed") from exc
-        public_virus.verify_public_record(document, raw_metadata_directory)
-        return
-    with tempfile.TemporaryDirectory(prefix="public-virus-review-") as empty_snapshot:
-        public_virus.verify_public_record(document, empty_snapshot)
+            raise ValueError("snapshot_index_malformed")
+        if name in names:
+            raise ValueError("snapshot_index_ambiguous")
+        names.add(name)
+    root = Path(raw_metadata_directory)
+    for entry in snapshot_index:
+        path = root / entry["name"]
+        try:
+            if path.is_symlink() or not path.is_file() or path.resolve().parent != root.resolve():
+                raise ValueError("snapshot_files_missing")
+        except OSError as exc:
+            raise ValueError("snapshot_files_missing") from exc
+    expected_record_digest = hashlib.sha256(json.dumps(
+        document["record"], sort_keys=True, separators=(",", ":"),
+    ).encode()).hexdigest()
+    if expected_record_digest != manifest.get("record_sha256"):
+        raise ValueError("intake_manifest_inconsistent")
+    try:
+        public_virus.verify_snapshot_index(root, snapshot_index)
+    except ValueError as exc:
+        raise ValueError("snapshot_hash_mismatch") from exc
 
 
 def _find_archive_entities(graph, accessions):
@@ -356,9 +367,21 @@ def build_review_packet(document, provenance_document=None, *,
             _verify_local_manifest(document, manifest, raw_metadata_directory)
         except (ValueError, OSError, TypeError, KeyError) as exc:
             code = str(exc) if str(exc) in {
-                "snapshot_files_not_verified", "snapshot_index_missing_or_malformed",
+                "source_snapshots_missing", "snapshot_directory_not_supplied",
+                "snapshot_files_missing", "snapshot_hash_mismatch",
+                "snapshot_index_malformed", "snapshot_index_ambiguous",
+                "intake_manifest_inconsistent",
             } else "intake_manifest_inconsistent"
-            reasons.append(_reason(code, "Local manifest, record digest, or snapshot verification failed."))
+            details = {
+                "source_snapshots_missing": "No source-response snapshots are indexed.",
+                "snapshot_directory_not_supplied": "The indexed source-response directory was not supplied.",
+                "snapshot_files_missing": "One or more indexed source-response files are missing or unsafe.",
+                "snapshot_hash_mismatch": "An indexed source-response file does not match its SHA256.",
+                "snapshot_index_malformed": "The source snapshot index is malformed or contains unsafe names.",
+                "snapshot_index_ambiguous": "The source snapshot index contains duplicate or ambiguous entries.",
+                "intake_manifest_inconsistent": "The normalized record digest does not match its manifest.",
+            }
+            reasons.append(_reason(code, details[code]))
         accessions = {}
         for field, entity_type in ARCHIVE_FIELDS.items():
             value = record.get(field)
