@@ -13,6 +13,7 @@ SCHEMA_VERSION = 1
 MAX_ENTITIES = 20_000
 MAX_RELATIONSHIPS = 50_000
 MAX_EVIDENCE = 100_000
+MAX_DOCUMENT_BYTES = 16 * 1024 * 1024
 MAX_TEXT = 2_000
 MAX_IDENTIFIER = 128
 
@@ -88,6 +89,72 @@ def _canonical(value):
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
         allow_nan=False,
     )
+
+
+def _canonical_size_bytes(value, limit=None):
+    """Count canonical UTF-8 bytes incrementally without building the JSON string."""
+    if limit is None:
+        limit = MAX_DOCUMENT_BYTES
+    encoder = json.JSONEncoder(
+        ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+    )
+    size = 0
+    try:
+        for chunk in encoder.iterencode(value):
+            size += len(chunk.encode("utf-8"))
+            if size > limit:
+                _fail(f"document exceeds MAX_DOCUMENT_BYTES ({limit})")
+    except UnicodeEncodeError as exc:
+        raise ProvenanceValidationError("document contains invalid Unicode") from exc
+    return size
+
+
+def _preflight_text_lower_bound(entities, relationships):
+    """Reject oversized known text fields before normalization or evidence hashing."""
+    size = 0
+    def add(value):
+        nonlocal size
+        if not isinstance(value, str):
+            return
+        try:
+            size += len(value.strip().encode("utf-8"))
+        except UnicodeEncodeError:
+            # The normal validator reports malformed Unicode.
+            return
+        if size > MAX_DOCUMENT_BYTES:
+            _fail(f"text exceeds MAX_DOCUMENT_BYTES ({MAX_DOCUMENT_BYTES})")
+
+    def evidence_text(records):
+        if not isinstance(records, list):
+            return
+        for item in records:
+            if not isinstance(item, dict):
+                continue
+            for key in ("source", "evidence_type", "review_state", "uncertainty",
+                        "statement", "dimension", "assessment", "source_digest"):
+                add(item.get(key))
+            reference = item.get("audit_reference")
+            if isinstance(reference, dict):
+                for value in reference.values():
+                    add(value)
+
+    for item in entities:
+        if not isinstance(item, dict):
+            continue
+        for key in ("entity_id", "entity_type", "label"):
+            add(item.get(key))
+        identifiers = item.get("identifiers")
+        if isinstance(identifiers, dict):
+            for namespace, value in identifiers.items():
+                add(namespace)
+                add(value)
+        evidence_text(item.get("identity_evidence"))
+    for item in relationships:
+        if not isinstance(item, dict):
+            continue
+        for key in ("relationship_id", "relationship_type", "subject", "object"):
+            add(item.get(key))
+        evidence_text(item.get("evidence"))
 
 
 def stable_evidence_id(evidence):
@@ -241,8 +308,11 @@ def _validate_entity(item):
     if identity_state == "confirmed" and entity_type == "biological_material":
         if not any(e.get("source") == "curator_decision"
                    and e.get("review_state") == "accepted"
+                   and "audit_reference" in e
                    for e in identity_evidence):
-            _fail("confirmed biological_material requires accepted curator identity evidence")
+            _fail(
+                "confirmed biological_material requires accepted curator "
+                "identity evidence with a valid audit_reference")
         if any(e.get("review_state") == "conflicting" for e in identity_evidence):
             _fail("conflicting identity evidence prevents confirmed biological_material identity")
     if identity_evidence:
@@ -311,6 +381,7 @@ def create_document(entities, relationships):
         _fail(f"entities must be a list of at most {MAX_ENTITIES}")
     if not isinstance(relationships, list) or len(relationships) > MAX_RELATIONSHIPS:
         _fail(f"relationships must be a list of at most {MAX_RELATIONSHIPS}")
+    _preflight_text_lower_bound(entities, relationships)
     evidence_count = 0
     for entity in entities:
         if isinstance(entity, dict) and isinstance(entity.get("identity_evidence"), list):
@@ -343,6 +414,7 @@ def create_document(entities, relationships):
         "entities": sorted(clean_entities, key=lambda row: row["entity_id"]),
         "relationships": sorted(clean_relationships, key=lambda row: row["relationship_id"]),
     }
+    _canonical_size_bytes(doc)
     return doc
 
 
@@ -362,7 +434,8 @@ def validate_document(document):
 
 def serialize_document(document):
     """Return deterministic UTF-8-compatible JSON text."""
-    return _canonical(validate_document(document))
+    canonical = validate_document(document)
+    return _canonical(canonical)
 
 
 def assess_independence(document, left, right, dimension):

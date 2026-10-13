@@ -58,6 +58,17 @@ def decision_edge(rid, left, right, dimension, assessment, **kwargs):
     )
 
 
+def identity_ev(review="accepted", **fields):
+    result = ev(review=review, **fields)
+    if review == "accepted":
+        result["audit_reference"] = {
+            "reviewer_id": "curator:test-reviewer",
+            "decision_id": "identity:test-001",
+            "decision_rationale": "Synthetic identity review fixture.",
+        }
+    return result
+
+
 class PublicVirusProvenanceTests(unittest.TestCase):
     def test_two_runs_from_one_sra_sample_do_not_imply_independence(self):
         graph = create_document(
@@ -155,7 +166,7 @@ class PublicVirusProvenanceTests(unittest.TestCase):
             [entity("study-a", "sra_study"), entity("study-b", "sra_study"),
              entity("material", "biological_material", identity_state="confirmed",
                     identifiers={"curator_material_id": "MAT-A"},
-                    identity_evidence=[ev()])],
+                     identity_evidence=[identity_ev()])],
             [
                 edge("study-a-material", "study-a", "material", "derived_from"),
                 edge("study-b-material", "study-b", "material", "derived_from"),
@@ -398,7 +409,7 @@ class PublicVirusProvenanceTests(unittest.TestCase):
         self.assertEqual(len(graph["relationships"]), 3)
 
     def test_confirmed_identity_rejects_unresolved_conflicting_evidence(self):
-        identity = ev()
+        identity = identity_ev()
         confirmed = entity(
             "material", "biological_material", identity_state="confirmed",
             identifiers={"local": "MAT-1"}, identity_evidence=[identity],
@@ -428,6 +439,123 @@ class PublicVirusProvenanceTests(unittest.TestCase):
         )
         self.assertEqual(create_document([provisional], [])["entities"][0]["identity_state"],
                          "provisional")
+
+    def test_confirmed_identity_requires_traceable_curator_decision(self):
+        generic_accepted = ev()
+        with self.assertRaisesRegex(ProvenanceValidationError, "valid audit_reference"):
+            create_document([entity(
+                "material", "biological_material", identity_state="confirmed",
+                identifiers={"local": "MAT-1"}, identity_evidence=[generic_accepted],
+            )], [])
+        valid = identity_ev()
+        graph = create_document([entity(
+            "material", "biological_material", identity_state="confirmed",
+            identifiers={"local": "MAT-1"}, identity_evidence=[valid],
+        )], [])
+        normalized = graph["entities"][0]["identity_evidence"][0]
+        self.assertEqual(normalized["audit_reference"]["decision_id"], "identity:test-001")
+        self.assertEqual(normalized["audit_reference"]["reviewer_id"], "curator:test-reviewer")
+
+    def test_confirmed_identity_rejects_invalid_curator_audit_references(self):
+        invalid_references = [
+            {"reviewer_id": " ", "decision_id": "d-1", "decision_rationale": "rationale"},
+            {"reviewer_id": "reviewer-1", "decision_rationale": "rationale"},
+            {"reviewer_id": "reviewer-1", "decision_id": "d-1"},
+            {"reviewer_id": ["reviewer-1"], "decision_id": "d-1",
+             "decision_rationale": "rationale"},
+            {"reviewer_id": "r" * 129, "decision_id": "d-1",
+             "decision_rationale": "rationale"},
+            {"reviewer_id": "reviewer-1", "decision_id": "d-1",
+             "decision_rationale": "x" * 2_001},
+        ]
+        for reference in invalid_references:
+            with self.subTest(reference=reference):
+                evidence = identity_ev()
+                evidence["audit_reference"] = reference
+                with self.assertRaises(ProvenanceValidationError):
+                    create_document([entity(
+                        "material", "biological_material", identity_state="confirmed",
+                        identifiers={"local": "MAT-1"}, identity_evidence=[evidence],
+                    )], [])
+
+    def test_confirmed_identity_rejects_proposed_and_publication_only_evidence(self):
+        for evidence in (
+                identity_ev(review="proposed"),
+                ev(source="publication_assertion", review="accepted")):
+            with self.subTest(evidence=evidence), self.assertRaisesRegex(
+                    ProvenanceValidationError, "accepted curator identity evidence"):
+                create_document([entity(
+                    "material", "biological_material", identity_state="confirmed",
+                    identifiers={"local": "MAT-1"}, identity_evidence=[evidence],
+                )], [])
+
+    def test_identity_audit_reference_participates_in_id_and_serialization(self):
+        first = identity_ev()
+        changed = identity_ev()
+        changed["audit_reference"]["decision_rationale"] = "Different synthetic rationale."
+        first_id = stable_evidence_id(first)
+        changed_id = stable_evidence_id(changed)
+        self.assertNotEqual(first_id, changed_id)
+        doc = create_document([entity(
+            "material", "biological_material", identity_state="confirmed",
+            identifiers={"local": "MAT-1"}, identity_evidence=[first],
+        )], [])
+        serialized = serialize_document(doc)
+        self.assertIn('"decision_id":"identity:test-001"', serialized)
+        self.assertIn('"reviewer_id":"curator:test-reviewer"', serialized)
+        self.assertEqual(validate_document(doc), doc)
+
+    def test_document_size_limit_uses_canonical_utf8_bytes_consistently(self):
+        entities = [entity("a"), entity("b", label='π\\n"quoted"\\\\text')]
+        relationships = [edge(
+            "r", "a", "b", evidence=[ev(
+                review="proposed",
+                statement='Unicode π and escaped "quotes" plus \\\\ backslash.',
+            )],
+        )]
+        ordinary = create_document(entities, relationships)
+        encoded_size = len(provenance._canonical(ordinary).encode("utf-8"))
+        self.assertGreater(encoded_size, len(provenance._canonical(ordinary)))
+        with patch.object(provenance, "MAX_DOCUMENT_BYTES", encoded_size):
+            exact = create_document(entities, relationships)
+            validated = validate_document(exact)
+            serialized = serialize_document(validated)
+            self.assertEqual(len(serialized.encode("utf-8")), encoded_size)
+        with patch.object(provenance, "MAX_DOCUMENT_BYTES", encoded_size + 1):
+            self.assertEqual(create_document(entities, relationships), ordinary)
+        with patch.object(provenance, "MAX_DOCUMENT_BYTES", encoded_size - 1):
+            for operation in (
+                    lambda: create_document(entities, relationships),
+                    lambda: validate_document(ordinary),
+                    lambda: serialize_document(ordinary)):
+                with self.assertRaisesRegex(ProvenanceValidationError, "MAX_DOCUMENT_BYTES"):
+                    operation()
+
+    def test_document_size_limit_covers_identity_and_relationship_evidence(self):
+        long_evidence = ev(review="proposed", statement="x" * 280)
+        identity_doc = [entity(
+            "material", "biological_material", identity_state="provisional",
+            identity_evidence=[long_evidence],
+        )]
+        relation_entities = [entity("a"), entity("b")]
+        relation_doc = [edge("large", "a", "b", evidence=[long_evidence])]
+        with patch.object(provenance, "MAX_DOCUMENT_BYTES", 300):
+            for entities, relationships in (
+                    (identity_doc, []),
+                    (relation_entities, relation_doc)):
+                with self.subTest(entity_evidence=bool(relationships)):
+                    with self.assertRaisesRegex(ProvenanceValidationError, "MAX_DOCUMENT_BYTES"):
+                        create_document(entities, relationships)
+
+    def test_document_size_lower_bound_rejects_before_evidence_hashing(self):
+        evidence = ev(review="proposed", statement="é" * 60)
+        with patch.object(provenance, "MAX_DOCUMENT_BYTES", 100), \
+                patch.object(provenance, "stable_evidence_id",
+                             side_effect=AssertionError("hashing must not start")) as hasher:
+            with self.assertRaisesRegex(ProvenanceValidationError, "MAX_DOCUMENT_BYTES"):
+                create_document([entity("a"), entity("b")],
+                                [edge("large", "a", "b", evidence=[evidence])])
+        hasher.assert_not_called()
 
     def test_independence_arguments_reject_non_string_and_missing_ids_consistently(self):
         graph = create_document([entity("a"), entity("b")], [])

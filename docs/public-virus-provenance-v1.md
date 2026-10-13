@@ -16,7 +16,11 @@ infection, sequencing, and publication evidence.
 Archive accessions belong on archive entities. They cannot serve as identifiers
 for a `biological_material`. The graph does not infer a material entity from an
 SRA or BioSample accession. A confirmed biological-material identity requires
-an accepted curator identity-evidence record and a non-archive identifier.
+an accepted curator identity-evidence record with a structured
+`audit_reference` (`reviewer_id`, `decision_id`, and `decision_rationale`),
+and a non-archive identifier. Proposed, rejected, or publication-only identity
+evidence cannot confirm material identity. A curator reference improves
+traceability but does not authenticate the curator or verify biological truth.
 Namespaced local identifiers can be used for physical materials; avoid
 including identifying human-sample metadata.
 
@@ -55,6 +59,11 @@ Evidence IDs are stable hashes of canonical evidence content. Serialization
 sorts entities, relationships, evidence, and object keys deterministically.
 Unknown fields, malformed references, duplicate records, unbounded values, and
 non-canonical documents are rejected with `ProvenanceValidationError`.
+The aggregate evidence cap is 100,000 records and canonical compact JSON is
+limited to 16 MiB of UTF-8 bytes. The byte limit is counted incrementally with
+JSON escaping and structure included; the 16 MiB ceiling leaves room for large
+metadata graphs while preventing the much larger documents permitted by the
+record-count and per-field text limits alone.
 
 ## Independence interface
 
