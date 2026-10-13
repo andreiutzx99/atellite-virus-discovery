@@ -2,6 +2,7 @@ import json
 import sys
 import tempfile
 import copy
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -143,6 +144,9 @@ class PublicVirusTests(unittest.TestCase):
                                return_value="<metadata/>"), \
                          patch("satellite_discovery.public_virus.parse_packages",
                                return_value=[record]), \
+                          patch("satellite_discovery.public_virus._sample_attribute_entries",
+                                return_value=[{"key": key, "value": value}
+                                              for key, value in attrs.items()]), \
                          patch("satellite_discovery.public_virus.enrich_ena"), \
                          patch("satellite_discovery.public_virus.files_for_run",
                                return_value=[{"bytes": 100}]):
@@ -202,6 +206,9 @@ class PublicVirusTests(unittest.TestCase):
                        return_value="<metadata-fixture/>"), \
                  patch("satellite_discovery.public_virus.parse_packages",
                        return_value=[row]), \
+                  patch("satellite_discovery.public_virus._sample_attribute_entries",
+                        return_value=[{"key": key, "value": value}
+                                      for key, value in row["attributes"].items()]), \
                  patch("satellite_discovery.public_virus.enrich_ena"):
                 doc = retrieve_accession(accession, virus, tmp)
             record, expected = doc["record"], fixture["expected"]
@@ -218,6 +225,62 @@ class PublicVirusTests(unittest.TestCase):
                               record["technical_suitability"]["reasons"])
                 self.assertNotIn("archive_sample_level_virus_identity",
                                  record["pilot_readiness"]["reasons"])
+
+    def test_repeated_raw_pathogen_attributes_survive_both_orders(self):
+        attrs_xml = (
+            '<SAMPLE_ATTRIBUTES><SAMPLE_ATTRIBUTE><TAG>pathogen</TAG><VALUE>{}</VALUE>'
+            '</SAMPLE_ATTRIBUTE><SAMPLE_ATTRIBUTE><TAG>pathogen</TAG><VALUE>{}</VALUE>'
+            '</SAMPLE_ATTRIBUTE></SAMPLE_ATTRIBUTES>'
+        )
+        original = (
+            '<SAMPLE_ATTRIBUTES><SAMPLE_ATTRIBUTE><TAG>host</TAG>'
+            '<VALUE>Homo sapiens</VALUE></SAMPLE_ATTRIBUTE></SAMPLE_ATTRIBUTES>'
+        )
+        cases = [
+            (("Dengue virus", "HCoV-229E"), "review_required"),
+            (("HCoV-229E", "Dengue virus"), "review_required"),
+            (("HCoV-229E", "HCoV-229E"), "accepted_for_technical_review"),
+        ]
+
+        def enrich(_client, row):
+            row.update({"raw_read_availability": "ena_fastq_listed",
+                        "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/456/SRR123456/x.fastq.gz",
+                        "fastq_md5": "0" * 32, "fastq_bytes": "100"})
+
+        for values, expected in cases:
+            xml = (public_xml().replace(
+                       "<SCIENTIFIC_NAME>Homo sapiens</SCIENTIFIC_NAME>",
+                       "<SCIENTIFIC_NAME>Human coronavirus 229E</SCIENTIFIC_NAME>")
+                   .replace("SRRTEST1", "SRR123").replace("SRRTEST2", "SRR1234")
+                   .replace(original, attrs_xml.format(*values)))
+            with self.subTest(values=values), tempfile.TemporaryDirectory() as tmp, \
+                 patch("satellite_discovery.public_virus.Client.search",
+                       return_value={"ids": ["uid"]}), \
+                 patch("satellite_discovery.public_virus.Client.fetch", return_value=xml), \
+                 patch("satellite_discovery.public_virus.enrich_ena", side_effect=enrich), \
+                 patch("satellite_discovery.public_virus.files_for_run",
+                       return_value=[{"bytes": 100}]):
+                document = retrieve_accession("SRR123", "hcov-229e", tmp)
+            record = document["record"]
+            self.assertEqual(record["public_virus"]["status"], expected)
+            self.assertEqual([item["value"] for item in record["raw_sample_attributes"]],
+                             list(values))
+            if expected == "review_required":
+                self.assertEqual(
+                    record["public_virus"]["reason"],
+                    "multiple_or_ambiguous_pathogen_metadata_requires_review",
+                )
+                self.assertTrue(any(
+                    item["field"] == "attribute:pathogen" and item["value"] == "Dengue virus"
+                    for item in record["public_virus"]["review_evidence"]
+                ))
+                self.assertEqual(record["pilot_readiness"]["status"],
+                                 "held_for_identity_review")
+                self.assertNotEqual(record["pilot_readiness"]["status"],
+                                    "eligible_for_review")
+            else:
+                self.assertEqual(record["pilot_readiness"]["status"],
+                                 "eligible_for_review")
 
     def test_accession_syntax_and_relationship_binding(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -253,6 +316,10 @@ class PublicVirusTests(unittest.TestCase):
             self.assertEqual(doc["record"]["public_virus"]["status"], "accepted_for_technical_review")
             self.assertFalse(doc["manifest"]["read_download_enabled"])
             self.assertFalse(doc["manifest"]["qc_enabled"])
+            self.assertEqual(doc["record"]["archive_center_name"], "Example centre")
+            self.assertNotIn("laboratory", doc["record"])
+            self.assertEqual(doc["record"]["public_virus"]["experimental_laboratory"],
+                             "UNKNOWN")
             self.assertTrue(verify_public_record(doc, Path(tmp) / "raw_metadata"))
             doc["record"]["organism"] = "Homo sapiens"
             with self.assertRaisesRegex(ValueError, "record changed"):
@@ -339,6 +406,16 @@ class PublicVirusTests(unittest.TestCase):
                 cli_main()
             self.assertEqual(raised.exception.code, 2)
             intake.assert_not_called()
+
+    def test_documented_module_command_shows_public_intake_help(self):
+        project_root = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [sys.executable, "-m", "satellite_discovery", "--help"],
+            cwd=project_root, capture_output=True, text=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--public-virus-accession", result.stdout)
+        self.assertIn("--public-virus", result.stdout)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from .database_query import Client
@@ -41,12 +42,12 @@ NON_PATHOGEN_CONTEXT_SEGMENTS = {
 }
 
 
-def _typed_pathogen_review(attrs, virus, terms, target_supported):
+def _typed_pathogen_review(attribute_entries, virus, terms, target_supported):
     """Return evidence for explicit or ambiguous multi-agent typed metadata."""
     evidence = []
     typed_values = [
         (str(key), str(value).strip())
-        for key, value in attrs.items()
+        for key, value in attribute_entries
         if str(key).strip().casefold().replace("_", " ") in TYPED_PATHOGEN_KEYS
         and str(value).strip().casefold() not in UNKNOWN_METADATA_VALUES
     ]
@@ -109,6 +110,43 @@ def _typed_pathogen_review(attrs, virus, terms, target_supported):
     return evidence
 
 
+def _sample_attribute_entries(xml, run_accession, expected_row):
+    """Read repeated attributes from the exact SRA package containing this run."""
+    root = ET.fromstring(xml)
+    for node in root.iter():
+        node.tag = node.tag.split("}")[-1]
+    packages = ([root] if root.tag == "EXPERIMENT_PACKAGE"
+                else root.findall(".//EXPERIMENT_PACKAGE"))
+    matches = []
+    for package in packages:
+        runs = package.findall(".//RUN_SET/RUN")
+        if not any(run.get("accession") == run_accession for run in runs):
+            continue
+        links = {
+            "experiment_accession": package.find("EXPERIMENT").get("accession")
+            if package.find("EXPERIMENT") is not None else None,
+            "sample_accession": package.find("SAMPLE").get("accession")
+            if package.find("SAMPLE") is not None else None,
+            "study_accession": package.find("STUDY").get("accession")
+            if package.find("STUDY") is not None else None,
+        }
+        if any(links[key] != expected_row.get(key) for key in links):
+            raise ValueError("Raw sample attributes do not match run relationships")
+        sample = package.find("SAMPLE")
+        if sample is None:
+            raise ValueError("SRA package has no sample for raw attribute evidence")
+        entries = []
+        for attribute in sample.findall(".//SAMPLE_ATTRIBUTE"):
+            tag = attribute.findtext("TAG")
+            value = attribute.findtext("VALUE")
+            if tag is not None:
+                entries.append({"key": tag.strip(), "value": value or ""})
+        matches.append(entries)
+    if len(matches) != 1:
+        raise ValueError("Raw sample attributes are not uniquely bound to the requested run")
+    return matches[0]
+
+
 def _validate_archive_accessions(row):
     for field, pattern in SRA_ACCESSION_PATTERNS.items():
         value = row.get(field)
@@ -130,9 +168,18 @@ def assess_identity(row, virus):
     attrs = row.get("attributes") or {}
     if not isinstance(attrs, dict):
         raise ValueError("Sample attributes must be a dictionary")
+    raw_entries = row.get("raw_sample_attributes")
+    if raw_entries is None:
+        attribute_entries = list(attrs.items())
+    else:
+        if not isinstance(raw_entries, list) or any(
+                not isinstance(entry, dict) or "key" not in entry or "value" not in entry
+                for entry in raw_entries):
+            raise ValueError("Raw sample attribute evidence must be a list of key/value records")
+        attribute_entries = [(entry["key"], entry["value"]) for entry in raw_entries]
     context = "\n".join(str(row.get(k) or "") for k in
                         ("organism", "sample_title", "experiment_title", "study_title"))
-    context += "\n" + "\n".join(str(v) for v in attrs.values())
+    context += "\n" + "\n".join(str(value) for _, value in attribute_entries)
     excluded = [term for term in POLICY["excluded_mentions"] if mentions(context, term)]
     terms = item["identity_terms"]
     organism = str(row.get("organism") or "")
@@ -140,7 +187,7 @@ def assess_identity(row, virus):
     accepted_keys = {k.casefold() for k in item["identity_attribute_keys"]}
     attribute_evidence = [
         {"key": str(key), "term": term}
-        for key, value in attrs.items()
+        for key, value in attribute_entries
         if str(key).strip().casefold() in accepted_keys
         for term in terms if mentions(str(value), term)
     ]
@@ -156,7 +203,7 @@ def assess_identity(row, virus):
     sample_context_fields = ("organism", "sample_title", "experiment_title")
     for field in sample_context_fields:
         add_review_text(field, row.get(field) or "")
-    for key, value in attrs.items():
+    for key, value in attribute_entries:
         add_review_text("attribute:" + str(key), value)
     # Study titles are broad context, not sample-level evidence. Only explicit
     # mixed/modified terms there trigger review; ordinary multi-virus discussion
@@ -170,7 +217,7 @@ def assess_identity(row, virus):
     flag_values = {"yes", "true", "1", "mixed", "coinfection", "co-infection",
                    "co infection", "mixed infection", "multiple infections"}
     target_supported = bool(organism_evidence or attribute_evidence)
-    for key, value in attrs.items():
+    for key, value in attribute_entries:
         normalized_key = str(key).strip().casefold().replace("_", " ").replace("-", " ")
         normalized_value = str(value).strip().casefold()
         if normalized_key in flag_keys and (
@@ -186,7 +233,9 @@ def assess_identity(row, virus):
                 "field": "attribute:" + str(key), "value": str(value),
                 "term": "additional_pathogen", "evidence_type": "structured_pathogen",
             })
-    review_evidence.extend(_typed_pathogen_review(attrs, virus, terms, target_supported))
+    review_evidence.extend(
+        _typed_pathogen_review(attribute_entries, virus, terms, target_supported)
+    )
     if excluded:
         status, reason = "excluded", "excluded_pathogen_mentioned_in_metadata"
     else:
@@ -199,7 +248,7 @@ def assess_identity(row, virus):
             if any(mentions(organism, term) for term in other["identity_terms"]) or any(
                     str(key).strip().casefold() in accepted_keys and
                     any(mentions(str(value), term) for term in other["identity_terms"])
-                    for key, value in attrs.items()):
+                    for key, value in attribute_entries):
                 other_virus_evidence.append(other_key)
         if review_evidence:
             status = "review_required"
@@ -315,6 +364,7 @@ def retrieve_accession(accession, virus, output, offline=False):
     if len(matches) != 1:
         raise ValueError("SRA response does not contain exactly one matching run")
     row = matches[0]
+    row["raw_sample_attributes"] = _sample_attribute_entries(xml, accession, row)
     required = ("experiment_accession", "sample_accession", "study_accession")
     if any(not row.get(field) for field in required):
         raise ValueError("Archive run/experiment/sample/study linkage is incomplete")
@@ -330,6 +380,7 @@ def retrieve_accession(accession, virus, output, offline=False):
     row["archive_center_name"] = row.get("laboratory") or "UNKNOWN"
     assessed = assess(dict(row), min_spots=0)
     row.update({key: assessed[key] for key in ("selection", "exclusion_reasons", "warnings")})
+    row.pop("laboratory", None)
     identity = assess_identity(row, virus)
     if offline and identity["status"] == "accepted_for_technical_review":
         identity = {

@@ -7,7 +7,7 @@ change its policy or acceptance rules.
 Run one archive accession at a time:
 
 ```sh
-python -m satellite_discovery.cli \
+python -m satellite_discovery \
   --public-virus-accession SRR12424243 \
   --public-virus hcov-229e \
   --output runs/public-virus-SRR12424243
@@ -27,6 +27,9 @@ title, and an untyped free-text claim do not establish it. A matching identity
 is reported as `accepted_for_technical_review`, never as biological
 confirmation. Missing identity is `insufficient`; contradictory virus identity
 is `conflicting`; configured excluded-pathogen mentions are `excluded`.
+For this route, repeated raw sample-attribute entries are retained from the
+accession-bound SRA package for identity review; the shared legacy parser is
+unchanged.
 Explicit sample-level mixed/coinfection or modified/recombinant evidence is
 `review_required`, a hold rather than a claim of confirmed coinfection. Typed
 pathogen fields and explicit additional-pathogen fields are checked even when
