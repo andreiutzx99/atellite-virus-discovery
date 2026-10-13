@@ -199,6 +199,15 @@ class ControlledFastqAcquisitionTests(unittest.TestCase):
         self.assertEqual(audit["status"], "failed")
         self.assertEqual(audit["files"], [])
 
+    def test_operator_interrupt_is_recorded_before_propagating(self):
+        def interrupt(spec, directory):
+            raise KeyboardInterrupt()
+        with self.assertRaises(KeyboardInterrupt):
+            self.execute(downloader=interrupt)
+        audit = json.loads((self.output / "acquisition.json").read_text(encoding="utf-8"))
+        self.assertEqual(audit["status"], "interrupted")
+        self.assertEqual(audit["failure"]["type"], "KeyboardInterrupt")
+
     def test_immediate_disk_check_failure_blocks_transfer(self):
         def no_space(directory, compressed_bytes):
             raise RuntimeError("Insufficient disk space: synthetic")

@@ -245,11 +245,14 @@ def acquire_single_run(
                 raise ValueError("Downloader output failed post-transfer integrity verification")
             audit["files"].append(item)
             sequence_downloader.write_json(audit_path, audit)
-    except Exception as exc:
-        audit["status"] = "failed"
+    except BaseException as exc:
+        interrupted = isinstance(exc, (KeyboardInterrupt, SystemExit))
+        audit["status"] = "interrupted" if interrupted else "failed"
         audit["failure"] = {"type": type(exc).__name__, "detail": str(exc)}
         audit["finished_utc"] = datetime.now(timezone.utc).isoformat()
         sequence_downloader.write_json(audit_path, audit)
+        if interrupted:
+            raise
         return {"status": "failed", "audit_path": str(audit_path), "error": str(exc)}
     audit["status"] = "complete"
     audit["finished_utc"] = datetime.now(timezone.utc).isoformat()

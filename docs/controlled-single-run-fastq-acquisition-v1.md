@@ -45,8 +45,9 @@ The downloader handles complete single/paired file sets, MD5 verification,
 bounded transfer, and safe resume. An `acquisition.json` audit is written as
 the transfer proceeds, with fresh archive metadata, the reviewed manifest,
 operator confirmation, attempts, observed sizes/checksums, and final outcome.
-Partial failures are recorded as failures; they do not authorize a later
-automatic retry.
+Transfer failures and operator interrupts are recorded in the audit; an
+interrupt is re-raised after the audit is safely updated. They do not authorize
+a later automatic retry.
 
 ## Limits
 
