@@ -1,6 +1,8 @@
 """Synthetic contract tests; they are not biological validation."""
 import unittest
+from unittest.mock import patch
 
+import satellite_discovery.public_virus_provenance as provenance
 from satellite_discovery.public_virus_provenance import (
     SCHEMA,
     ProvenanceValidationError,
@@ -34,6 +36,17 @@ def ev(source="curator_decision", review="accepted", dimension=None,
     if dimension is not None:
         result["dimension"] = dimension
         result["assessment"] = assessment
+        if review == "accepted" and source == "curator_decision":
+            result["audit_reference"] = {
+                "reviewer_id": "curator:test-reviewer",
+                "decision_id": "decision:test-001",
+                "decision_rationale": "Synthetic test rationale.",
+            }
+        elif review == "accepted" and source == "publication_assertion":
+            result["audit_reference"] = {
+                "publication_ref": "doi:10.0000/synthetic",
+                "source_locator": "Results, paragraph 1",
+            }
     result.update(fields)
     return result
 
@@ -48,10 +61,14 @@ def decision_edge(rid, left, right, dimension, assessment, **kwargs):
 class PublicVirusProvenanceTests(unittest.TestCase):
     def test_two_runs_from_one_sra_sample_do_not_imply_independence(self):
         graph = create_document(
-            [entity("run-a"), entity("run-b"), entity("sra-sample", "sra_sample")],
+            [entity("run-a"), entity("run-b"),
+             entity("exp-a", "sra_experiment"), entity("exp-b", "sra_experiment"),
+             entity("sra-sample", "sra_sample")],
             [
-                edge("r-a-exp", "run-a", "sra-sample", "experiment_uses_archive_sample"),
-                edge("r-b-exp", "run-b", "sra-sample", "experiment_uses_archive_sample"),
+                edge("r-a-exp", "run-a", "exp-a", "run_of_experiment"),
+                edge("r-b-exp", "run-b", "exp-b", "run_of_experiment"),
+                edge("exp-a-sample", "exp-a", "sra-sample", "experiment_uses_archive_sample"),
+                edge("exp-b-sample", "exp-b", "sra-sample", "experiment_uses_archive_sample"),
             ],
         )
         for dimension in ("sequencing", "biological_sample", "original_viral_isolate"):
@@ -258,6 +275,170 @@ class PublicVirusProvenanceTests(unittest.TestCase):
         evidence["evidence_id"] = "ev-" + "0" * 64
         with self.assertRaisesRegex(ProvenanceValidationError, "does not match"):
             create_document([entity("a"), entity("b")], [edge("r", "a", "b", evidence=[evidence])])
+
+    def test_aggregate_evidence_limit_counts_identity_and_relationship_evidence(self):
+        def identity_entity(name, count):
+            return entity(
+                name, "biological_material", identity_state="provisional",
+                identity_evidence=[
+                    ev(review="proposed", statement=f"identity fixture {name}-{i}")
+                    for i in range(count)
+                ],
+            )
+
+        with patch.object(provenance, "MAX_EVIDENCE", 4):
+            with self.assertRaisesRegex(ProvenanceValidationError, "evidence exceeds 4"):
+                create_document([identity_entity("a", 3), identity_entity("b", 2)], [])
+            rel_evidence = [
+                ev(review="proposed", statement=f"relationship fixture {i}")
+                for i in range(5)
+            ]
+            with self.assertRaisesRegex(ProvenanceValidationError, "evidence exceeds 4"):
+                create_document([entity("a"), entity("b")],
+                                [edge("too-many", "a", "b", evidence=rel_evidence)])
+            mixed = [
+                ev(review="proposed", statement=f"mixed relationship fixture {i}")
+                for i in range(3)
+            ]
+            with self.assertRaisesRegex(ProvenanceValidationError, "evidence exceeds 4"):
+                create_document(
+                    [identity_entity("a", 2), entity("b")],
+                    [edge("mixed", "a", "b", evidence=mixed)],
+                )
+            exact = [
+                ev(review="proposed", statement=f"exact relationship fixture {i}")
+                for i in range(2)
+            ]
+            graph = create_document(
+                [identity_entity("a", 2), entity("b")],
+                [edge("exact", "a", "b", evidence=exact)],
+            )
+            self.assertEqual(
+                sum(len(item.get("identity_evidence", [])) for item in graph["entities"])
+                + sum(len(item["evidence"]) for item in graph["relationships"]),
+                4,
+            )
+
+    def test_aggregate_evidence_limit_fails_before_evidence_validation(self):
+        with patch.object(provenance, "MAX_EVIDENCE", 1), \
+                patch.object(provenance, "_validate_evidence",
+                             side_effect=AssertionError("must fail during preflight")) as validator:
+            with self.assertRaisesRegex(ProvenanceValidationError, "evidence exceeds 1"):
+                create_document(
+                    [entity("a", "biological_material", identity_state="provisional",
+                            identity_evidence=[ev(), ev(statement="second fixture")])],
+                    [],
+                )
+        validator.assert_not_called()
+
+    def test_accepted_independence_evidence_requires_auditable_reference(self):
+        for source in ("publication_assertion", "curator_decision"):
+            evidence = ev(source=source, dimension="sequencing", assessment="different")
+            evidence.pop("audit_reference")
+            with self.subTest(source=source), self.assertRaisesRegex(
+                    ProvenanceValidationError, "requires an audit_reference"):
+                create_document([entity("a"), entity("b")],
+                                [decision_edge("missing-reference", "a", "b",
+                                               "sequencing", "different",
+                                               source=source,
+                                               audit_reference=None)])
+
+    def test_independence_audit_reference_is_canonical_and_content_addressed(self):
+        claim = ev(source="publication_assertion", dimension="sequencing",
+                   assessment="different")
+        graph = create_document([entity("a"), entity("b")],
+                                [edge("audited", "a", "b",
+                                      "independence_assessment", [claim])])
+        normalized = graph["relationships"][0]["evidence"][0]
+        self.assertEqual(normalized["audit_reference"]["publication_ref"],
+                         "doi:10.0000/synthetic")
+        self.assertEqual(normalized["evidence_id"], stable_evidence_id(
+            {key: value for key, value in normalized.items() if key != "evidence_id"}))
+        self.assertEqual(validate_document(graph), graph)
+
+    def test_unaccepted_independence_claims_need_dimensions_but_not_audit_references(self):
+        for review in ("proposed", "rejected", "conflicting"):
+            graph = create_document(
+                [entity("a"), entity("b")],
+                [decision_edge(f"claim-{review}", "a", "b", "sequencing", "different",
+                               review=review)],
+            )
+            self.assertEqual(assess_independence(graph, "a", "b", "sequencing"), "UNKNOWN")
+        with self.assertRaisesRegex(ProvenanceValidationError, "requires a valid dimension"):
+            create_document([entity("a"), entity("b")],
+                            [edge("no-dimension", "a", "b", "independence_assessment")])
+        with self.assertRaisesRegex(ProvenanceValidationError, "fields require an independence_assessment"):
+            create_document(
+                [entity("a"), entity("b")],
+                [edge("wrong-edge", "a", "b",
+                      evidence=[ev(dimension="sequencing", assessment="different")])],
+            )
+
+    def test_relationship_endpoint_type_contracts(self):
+        invalid = edge("invalid-endpoints", "publication", "stock",
+                       "experiment_uses_archive_sample")
+        with self.assertRaisesRegex(ProvenanceValidationError, "incompatible endpoint types"):
+            create_document(
+                [entity("publication", "publication"),
+                 entity("stock", "viral_isolate_or_stock")], [invalid])
+        with self.assertRaisesRegex(ProvenanceValidationError, "matching entity types"):
+            create_document(
+                [entity("run", "sra_run"), entity("event", "sequencing_event")],
+                [edge("mixed-replicates", "run", "event", "technical_replicate_of")],
+            )
+        graph = create_document(
+            [entity("run", "sra_run"), entity("experiment", "sra_experiment"),
+             entity("sample", "sra_sample"), entity("paper", "publication")],
+            [
+                edge("run-exp", "run", "experiment", "run_of_experiment"),
+                edge("exp-sample", "experiment", "sample", "experiment_uses_archive_sample"),
+                edge("run-paper", "run", "paper", "reported_in_publication"),
+            ],
+        )
+        self.assertEqual(len(graph["relationships"]), 3)
+
+    def test_confirmed_identity_rejects_unresolved_conflicting_evidence(self):
+        identity = ev()
+        confirmed = entity(
+            "material", "biological_material", identity_state="confirmed",
+            identifiers={"local": "MAT-1"}, identity_evidence=[identity],
+        )
+        self.assertEqual(create_document([confirmed], [])["entities"][0]["identity_state"],
+                         "confirmed")
+        for state in ("proposed", "rejected"):
+            with self.subTest(state=state), self.assertRaisesRegex(
+                    ProvenanceValidationError, "accepted curator identity evidence"):
+                create_document([entity(
+                    "material", "biological_material", identity_state="confirmed",
+                    identifiers={"local": "MAT-1"},
+                    identity_evidence=[ev(review=state)],
+                )], [])
+        with self.assertRaisesRegex(ProvenanceValidationError, "conflicting identity evidence"):
+            create_document([entity(
+                "material", "biological_material", identity_state="confirmed",
+                identifiers={"local": "MAT-1"},
+                identity_evidence=[identity, ev(review="conflicting",
+                                                statement="unresolved identity conflict")],
+            )], [])
+        provisional = entity(
+            "material", "biological_material", identity_state="provisional",
+            identifiers={"local": "MAT-1"},
+            identity_evidence=[identity, ev(review="conflicting",
+                                            statement="unresolved identity conflict")],
+        )
+        self.assertEqual(create_document([provisional], [])["entities"][0]["identity_state"],
+                         "provisional")
+
+    def test_independence_arguments_reject_non_string_and_missing_ids_consistently(self):
+        graph = create_document([entity("a"), entity("b")], [])
+        for left, right, dimension in (
+                ([], "b", "sequencing"),
+                ("a", [], "sequencing"),
+                ("a", "b", []),
+                ("missing", "b", "sequencing")):
+            with self.subTest(left=left, right=right, dimension=dimension):
+                with self.assertRaises(ProvenanceValidationError):
+                    assess_independence(graph, left, right, dimension)
 
 
 if __name__ == "__main__":
