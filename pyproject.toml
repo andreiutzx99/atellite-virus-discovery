@@ -12,6 +12,7 @@ dependencies = []
 [project.scripts]
 satellite-discovery = "satellite_discovery.cli:main"
 satellite-reviews = "satellite_discovery.review_ui:main"
+satellite-controlled-fastq = "satellite_discovery.controlled_fastq_acquisition:main"
 
 [tool.setuptools.packages.find]
 include = ["satellite_discovery*"]
