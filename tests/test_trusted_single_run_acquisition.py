@@ -261,11 +261,15 @@ class TrustedAcquisitionTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             gate._transfer_one(spec, out, opener=Opener(body))
 
-    def test_live_revalidation_blocks_without_fresh_geo_evidence_provider(self):
-        with self.assertRaisesRegex(gate.AuthorizationError, "Production-owned GEO"):
-            gate._fresh_exploratory_record(
-                self.evidence, {}, self.root / "archive-evidence",
-            )
+    def test_live_revalidation_uses_production_refresher_and_fails_closed(self):
+        with patch.object(
+            gate, "refresh_source_evidence",
+            side_effect=gate.SourceEvidenceError("source_unavailable", "offline test"),
+        ):
+            with self.assertRaisesRegex(gate.AuthorizationError, "Fresh public metadata check failed"):
+                gate._fresh_exploratory_record(
+                    self.evidence, {}, self.root / "archive-evidence",
+                )
         with self.assertRaises(TypeError):
             gate._fresh_exploratory_record(
                 self.evidence, {}, self.root / "archive-evidence",
@@ -282,13 +286,17 @@ class TrustedAcquisitionTests(unittest.TestCase):
         }
         output = self.root / "not-created" / "reads"
         replay = self.trust / "replay.sqlite3"
-        result = gate.acquire_exploratory_single_run(
-            self.evidence, template, self.scientific, self.operator,
-            self.trust, replay, output, self.root, lambda prompt: True,
-            now=self.now,
-        )
+        with patch.object(
+            gate, "refresh_source_evidence",
+            side_effect=gate.SourceEvidenceError("source_unavailable", "offline test"),
+        ):
+            result = gate.acquire_exploratory_single_run(
+                self.evidence, template, self.scientific, self.operator,
+                self.trust, replay, output, self.root, lambda prompt: True,
+                now=self.now,
+            )
         self.assertEqual(result["status"], "blocked")
-        self.assertIn("Production-owned GEO", result["reasons"][0]["detail"])
+        self.assertIn("Fresh public metadata check failed", result["reasons"][0]["detail"])
         self.assertFalse(output.parent.exists())
         self.assertFalse(replay.exists())
 

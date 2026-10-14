@@ -1,0 +1,21 @@
+!Sample_title = MRC5_24_R2
+!Sample_geo_accession = GSM4718636
+!Sample_status = Public on Mar 03 2021
+!Sample_submission_date = Aug 10 2020
+!Sample_last_update_date = Oct 25 2022
+!Sample_type = SRA
+!Sample_source_name_ch1 = MRC5 cell line
+!Sample_organism_ch1 = Homo sapiens
+!Sample_characteristics_ch1 = cell line: MRC-5
+!Sample_characteristics_ch1 = tissue: lung fibroblast cell line
+!Sample_characteristics_ch1 = treatment: Infected with HCoV-229E virus for 24 hours
+!Sample_treatment_protocol_ch1 = After a 24-hour culture to 80-90% confluency, cells were infected with 0.01 multiplicity of infection (MOI) of virus. HCoV-229E was grown in a humidified incubator with 5% CO2, at 35°C.
+!Sample_molecule_ch1 = total RNA
+!Sample_extract_protocol_ch1 = Total RNA was extracted at 0, 6, 24, 48, 72 and 96 hours post-HCoV-229E infection, using NucliSENS® easyMag®, according to the manufacturer’s protocol. At each time point, three biological repeats were tested. All RNA samples were treated with RQ1 RNase-free DNaseI (Promega, USA), according to the manufacturer’s protocol. RNA quality was assessed using the Agilent High Sensitivity RNA ScreenTape for TapeStation System (Agilent Technologies, Germany).
+!Sample_extract_protocol_ch1 = RNA samples (>8 RNA integrity number (RIN)) were prepared using the Illumina TruSeq RNA Library Preparation Kit v2 and sequenced in Illumina HiSeq 2500 Sequencer.
+!Sample_library_selection = cDNA
+!Sample_library_source = transcriptomic
+!Sample_library_strategy = RNA-Seq
+!Sample_relation = BioSample: https://www.ncbi.nlm.nih.gov/biosample/SAMN15776099
+!Sample_relation = SRA: https://www.ncbi.nlm.nih.gov/sra?term=SRX8920123
+!Sample_series_id = GSE155986
