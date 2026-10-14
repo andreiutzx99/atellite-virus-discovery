@@ -272,6 +272,26 @@ class TrustedAcquisitionTests(unittest.TestCase):
                 source_evidence_revalidator=lambda *args: self.fail("caller callback must not run"),
             )
 
+    def test_production_entry_blocks_before_creating_outputs_or_consuming_auth(self):
+        template = {
+            "decision_status": "NOT_APPROVED", "scope": gate.TARGET,
+            "policy_sha256": gate.POLICY_SHA256,
+            "evidence_document_sha256": self.evidence_digest,
+            "fastq_manifest_sha256": gate.EXPECTED_MANIFEST,
+            "unresolved_limitations": self.scientific_payload["unresolved_limitations"],
+        }
+        output = self.root / "not-created" / "reads"
+        replay = self.trust / "replay.sqlite3"
+        result = gate.acquire_exploratory_single_run(
+            self.evidence, template, self.scientific, self.operator,
+            self.trust, replay, output, self.root, lambda prompt: True,
+            now=self.now,
+        )
+        self.assertEqual(result["status"], "blocked")
+        self.assertIn("Production-owned GEO", result["reasons"][0]["detail"])
+        self.assertFalse(output.parent.exists())
+        self.assertFalse(replay.exists())
+
     def test_full_synthetic_orchestration_consumes_auth_and_writes_audit(self):
         body = b"synthetic FASTQ"
         spec = {

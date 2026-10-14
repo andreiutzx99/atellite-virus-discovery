@@ -295,7 +295,6 @@ def acquire_exploratory_single_run(
         operator_binding = canonical_json(operator)
         output = _safe_output_path(output_directory, storage_directory)
         fresh_evidence_dir = output.parent / (output.name + "-archive-evidence")
-        output.parent.mkdir(parents=True, exist_ok=True)
         fresh = _fresh_exploratory_record(
             evidence, approval_template, fresh_evidence_dir,
         )
