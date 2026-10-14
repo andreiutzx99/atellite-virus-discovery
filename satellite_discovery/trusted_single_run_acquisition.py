@@ -313,9 +313,12 @@ def acquire_exploratory_single_run(
         }
         if not callable(confirmation_callback) or confirmation_callback(prompt) is not True:
             raise AuthorizationError("Explicit interactive confirmation was not accepted.")
-        operator, operator_signers = verify_operator_authorization(
+        operator_confirmed, operator_signers_confirmed = verify_operator_authorization(
             operator_bundle, keys, scientific, storage_directory=storage_directory,
         )
+        if (canonical_json(operator_confirmed) != operator_binding
+                or operator_signers_confirmed != operator_signers):
+            raise AuthorizationError("Operator authorization changed during confirmation.")
         replay_path = Path(replay_database).expanduser()
         expected_replay_path = (Path(trust_root) / "replay.sqlite3").resolve()
         if replay_path.resolve() != expected_replay_path:
