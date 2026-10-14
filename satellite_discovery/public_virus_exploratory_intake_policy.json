@@ -1,0 +1,36 @@
+{
+  "schema": "public-virus-exploratory-intake-policy-v1",
+  "schema_version": 1,
+  "policy_identifier": "public-virus-exploratory-229e-gse155986-v1",
+  "status": "INACTIVE_REVIEW_ONLY",
+  "scope": {
+    "virus": "HCoV-229E",
+    "geo_series": "GSE155986",
+    "bioproject": "PRJNA656274",
+    "study": "SRP276927",
+    "run": "SRR12424250",
+    "experiment": "SRX8920123",
+    "biosample": "SAMN15776099",
+    "geo_sample": "GSM4718636",
+    "max_runs": 1,
+    "max_compressed_bytes": 1000000000
+  },
+  "expected_fastq_manifest_sha256": "8af1155a0ff3d65d2d32bb62560b2db37c22fb5f37c6b38a684a72747e4e9fe0",
+  "requirements": [
+    "validated current archive record and exact run linkage",
+    "sample-level reported HCoV-229E infection exposure at 24 hours",
+    "supported explicit run-to-experiment-to-BioSample-to-GEO relationships",
+    "primary publication and archive metadata references",
+    "no unresolved identity, treatment, or archive metadata conflict",
+    "complete canonical FASTQ manifest and matching SHA256",
+    "existing library and technical suitability checks"
+  ],
+  "non_authorizing": {
+    "changes_strict_public_virus_policy": false,
+    "changes_eligibility": false,
+    "sequence_confirms_virus": false,
+    "scientific_approval_is_authenticated": false,
+    "acquisition_authorized": false,
+    "download_enabled": false
+  }
+}
