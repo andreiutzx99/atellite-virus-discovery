@@ -1,0 +1,158 @@
+{
+  "schema": "hcov-229e-exploratory-pilot-go-no-go-v1",
+  "schema_version": 1,
+  "curation_date": "2026-10-14",
+  "evidence_retrieved_at": "2026-10-14",
+  "recommendation": {
+    "scientific_decision": "CONDITIONAL GO",
+    "scope": "One provisional single-run technical pipeline pilot from a supported 6-72 hour GSE155986 HCoV-229E exposure sample.",
+    "not_human_approval": true,
+    "policy_approval": "PENDING",
+    "acquisition_authorized": false,
+    "current_eligibility": "HELD",
+    "biological_discovery_authorized": false
+  },
+  "current_policy": {
+    "name": "public-virus-v1",
+    "unchanged": true,
+    "max_compressed_bytes_per_run": 1000000000,
+    "identity_gate_result_for_dataset": "HELD",
+    "acquisition_enabled": false,
+    "reads_downloaded_or_inspected": false
+  },
+  "sources": [
+    {
+      "id": "geo_series",
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE155986&targ=self&form=text&view=full",
+      "retrieved_at": "2026-10-14",
+      "source_updated": "GEO sample records report last update 2022-10-25",
+      "supports": ["series design", "sample links", "treatment annotations", "library metadata"]
+    },
+    {
+      "id": "geo_samples",
+      "url_template": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={geo_sample}&targ=self&form=text&view=full",
+      "accessions": ["GSM4718629-GSM4718643"],
+      "retrieved_at": "2026-10-14",
+      "supports": ["all 15 GEO-to-BioSample/SRA links", "sample-level condition", "library metadata"]
+    },
+    {
+      "id": "biosamples",
+      "url_template": "https://www.ncbi.nlm.nih.gov/biosample/{biosample}",
+      "accessions": ["SAMN15776074-SAMN15776103"],
+      "retrieved_at": "2026-10-14",
+      "supports": ["all 15 BioSample-to-GEO links", "host organism", "sample treatment"]
+    },
+    {
+      "id": "sra_runinfo",
+      "url": "https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/runinfo?acc=SRP276927",
+      "retrieved_at": "2026-10-14",
+      "supports": ["Run-to-Experiment/BioSample/GEO mapping", "platform", "library strategy/source/selection", "layout"]
+    },
+    {
+      "id": "ena_file_report",
+      "url": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRP276927&result=read_run&fields=study_accession,run_accession,experiment_accession,sample_accession,secondary_sample_accession,library_name,library_layout,library_source,library_selection,instrument_platform,instrument_model,fastq_ftp,fastq_bytes,fastq_md5&format=tsv",
+      "retrieved_at": "2026-10-14",
+      "source_updated": "All 15 run rows report last_updated 2021-03-04",
+      "supports": ["all 15 ENA run/file manifests", "compressed bytes", "FASTQ MD5", "library and instrument fields"]
+    },
+    {
+      "id": "publication",
+      "url": "https://doi.org/10.1371/journal.pone.0247128",
+      "retrieved_at": "2026-10-14",
+      "published": "2021-02-25",
+      "supports": ["infection protocol", "time course", "RNA library kit", "qPCR virus kinetics", "biological-repeat wording"]
+    }
+  ],
+  "source_recheck": {
+    "accession_relationships": "15/15 Run-Experiment-BioSample-GEO chains agree across current GEO, BioSample, SRA RunInfo, and ENA records.",
+    "changes_since_previous_review": "No changed run-to-sample mappings, file sizes, or FASTQ MD5 values were found in the refreshed records. GEO sample pages show 2022-10-25 as their last update; ENA run rows show 2021-03-04. These dates do not prove that source content was unchanged continuously.",
+    "source_conflict": "The 0-hour sample annotations remain ambiguous, not resolved by the refreshed source records.",
+    "missing_96_hour_runs": "The paper methods mention extraction through 96 hours, while the deposited GSE155986/SRP276927 set contains 0-72 hour records only. No 96-hour run is included in this pilot scope."
+  },
+  "findings": {
+    "run_count": 15,
+    "reported_infected_samples": 12,
+    "unresolved_zero_hour_samples": 3,
+    "confirmed_mock_controls": 0,
+    "archive_identity_sufficient_under_current_policy": false,
+    "sequence_confirmed_presence": "NOT_ASSESSED",
+    "biological_independence": "UNKNOWN",
+    "all_runs_have_one_single_end_fastq_manifest": true,
+    "all_individual_fastq_files_under_1gb": true,
+    "library": {
+      "geo_and_sra_strategy": "RNA-Seq",
+      "source": "TRANSCRIPTOMIC",
+      "selection_field": "cDNA",
+      "layout": "SINGLE",
+      "platform": "Illumina HiSeq 2500",
+      "paper_method": "Illumina TruSeq RNA Library Preparation Kit v2; RNA integrity number >8",
+      "poly_a_or_rrna_depletion": "UNKNOWN; the retrieved study and archive records do not explicitly state which enrichment method was applied."
+    },
+    "biological_repeats": "The paper states that three biological repeats were tested at each time point. It does not describe enough about separate culture preparation or independent infection events to authenticate independence of the deposited runs.",
+    "controls": "The three 0-hour samples are annotated Untreated in GEO and BioSample; the GEO protocol is generic infection wording, and the paper describes a time course post-infection compared with uninfected cells. Their inoculation status at collection is unresolved. No deposited mock control is confirmed."
+  },
+  "records": [
+    {"run":"SRR12424243","experiment":"SRX8920116","biosample":"SAMN15776103","geo_sample":"GSM4718629","reported_condition":"Untreated","timepoint_hours":0,"exposure_assessment":"INSUFFICIENT_UNRESOLVED_BASELINE","fastq_bytes":728420078,"fastq_md5":"424739d537341d59ccbb4e1412446f0a"},
+    {"run":"SRR12424244","experiment":"SRX8920117","biosample":"SAMN15776102","geo_sample":"GSM4718630","reported_condition":"Untreated","timepoint_hours":0,"exposure_assessment":"INSUFFICIENT_UNRESOLVED_BASELINE","fastq_bytes":707122524,"fastq_md5":"d656b24eb5ebd866e1a305623f3b7541"},
+    {"run":"SRR12424245","experiment":"SRX8920118","biosample":"SAMN15776101","geo_sample":"GSM4718631","reported_condition":"Untreated","timepoint_hours":0,"exposure_assessment":"INSUFFICIENT_UNRESOLVED_BASELINE","fastq_bytes":738657482,"fastq_md5":"f8a996652779615d1045b9fbc0c1ab3c"},
+    {"run":"SRR12424246","experiment":"SRX8920119","biosample":"SAMN15776082","geo_sample":"GSM4718632","reported_condition":"Infected with HCoV-229E virus for 6 hours","timepoint_hours":6,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":716754201,"fastq_md5":"d473a02a16e0560943b105cdacb94d67"},
+    {"run":"SRR12424247","experiment":"SRX8920120","biosample":"SAMN15776081","geo_sample":"GSM4718633","reported_condition":"Infected with HCoV-229E virus for 6 hours","timepoint_hours":6,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":812687023,"fastq_md5":"5552a3255dde715bcdd8c9fec85b574d"},
+    {"run":"SRR12424248","experiment":"SRX8920121","biosample":"SAMN15776080","geo_sample":"GSM4718634","reported_condition":"Infected with HCoV-229E virus for 6 hours","timepoint_hours":6,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":690690938,"fastq_md5":"97b47ff2dd781ced1a1735636a6c4741"},
+    {"run":"SRR12424249","experiment":"SRX8920122","biosample":"SAMN15776100","geo_sample":"GSM4718635","reported_condition":"Infected with HCoV-229E virus for 24 hours","timepoint_hours":24,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":719954581,"fastq_md5":"a1e98102738e3357cb108779a4e1bd07"},
+    {"run":"SRR12424250","experiment":"SRX8920123","biosample":"SAMN15776099","geo_sample":"GSM4718636","reported_condition":"Infected with HCoV-229E virus for 24 hours","timepoint_hours":24,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":680887913,"fastq_md5":"9ac379cab68b8b5e2862ec167e95d3c9"},
+    {"run":"SRR12424251","experiment":"SRX8920124","biosample":"SAMN15776083","geo_sample":"GSM4718637","reported_condition":"Infected with HCoV-229E virus for 24 hours","timepoint_hours":24,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":688743343,"fastq_md5":"eda61772c7168f0bd7a449ea416442de"},
+    {"run":"SRR12424252","experiment":"SRX8920125","biosample":"SAMN15776079","geo_sample":"GSM4718638","reported_condition":"Infected with HCoV-229E virus for 48 hours","timepoint_hours":48,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":789406350,"fastq_md5":"b1fed07cc8b44474559b9f88a358deea"},
+    {"run":"SRR12424253","experiment":"SRX8920126","biosample":"SAMN15776078","geo_sample":"GSM4718639","reported_condition":"Infected with HCoV-229E virus for 48 hours","timepoint_hours":48,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":662991065,"fastq_md5":"2d755dd8e84f90cc7b60ad3be6eddc30"},
+    {"run":"SRR12424254","experiment":"SRX8920127","biosample":"SAMN15776077","geo_sample":"GSM4718640","reported_condition":"Infected with HCoV-229E virus for 48 hours","timepoint_hours":48,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":701721556,"fastq_md5":"68579616f5321e33896ab3e1b7391905"},
+    {"run":"SRR12424255","experiment":"SRX8920128","biosample":"SAMN15776076","geo_sample":"GSM4718641","reported_condition":"Infected with HCoV-229E virus for 72 hours","timepoint_hours":72,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":665176079,"fastq_md5":"c619bf26097b0eec55d71e578cbcd83a"},
+    {"run":"SRR12424256","experiment":"SRX8920129","biosample":"SAMN15776075","geo_sample":"GSM4718642","reported_condition":"Infected with HCoV-229E virus for 72 hours","timepoint_hours":72,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":711794311,"fastq_md5":"54406024f3c4ad5a8ed1a9cb798782b5"},
+    {"run":"SRR12424257","experiment":"SRX8920130","biosample":"SAMN15776074","geo_sample":"GSM4718643","reported_condition":"Infected with HCoV-229E virus for 72 hours","timepoint_hours":72,"exposure_assessment":"SUPPORTED_STUDY_REPORTED","fastq_bytes":751000032,"fastq_md5":"ff42365e93867f3fd8a5141d784f226b"}
+  ],
+  "decision_matrix": [
+    {"question":"Accession mapping sufficiently supported?","answer":"YES","basis":"15/15 four-level chains agree across refreshed GEO, BioSample, SRA RunInfo, and ENA."},
+    {"question":"Experimental exposure sufficiently documented?","answer":"CONDITIONAL","basis":"Explicit HCoV-229E treatment at 6-72 hours for 12 samples; 0-hour samples remain unresolved."},
+    {"question":"Archive-declared identity sufficient under current policy?","answer":"NO","basis":"The archive identifies human MRC-5 material; current strict virus identity gate remains HELD."},
+    {"question":"Narrow exposure-based policy amendment scientifically defensible?","answer":"YES, FOR SCOPED TECHNICAL INTAKE ONLY","basis":"Sample-level condition, primary paper, and exact accession chain support a bounded evidence exception, not sequence confirmation."},
+    {"question":"RNA-seq library suitable for a technical pilot?","answer":"CONDITIONAL","basis":"Host-cell transcriptomic RNA-seq is technically usable; selection method is undocumented and viral-read recovery is unknown."},
+    {"question":"Complete nominated run within 1 GB cap?","answer":"YES, BY CURRENT ENA MANIFEST METADATA","basis":"One single-end FASTQ is reported at 680887913 bytes; a future acquisition preflight must revalidate it."},
+    {"question":"Appropriate biological controls established?","answer":"NO","basis":"No confirmed mock sample; 0-hour untreated samples are ambiguous."},
+    {"question":"Biological independence established?","answer":"NO / UNKNOWN","basis":"The article says biological repeats but does not document separate culture preparation sufficiently."},
+    {"question":"Single-run technical pilot scientifically justifiable?","answer":"CONDITIONAL","basis":"Useful to exercise the pipeline, not to make a biological discovery claim; policy review and separate acquisition authorization remain required."},
+    {"question":"Controlled biological discovery study currently justifiable?","answer":"NO","basis":"Controls, validated independence, and biological replication are not established."},
+    {"question":"Acquisition currently authorized?","answer":"NO","basis":"No policy amendment or operator authorization is approved."},
+    {"question":"Exact remaining approvals?","answer":"PENDING","basis":"Documented owner decision plus independent scientific review for the narrow rule, followed by separate operator authorization and fresh manifest preflight."}
+  ],
+  "provisional_pilot": {
+    "nomination_status": "PROVISIONAL_NOT_APPROVED",
+    "run": "SRR12424250",
+    "experiment": "SRX8920123",
+    "biosample": "SAMN15776099",
+    "geo_sample": "GSM4718636",
+    "reported_condition": "Infected with HCoV-229E virus for 24 hours",
+    "timepoint_hours": 24,
+    "layout": "SINGLE",
+    "fastq_manifest": [
+      {
+        "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR124/050/SRR12424250/SRR12424250.fastq.gz",
+        "compressed_bytes": 680887913,
+        "md5": "9ac379cab68b8b5e2862ec167e95d3c9"
+      }
+    ],
+    "rationale": "The paper reports intracellular viral propagation peaking at 24 hours by qPCR, making this a useful timepoint for a future technical pipeline trial. Among the three 24-hour runs, this has the smallest reported compressed manifest. Neither fact predicts read-level viral yield for this run.",
+    "limitations": ["one run cannot establish reproducibility", "no read-level quality or viral content has been examined", "library selection chemistry is not explicit", "no control comparison is justified"],
+    "acquisition_authorized": false
+  },
+  "next_implementation": {
+    "pr": 66,
+    "scope": "One versioned, opt-in exploratory intake rule for explicitly reviewed GSE155986 runs only.",
+    "requirements": [
+      "Require recorded owner and independent scientific approval before enabling the exact run scope.",
+      "Keep archive identity and sequence-confirmed presence as separate fields; never infer either from exposure evidence.",
+      "Require exact current GEO/SRA/BioSample/ENA mapping and sample-level treatment evidence.",
+      "Preserve the 1,000,000,000-byte per-run cap, complete manifest, file hashes, storage, and existing provenance checks.",
+      "Keep all other datasets on strict public-virus-v1 behavior.",
+      "Keep acquisition disabled until a separate explicit operator confirmation and fresh acquisition preflight."
+    ],
+    "human_approval_status": "NOT_APPROVED"
+  }
+}
