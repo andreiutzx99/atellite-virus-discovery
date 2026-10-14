@@ -4,7 +4,6 @@ Dry-run is the default. This module never invokes QC, assembly, or analysis.
 """
 import argparse
 import json
-import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,9 +20,33 @@ LINKAGE_FIELDS = (
     "study_accession", "bioproject",
 )
 
+LIVE_ACQUISITION_BLOCK_CODE = "trusted_authorization_unavailable"
+LIVE_ACQUISITION_BLOCK_DETAIL = (
+    "Live FASTQ acquisition is disabled: no independently trusted, "
+    "replay-protected operator authorization mechanism is implemented."
+)
+
+
+class TrustedAuthorizationUnavailable(RuntimeError):
+    """Raised at the controlled transfer boundary until trusted authorization exists."""
+
 
 def _blocked(code, detail):
     return {"code": code, "detail": detail}
+
+
+def _require_trusted_authorization():
+    """Fail closed; local files, callbacks, environment and CLI flags are not trust anchors."""
+    raise TrustedAuthorizationUnavailable(LIVE_ACQUISITION_BLOCK_DETAIL)
+
+
+def _controlled_transfer(spec, output, downloader):
+    """The controlled workflow cannot transfer until an external trust anchor exists.
+
+    This guard is deliberately independent of the legacy downloader, which remains
+    available to existing callers and is not an authorization mechanism.
+    """
+    _require_trusted_authorization()
 
 
 def plan_single_run(
@@ -113,13 +136,15 @@ def acquire_single_run(
     succeed. It must return the exact run and approved resource caps. This keeps
     a saved approval JSON or dry-run plan from acting as a download command.
     """
-    if os.environ.get("CI", "").strip().casefold() in {"1", "true", "yes"}:
+    # Hard stop before archive retrieval, callbacks, filesystem creation or
+    # network activity. CI detection and caller-supplied confirmation callbacks
+    # cannot establish operator identity or authorize acquisition.
+    try:
+        _require_trusted_authorization()
+    except TrustedAuthorizationUnavailable as exc:
         return {
             "status": "blocked",
-            "reasons": [_blocked(
-                "acquisition_disabled_in_ci",
-                "Real FASTQ acquisition is disabled in CI environments.",
-            )],
+            "reasons": [_blocked(LIVE_ACQUISITION_BLOCK_CODE, str(exc))],
         }
     retriever = retriever or public_virus.retrieve_accession
     downloader = downloader or sequence_downloader.download_file
@@ -226,14 +251,9 @@ def acquire_single_run(
     try:
         for spec in files:
             if downloader is sequence_downloader.download_file:
-                path = downloader(
-                    spec, output, attempt_history=audit["download_attempts"],
-                    attempt_recorder=lambda item: sequence_downloader.write_json(
-                        audit_path, audit,
-                    ),
-                )
+                path = _controlled_transfer(spec, output, downloader)
             else:
-                path = downloader(spec, output)
+                path = _controlled_transfer(spec, output, downloader)
             sequence_downloader.write_json(audit_path, audit)
             item = {
                 "name": spec["name"], "url": spec["url"], "role": spec["role"],
