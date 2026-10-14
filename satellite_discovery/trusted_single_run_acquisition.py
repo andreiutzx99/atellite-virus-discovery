@@ -12,22 +12,19 @@ import os
 import re
 import sqlite3
 import sys
-import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from . import public_virus, sequence_downloader
+from . import sequence_downloader
 from .controlled_fastq_acquisition import (
     _atomic_audit_write, _check_destination_space, _controlled_ena_opener,
-    _create_acquisition_lock, _retain_archive_snapshots, _safe_output_path,
+    _create_acquisition_lock, _safe_output_path,
     _validate_ena_redirect_target,
 )
-from .public_virus_exploratory_intake import (
-    MAX_BYTES, POLICY_ID, POLICY_SHA256, TARGET, evaluate_exploratory_intake,
-)
+from .public_virus_exploratory_intake import MAX_BYTES, POLICY_ID, POLICY_SHA256, TARGET
 from .public_virus_acquisition_preflight import fastq_manifest_sha256
 
 SCIENTIFIC_SCHEMA = "hcov-229e-scientific-approval-signatures-v1"
@@ -196,8 +193,13 @@ def verify_operator_authorization(
 def consume_authorization(database, payload, *, now=None):
     """Durably reserve a signed nonce before transfer; concurrent replays lose atomically."""
     path = Path(database)
-    if path.is_symlink() or not path.parent.is_dir():
+    if (path.is_symlink() or not path.parent.is_dir()
+            or path.resolve().parent != path.parent.resolve()):
         raise AuthorizationError("Replay-protection database path is unsafe.")
+    if path.exists():
+        mode = path.lstat().st_mode
+        if not path.is_file() or (os.name != "nt" and mode & 0o022):
+            raise AuthorizationError("Replay-protection database is not a protected regular file.")
     now = now or datetime.now(timezone.utc)
     connection = sqlite3.connect(path, timeout=10, isolation_level=None)
     try:
@@ -224,36 +226,12 @@ def consume_authorization(database, payload, *, now=None):
         connection.close()
 
 
-def _fresh_exploratory_record(
-    evidence, approval_template, evidence_directory, retriever=None,
-    source_evidence_revalidator=None,
-):
-    if not callable(source_evidence_revalidator):
-        raise AuthorizationError(
-            "Fresh GEO treatment and publication evidence retrieval is not configured; live acquisition remains blocked."
-        )
-    retriever = retriever or public_virus.retrieve_accession
-    with tempfile.TemporaryDirectory(prefix="trusted-hcov-229e-") as temp:
-        refreshed_evidence = source_evidence_revalidator(evidence, temp)
-        if (not isinstance(refreshed_evidence, dict)
-                or canonical_json(refreshed_evidence) != canonical_json(evidence)):
-            raise AuthorizationError(
-                "Fresh treatment evidence changed, is incomplete, or differs from the signed decision."
-            )
-        document = retriever(TARGET["run"], "hcov-229e", temp, offline=False)
-        manifest = document.get("manifest", {})
-        index = manifest.get("snapshot_index")
-        retained = Path(evidence_directory)
-        retained_manifest = _retain_archive_snapshots(
-            Path(temp) / "raw_metadata", retained, index,
-        )
-        manifest["retained_archive_evidence"] = retained_manifest
-        result = evaluate_exploratory_intake(
-            document, retained, refreshed_evidence, approval_template,
-        )
-    if result.get("result") != "candidate_for_scientific_review":
-        raise AuthorizationError("Fresh exact-run exploratory evidence did not pass.")
-    return document
+def _fresh_exploratory_record(evidence, approval_template, evidence_directory):
+    """Fail closed until the fixed-endpoint, bounded source refresher is implemented."""
+    raise AuthorizationError(
+        "Production-owned GEO/BioSample/publication evidence refresh is not implemented; "
+        "live acquisition remains blocked."
+    )
 
 
 def _transfer_one(spec, destination, opener=None):
@@ -314,6 +292,7 @@ def acquire_exploratory_single_run(
         operator, operator_signers = verify_operator_authorization(
             operator_bundle, keys, scientific, storage_directory=storage_directory, now=now,
         )
+        operator_binding = canonical_json(operator)
         output = _safe_output_path(output_directory, storage_directory)
         fresh_evidence_dir = output.parent / (output.name + "-archive-evidence")
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -338,12 +317,17 @@ def acquire_exploratory_single_run(
         operator, operator_signers = verify_operator_authorization(
             operator_bundle, keys, scientific, storage_directory=storage_directory,
         )
-        consume_authorization(Path(trust_root) / "replay.sqlite3", operator, now=now)
+        replay_path = Path(replay_database).expanduser()
+        expected_replay_path = (Path(trust_root) / "replay.sqlite3").resolve()
+        if replay_path.resolve() != expected_replay_path:
+            raise AuthorizationError("Replay database must be the protected trust-store replay.sqlite3.")
         lock = _create_acquisition_lock(output)
+        if output.exists() or output.is_symlink():
+            raise FileExistsError("Acquisition output already exists.")
         output.mkdir()
         audit_path = output / "acquisition.json"
         audit = {
-            "schema": "trusted-single-run-acquisition-audit-v1", "status": "authorization_consumed",
+            "schema": "trusted-single-run-acquisition-audit-v1", "status": "pre_transfer_authorization_validated",
             "scope": TARGET, "scientific_signers": signers, "operator_signers": operator_signers,
             "authorization_id": operator["authorization_id"],
             "fresh_manifest_sha256": EXPECTED_MANIFEST,
@@ -352,6 +336,24 @@ def acquire_exploratory_single_run(
             "eligibility": "HELD", "files": [],
         }
         _atomic_audit_write(audit_path, audit)
+        # Reverify at the consumption boundary and bind replay state to this exact
+        # payload; confirmation callbacks cannot substitute another signed token.
+        operator_now, operator_signers_now = verify_operator_authorization(
+            operator_bundle, keys, scientific, storage_directory=storage_directory,
+        )
+        if (canonical_json(operator_now) != operator_binding
+                or operator_signers_now != operator_signers):
+            raise AuthorizationError("Operator authorization changed after confirmation.")
+        consume_authorization(replay_path, operator_now, now=now)
+        audit.update(status="authorization_consumed")
+        _atomic_audit_write(audit_path, audit)
+        # A short-lived token may expire while lock, audit, or directory work runs.
+        operator_last, _ = verify_operator_authorization(
+            operator_bundle, keys, scientific, storage_directory=storage_directory,
+        )
+        if canonical_json(operator_last) != operator_binding:
+            raise AuthorizationError("Operator authorization changed before transfer.")
+        _check_destination_space(output, EXPECTED_BYTES, LIMITS["max_storage_bytes"])
         observed = _transfer_one(files[0], output)
         audit.update(status="complete", files=[observed])
         _atomic_audit_write(audit_path, audit)
@@ -407,10 +409,11 @@ def main():
             raise AuthorizationError("Evidence document differs from signed scientific approval.")
         if not args.execute:
             result = {
-                "status": "ready_for_fresh_revalidation_not_executed",
+            "status": "signatures_valid_fresh_revalidation_required",
                 "scope": TARGET,
                 "operator": operator["operator_identifier"],
-                "note": "No metadata refresh or FASTQ transfer was performed.",
+            "can_execute": False,
+            "note": "Signatures are valid, but production-owned fresh treatment evidence is unavailable; no transfer was performed.",
             }
         elif not sys.stdin.isatty():
             raise AuthorizationError("Live execution requires an interactive terminal.")
@@ -434,7 +437,7 @@ def main():
         }]}
     print(json.dumps(result, indent=2))
     return 0 if result["status"] in {
-        "ready_for_fresh_revalidation_not_executed", "complete",
+        "signatures_valid_fresh_revalidation_required", "complete",
     } else 1
 
 

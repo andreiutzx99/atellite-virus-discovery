@@ -192,6 +192,14 @@ class TrustedAcquisitionTests(unittest.TestCase):
         with self.assertRaises(gate.AuthorizationError):
             gate.consume_authorization(database, self.operator_payload, now=self.now)
 
+    @unittest.skipIf(__import__("os").name == "nt", "POSIX symlink test")
+    def test_replay_database_symlink_is_rejected(self):
+        target = self.trust / "actual.sqlite3"
+        link = self.trust / "replay.sqlite3"
+        link.symlink_to(target)
+        with self.assertRaisesRegex(gate.AuthorizationError, "unsafe"):
+            gate.consume_authorization(link, self.operator_payload, now=self.now)
+
     def test_concurrent_replay_has_one_winner(self):
         import threading
         barrier = threading.Barrier(2)
@@ -254,10 +262,14 @@ class TrustedAcquisitionTests(unittest.TestCase):
             gate._transfer_one(spec, out, opener=Opener(body))
 
     def test_live_revalidation_blocks_without_fresh_geo_evidence_provider(self):
-        with self.assertRaisesRegex(gate.AuthorizationError, "Fresh GEO"):
+        with self.assertRaisesRegex(gate.AuthorizationError, "Production-owned GEO"):
             gate._fresh_exploratory_record(
                 self.evidence, {}, self.root / "archive-evidence",
-                retriever=lambda *args, **kwargs: self.fail("retrieval must not start"),
+            )
+        with self.assertRaises(TypeError):
+            gate._fresh_exploratory_record(
+                self.evidence, {}, self.root / "archive-evidence",
+                source_evidence_revalidator=lambda *args: self.fail("caller callback must not run"),
             )
 
     def test_full_synthetic_orchestration_consumes_auth_and_writes_audit(self):
