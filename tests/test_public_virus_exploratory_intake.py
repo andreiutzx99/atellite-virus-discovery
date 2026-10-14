@@ -177,9 +177,10 @@ class ExploratoryIntakeTests(unittest.TestCase):
     def test_checked_in_pending_approval_binds_to_policy_evidence_and_manifest(self):
         evidence = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
         approval = json.loads(APPROVAL_PATH.read_text(encoding="utf-8"))
-        policy_bytes = (ROOT / "satellite_discovery" /
-                        "public_virus_exploratory_intake_policy.json").read_bytes()
-        self.assertEqual(approval["policy_sha256"], hashlib.sha256(policy_bytes).hexdigest())
+        policy = json.loads((ROOT / "satellite_discovery" /
+                             "public_virus_exploratory_intake_policy.json")
+                            .read_text(encoding="utf-8"))
+        self.assertEqual(approval["policy_sha256"], _digest(policy))
         self.assertEqual(approval["evidence_document_sha256"], _digest(evidence))
         self.assertEqual(approval["fastq_manifest_sha256"], evidence["fastq_manifest_sha256"])
         self.assertEqual(approval["decision_status"], "NOT_APPROVED")

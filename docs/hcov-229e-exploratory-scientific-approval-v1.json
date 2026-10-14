@@ -12,7 +12,7 @@
     "geo_sample": "GSM4718636"
   },
   "policy_identifier": "public-virus-exploratory-229e-gse155986-v1",
-  "policy_sha256": "84c23e618273ad4f790a2774e78861d83605f474792a1a9cc8389e5b2d81fafe",
+  "policy_sha256": "b09df95a8c113272debf6ccd8a732c46407e34eba140fea7361464c9d10eeaeb",
   "evidence_document_sha256": "4d015d450b1465e38d7d91beadf6640ee1db8972ac24c4692ab25637d19ad7b0",
   "fastq_manifest_sha256": "8af1155a0ff3d65d2d32bb62560b2db37c22fb5f37c6b38a684a72747e4e9fe0",
   "purpose": "single-run technical pilot",

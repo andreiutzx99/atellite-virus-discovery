@@ -25,7 +25,7 @@ The evaluator is an offline function over supplied documents. It:
 2. Recomputes the strict `public-virus-v1` identity result and requires the existing insufficient-identity hold to remain present.
 3. Reuses the existing metadata technical-suitability assessment and FASTQ parser, and requires Illumina, transcriptomic RNA-Seq, cDNA selection, single-end layout, a complete one-file manifest, the 1 GB cap, and the pinned canonical manifest SHA256.
 4. Evaluates sample-level treatment and explicit run→experiment→BioSample→GEO relationships with the existing exposure-evidence validator. It requires current, non-conflicted metadata; valid archive references; and the primary publication.
-5. Binds the pending scientific approval template to the exact policy-file digest, canonical evidence-document digest, and FASTQ manifest digest.
+5. Binds the pending scientific approval template to the canonical policy JSON digest, canonical evidence-document digest, and FASTQ manifest digest.
 
 Evidence and approval examples are in `hcov-229e-exploratory-intake-evidence-v1.json` and `hcov-229e-exploratory-scientific-approval-v1.json`. The status is `NOT_APPROVED`; no person, approval rationale, date, or signature is supplied. A JSON claim of `APPROVED` or `REJECTED` is blocked because this offline pathway cannot authenticate an approver.
 

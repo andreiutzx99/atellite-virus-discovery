@@ -10,7 +10,6 @@ from .public_virus_exposure_proposal import evaluate_exposure_record
 
 POLICY_PATH = Path(__file__).with_name("public_virus_exploratory_intake_policy.json")
 POLICY = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
-POLICY_SHA256 = hashlib.sha256(POLICY_PATH.read_bytes()).hexdigest()
 POLICY_ID = "public-virus-exploratory-229e-gse155986-v1"
 TARGET = {
     "virus": "HCoV-229E", "geo_series": "GSE155986",
@@ -27,6 +26,9 @@ def _digest(value):
     raw = json.dumps(value, ensure_ascii=False, sort_keys=True,
                      separators=(",", ":"), allow_nan=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+POLICY_SHA256 = _digest(POLICY)
 
 
 def _reason(code, detail):
