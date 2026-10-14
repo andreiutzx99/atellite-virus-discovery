@@ -40,15 +40,6 @@ def _require_trusted_authorization():
     raise TrustedAuthorizationUnavailable(LIVE_ACQUISITION_BLOCK_DETAIL)
 
 
-def _controlled_transfer(spec, output, downloader):
-    """The controlled workflow cannot transfer until an external trust anchor exists.
-
-    This guard is deliberately independent of the legacy downloader, which remains
-    available to existing callers and is not an authorization mechanism.
-    """
-    _require_trusted_authorization()
-
-
 def plan_single_run(
     accession_document, raw_metadata_directory, review_decision, *,
     provenance_document=None, storage_directory=None,
@@ -125,30 +116,17 @@ def _fresh_revalidation(
         return fresh_plan, fresh, fresh_files, retrieved_utc, []
 
 
-def acquire_single_run(
+def _orchestrate_synthetic_acquisition(
     accession_document, raw_metadata_directory, review_decision, output_directory,
-    storage_directory, confirmation_callback, *, provenance_document=None,
-    retriever=None, downloader=None, disk_checker=None,
+    storage_directory, confirmation_callback, *, retriever, downloader,
+    disk_checker, provenance_document=None,
 ):
-    """Acquire exactly one reviewed run after fresh checks and live confirmation.
+    """Offline orchestration harness. Never called by the production entry point.
 
-    ``confirmation_callback`` is called only after fresh metadata and preflight
-    succeed. It must return the exact run and approved resource caps. This keeps
-    a saved approval JSON or dry-run plan from acting as a download command.
+    All I/O dependencies are mandatory, injected test doubles; there are no
+    defaults to archive or FASTQ network clients. Production acquisition remains
+    unconditionally disabled in ``acquire_single_run`` below.
     """
-    # Hard stop before archive retrieval, callbacks, filesystem creation or
-    # network activity. CI detection and caller-supplied confirmation callbacks
-    # cannot establish operator identity or authorize acquisition.
-    try:
-        _require_trusted_authorization()
-    except TrustedAuthorizationUnavailable as exc:
-        return {
-            "status": "blocked",
-            "reasons": [_blocked(LIVE_ACQUISITION_BLOCK_CODE, str(exc))],
-        }
-    retriever = retriever or public_virus.retrieve_accession
-    downloader = downloader or sequence_downloader.download_file
-    disk_checker = disk_checker or sequence_downloader.check_disk
     initial = plan_single_run(
         accession_document, raw_metadata_directory, review_decision,
         provenance_document=provenance_document,
@@ -250,10 +228,7 @@ def acquire_single_run(
     sequence_downloader.write_json(audit_path, audit)
     try:
         for spec in files:
-            if downloader is sequence_downloader.download_file:
-                path = _controlled_transfer(spec, output, downloader)
-            else:
-                path = _controlled_transfer(spec, output, downloader)
+            path = downloader(spec, output)
             sequence_downloader.write_json(audit_path, audit)
             item = {
                 "name": spec["name"], "url": spec["url"], "role": spec["role"],
@@ -278,6 +253,20 @@ def acquire_single_run(
     audit["finished_utc"] = datetime.now(timezone.utc).isoformat()
     sequence_downloader.write_json(audit_path, audit)
     return {"status": "complete", "audit_path": str(audit_path), "files": audit["files"]}
+
+
+def acquire_single_run(
+    accession_document, raw_metadata_directory, review_decision, output_directory,
+    storage_directory, confirmation_callback, **kwargs,
+):
+    """Production acquisition entry point; permanently fail closed in this release."""
+    try:
+        _require_trusted_authorization()
+    except TrustedAuthorizationUnavailable as exc:
+        return {
+            "status": "blocked",
+            "reasons": [_blocked(LIVE_ACQUISITION_BLOCK_CODE, str(exc))],
+        }
 
 
 def main():

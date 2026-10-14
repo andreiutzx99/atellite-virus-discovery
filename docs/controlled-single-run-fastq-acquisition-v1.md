@@ -31,6 +31,11 @@ download callbacks. A locally editable decision, digest, environment variable,
 CLI option, or callback cannot authenticate an operator. This is intentional:
 no independent trust anchor is currently implemented.
 
+The module also contains a private orchestration harness used by synthetic
+tests with explicitly injected archive, transfer, and disk-check doubles. The
+production `acquire_single_run()` entry point never invokes that harness and
+has no test-mode selector.
+
 The prior implementation's temporary fresh archive response directory was
 deleted after checks. It did not safely retain exact source response bytes.
 Destination filesystem binding, safe output-path handling, concurrency locks,
