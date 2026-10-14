@@ -43,7 +43,7 @@ class InstalledWheelResourceTests(unittest.TestCase):
                  "from importlib.resources import files; "
                  "assert files('satellite_discovery').joinpath("
                  "'public_virus_exploratory_intake_policy.json').is_file(); "
-                 "import satellite_discovery.trusted_single_run_acquisition"],
+                 "import satellite_discovery.public_virus_exploratory_intake"],
                 check=True, capture_output=True, text=True, cwd=temp, env=env,
             )
 

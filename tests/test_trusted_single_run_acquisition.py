@@ -8,13 +8,19 @@ from pathlib import Path
 from unittest.mock import patch
 from io import BytesIO
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+try:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from satellite_discovery import trusted_single_run_acquisition as gate
+    HAS_CRYPTOGRAPHY = True
+except ImportError:
+    serialization = Ed25519PrivateKey = gate = None
+    HAS_CRYPTOGRAPHY = False
 
 from satellite_discovery.public_virus_acquisition_preflight import fastq_manifest_sha256
-from satellite_discovery import trusted_single_run_acquisition as gate
 
 
+@unittest.skipUnless(HAS_CRYPTOGRAPHY, "cryptography is installed with the main package, not optional-tools")
 class TrustedAcquisitionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="trusted-hcov-test-")
