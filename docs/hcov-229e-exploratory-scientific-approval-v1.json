@@ -1,0 +1,36 @@
+{
+  "schema": "hcov-229e-exploratory-scientific-approval-v1",
+  "schema_version": 1,
+  "scope": {
+    "virus": "HCoV-229E",
+    "geo_series": "GSE155986",
+    "bioproject": "PRJNA656274",
+    "study": "SRP276927",
+    "run": "SRR12424250",
+    "experiment": "SRX8920123",
+    "biosample": "SAMN15776099",
+    "geo_sample": "GSM4718636"
+  },
+  "policy_identifier": "public-virus-exploratory-229e-gse155986-v1",
+  "policy_sha256": "84c23e618273ad4f790a2774e78861d83605f474792a1a9cc8389e5b2d81fafe",
+  "evidence_document_sha256": "4d015d450b1465e38d7d91beadf6640ee1db8972ac24c4692ab25637d19ad7b0",
+  "fastq_manifest_sha256": "8af1155a0ff3d65d2d32bb62560b2db37c22fb5f37c6b38a684a72747e4e9fe0",
+  "purpose": "single-run technical pilot",
+  "owner_decision": "NOT_RECORDED",
+  "owner_identifier": null,
+  "owner_rationale": null,
+  "independent_reviewer_decision": "NOT_RECORDED",
+  "independent_reviewer_identifier": null,
+  "independent_reviewer_rationale": null,
+  "decision_rationale": null,
+  "decision_date": null,
+  "unresolved_limitations": [
+    "No read-level quality or virus content has been assessed.",
+    "The FASTQ size and checksum are archive metadata, not file-verified.",
+    "Biological independence and library enrichment chemistry remain unknown.",
+    "No confirmed mock control is available."
+  ],
+  "decision_status": "NOT_APPROVED",
+  "authorizing": false,
+  "acquisition_authorized": false
+}

@@ -1,0 +1,92 @@
+{
+  "schema": "hcov-229e-exploratory-evidence-v1",
+  "schema_version": 1,
+  "authorizing": false,
+  "acquisition_enabled": false,
+  "metadata_state": "CURRENT",
+  "scope": {
+    "virus": "HCoV-229E",
+    "geo_series": "GSE155986",
+    "bioproject": "PRJNA656274",
+    "study": "SRP276927",
+    "run": "SRR12424250",
+    "experiment": "SRX8920123",
+    "biosample": "SAMN15776099",
+    "geo_sample": "GSM4718636"
+  },
+  "exposure_record": {
+    "accessions": {
+      "run": "SRR12424250",
+      "experiment": "SRX8920123",
+      "biosample": "SAMN15776099",
+      "geo_sample": "GSM4718636"
+    },
+    "accession_relationships": {
+      "run_experiment": {
+        "subject": "SRR12424250",
+        "object": "SRX8920123",
+        "status": "SUPPORTED",
+        "source_references": ["sra_runinfo", "ena_run"]
+      },
+      "experiment_biosample": {
+        "subject": "SRX8920123",
+        "object": "SAMN15776099",
+        "status": "SUPPORTED",
+        "source_references": ["sra_runinfo", "biosample"]
+      },
+      "biosample_geo_sample": {
+        "subject": "SAMN15776099",
+        "object": "GSM4718636",
+        "status": "SUPPORTED",
+        "source_references": ["biosample", "geo_sample"]
+      }
+    },
+    "metadata_state": "CURRENT",
+    "conflict_assessment": {"status": "NONE"},
+    "source_references": {
+      "sra_runinfo": {
+        "url": "https://trace.ncbi.nlm.nih.gov/Traces/sra-db-be/runinfo?acc=SRP276927",
+        "retrieved_at": "2026-10-14"
+      },
+      "ena_run": {
+        "url": "https://www.ebi.ac.uk/ena/browser/view/SRR12424250",
+        "retrieved_at": "2026-10-14"
+      },
+      "biosample": {
+        "url": "https://www.ncbi.nlm.nih.gov/biosample/SAMN15776099",
+        "retrieved_at": "2026-10-14"
+      },
+      "geo_sample": {
+        "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4718636",
+        "retrieved_at": "2026-10-14"
+      },
+      "publication": {
+        "url": "https://doi.org/10.1371/journal.pone.0247128",
+        "retrieved_at": "2026-10-14"
+      }
+    },
+    "sample_treatment": {
+      "reported_virus": "HCoV-229E",
+      "condition": "REPORTED_INFECTED",
+      "archive_annotation": "Infected with HCoV-229E virus for 24 hours",
+      "timepoint_hours": 24,
+      "source_references": ["geo_sample", "biosample"],
+      "publication_references": ["publication"],
+      "protocol_references": []
+    },
+    "biological_independence": {"status": "UNKNOWN"},
+    "current_identity_status": "INSUFFICIENT",
+    "sequence_confirmation_status": "NOT_ASSESSED",
+    "requested_eligibility": "HELD"
+  },
+  "fastq_files": [
+    {
+      "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR124/050/SRR12424250/SRR12424250.fastq.gz",
+      "name": "SRR12424250.fastq.gz",
+      "md5": "9ac379cab68b8b5e2862ec167e95d3c9",
+      "bytes": 680887913,
+      "role": "single"
+    }
+  ],
+  "fastq_manifest_sha256": "8af1155a0ff3d65d2d32bb62560b2db37c22fb5f37c6b38a684a72747e4e9fe0"
+}
