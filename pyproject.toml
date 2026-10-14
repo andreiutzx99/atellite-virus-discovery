@@ -7,12 +7,13 @@ name = "satellite-discovery"
 version = "0.3.0"
 description = "Public sequencing retrieval, QC and descriptive artifact reviews"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["cryptography>=44,<51"]
 
 [project.scripts]
 satellite-discovery = "satellite_discovery.cli:main"
 satellite-reviews = "satellite_discovery.review_ui:main"
 satellite-controlled-fastq = "satellite_discovery.controlled_fastq_acquisition:main"
+satellite-controlled-exploratory-fastq = "satellite_discovery.trusted_single_run_acquisition:main"
 
 [tool.setuptools.packages.find]
 include = ["satellite_discovery*"]
@@ -22,6 +23,7 @@ satellite_discovery = [
     "helpers.json",
     "model_scope.json",
     "public_virus_policy.json",
+    "public_virus_exploratory_intake_policy.json",
     "m12_legacy_cache_compatibility.txt",
     "m5_execution_outcome_cache_compatibility.txt",
     "stage_cache_identity_compatibility.txt",
