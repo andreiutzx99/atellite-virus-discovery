@@ -1,18 +1,24 @@
-"""Explicit, one-run FASTQ acquisition guarded by fresh archive revalidation.
+"""Dry-run preflight and permanently disabled one-run FASTQ acquisition API.
 
-Dry-run is the default. This module never invokes QC, assembly, or analysis.
+The production API fails closed before archive retrieval or FASTQ transfer.
+This module never invokes QC, assembly, or analysis.
 """
 import argparse
+import hashlib
 import json
+import os
+import re
+import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError
+from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, build_opener
 
-from . import public_virus, sequence_downloader
+from . import sequence_downloader
 from .public_virus_acquisition_preflight import (
-    MAX_COMPRESSED_BYTES,
     build_acquisition_preflight,
-    fastq_manifest_sha256,
 )
 
 LINKAGE_FIELDS = (
@@ -25,6 +31,9 @@ LIVE_ACQUISITION_BLOCK_DETAIL = (
     "Live FASTQ acquisition is disabled: no independently trusted, "
     "replay-protected operator authorization mechanism is implemented."
 )
+MAX_ARCHIVE_SNAPSHOT_FILES = 64
+MAX_ARCHIVE_SNAPSHOT_BYTES = 50 * 1024 * 1024
+ENA_REDIRECT_HOSTS = frozenset({"ftp.sra.ebi.ac.uk", "ftp.ebi.ac.uk"})
 
 
 class TrustedAuthorizationUnavailable(RuntimeError):
@@ -33,6 +42,180 @@ class TrustedAuthorizationUnavailable(RuntimeError):
 
 def _blocked(code, detail):
     return {"code": code, "detail": detail}
+
+
+def _retain_archive_snapshots(source, destination, snapshot_index):
+    """Atomically preserve a bounded exact-byte copy of fresh archive snapshots."""
+    source, destination = Path(source), Path(destination)
+    if source.is_symlink() or not source.is_dir():
+        raise ValueError("Fresh archive snapshot directory is missing or unsafe")
+    if not isinstance(snapshot_index, list) or not snapshot_index:
+        raise ValueError("Fresh archive snapshot index is missing")
+    if len(snapshot_index) > MAX_ARCHIVE_SNAPSHOT_FILES:
+        raise ValueError("Fresh archive snapshot file-count limit exceeded")
+    names = []
+    for item in snapshot_index:
+        if not isinstance(item, dict) or not {"name", "sha256"} <= set(item):
+            raise ValueError("Malformed fresh archive snapshot index entry")
+        name = item["name"]
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", name):
+            raise ValueError("Unsafe archive snapshot filename")
+        if name in names or name in {".", ".."}:
+            raise ValueError("Duplicate or unsafe archive snapshot filename")
+        if not isinstance(item["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", item["sha256"]):
+            raise ValueError("Malformed archive snapshot SHA256")
+        names.append(name)
+    actual = list(source.iterdir())
+    if len(actual) != len(names) or {p.name for p in actual} != set(names):
+        raise ValueError("Fresh archive snapshots are missing, duplicated or unindexed")
+    records = []
+    total = 0
+    for item in snapshot_index:
+        path = source / item["name"]
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Fresh archive snapshot is not a regular file")
+        size = path.stat().st_size
+        total += size
+        if total > MAX_ARCHIVE_SNAPSHOT_BYTES:
+            raise ValueError("Fresh archive snapshot byte limit exceeded")
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != item["sha256"]:
+            raise ValueError("Fresh archive snapshot digest mismatch")
+        records.append({"name": item["name"], "sha256": digest, "bytes": size})
+    destination = destination.absolute()
+    parent = destination.parent
+    current = Path(destination.anchor)
+    for part in destination.parts[1:-1]:
+        current = current / part
+        if current.exists() and (current.is_symlink() or getattr(current, "is_junction", lambda: False)()):
+            raise ValueError("Archive evidence destination traverses a link")
+    if not parent.is_dir() or destination.exists() or destination.is_symlink():
+        raise FileExistsError("Archive evidence destination is unavailable or already exists")
+    destination.mkdir()
+    try:
+        for item in records:
+            data = (source / item["name"]).read_bytes()
+            if len(data) != item["bytes"] or hashlib.sha256(data).hexdigest() != item["sha256"]:
+                raise ValueError("Archive snapshot changed while being preserved")
+            target = destination / item["name"]
+            temporary = destination / ("." + item["name"] + ".tmp")
+            with temporary.open("xb") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, target)
+        manifest = {
+            "schema": "controlled-acquisition-archive-evidence-v1",
+            "source_identity": "NCBI SRA / ENA (retrieval claim; not authenticated)",
+            "snapshots": records,
+            "total_bytes": total,
+        }
+        temporary = destination / ".snapshot_manifest.json.tmp"
+        with temporary.open("x", encoding="utf-8") as handle:
+            json.dump(manifest, handle, indent=2, sort_keys=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination / "snapshot_manifest.json")
+        return manifest
+    except BaseException:
+        shutil.rmtree(destination, ignore_errors=True)
+        raise
+
+
+def _safe_output_path(output_directory, storage_directory):
+    output, storage = Path(output_directory), Path(storage_directory)
+    if ".." in output.parts or ".." in storage.parts:
+        raise ValueError("Output or approved storage path contains traversal")
+    for path in (output, storage):
+        current = Path(path.absolute().anchor)
+        for part in path.absolute().parts[1:]:
+            current = current / part
+            if current.exists() and (
+                current.is_symlink() or getattr(current, "is_junction", lambda: False)()
+            ):
+                raise ValueError("Output or storage path traverses a link")
+    try:
+        storage = storage.resolve(strict=True)
+    except OSError as exc:
+        raise ValueError("Approved storage scope cannot be resolved") from exc
+    output = output.resolve(strict=False)
+    try:
+        output.relative_to(storage)
+    except ValueError as exc:
+        raise ValueError("Output is outside approved storage scope") from exc
+    return output
+
+
+def _check_destination_space(output_directory, compressed_bytes, storage_cap_bytes):
+    output = Path(output_directory)
+    if compressed_bytes < 0 or storage_cap_bytes < 0:
+        raise ValueError("Storage budgets must be non-negative")
+    required = 3 * compressed_bytes + 256 * 1024 * 1024
+    if required > storage_cap_bytes:
+        raise RuntimeError("Required destination headroom exceeds approved storage cap")
+    destination_volume = output if output.exists() else output.parent
+    free = shutil.disk_usage(destination_volume).free
+    if free < required:
+        raise RuntimeError(f"Insufficient destination filesystem headroom: need {required:,} bytes")
+    return {"required_bytes": required, "free_bytes": free}
+
+
+def _atomic_audit_write(path, data):
+    path = Path(path)
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise ValueError("Acquisition audit path is unsafe")
+    fd, temporary = tempfile.mkstemp(prefix=".acquisition-", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    except BaseException:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+
+
+def _create_acquisition_lock(output):
+    output = Path(output)
+    lock = output.parent / ("." + output.name + ".acquisition.lock")
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        raise RuntimeError("Acquisition destination is already locked") from None
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump({"status": "owned", "pid": os.getpid()}, handle)
+        handle.flush()
+        os.fsync(handle.fileno())
+    return lock
+
+
+def _validate_ena_redirect_target(url):
+    parts = urlsplit(url)
+    if (
+        parts.scheme != "https" or parts.hostname not in ENA_REDIRECT_HOSTS
+        or parts.port is not None or parts.username or parts.password
+    ):
+        raise ValueError("Unapproved ENA redirect destination")
+    return url
+
+
+class _ENARedirectHandler(HTTPRedirectHandler):
+    """Reject an unapproved redirect before urllib makes the redirected request."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        try:
+            _validate_ena_redirect_target(newurl)
+        except ValueError:
+            raise HTTPError(req.full_url, code, "Unapproved ENA redirect destination", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _controlled_ena_opener():
+    return build_opener(_ENARedirectHandler())
 
 
 def _require_trusted_authorization():
@@ -54,7 +237,7 @@ def plan_single_run(
 
 def _fresh_revalidation(
     accession_document, review_decision, *, provenance_document, storage_directory,
-    retriever,
+    retriever, evidence_directory,
 ):
     original = accession_document.get("record", {})
     run = original.get("run_accession")
@@ -70,6 +253,17 @@ def _fresh_revalidation(
         retrieved_utc = datetime.now(timezone.utc).isoformat()
         manifest = fresh.get("manifest", {})
         fresh_record = fresh.get("record", {})
+        try:
+            retained_evidence = _retain_archive_snapshots(
+                Path(temp) / "raw_metadata", evidence_directory,
+                manifest.get("snapshot_index"),
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            return None, fresh, None, retrieved_utc, [_blocked(
+                "fresh_archive_evidence_unavailable",
+                f"Fresh archive evidence could not be safely retained ({type(exc).__name__}).",
+            )]
+        manifest["retained_archive_evidence"] = retained_evidence
         reasons = []
         if manifest.get("retrieval_mode") != "archive_client":
             reasons.append(_blocked(
@@ -114,145 +308,6 @@ def _fresh_revalidation(
                 "Fresh metadata does not contain a complete valid FASTQ file set.",
             )]
         return fresh_plan, fresh, fresh_files, retrieved_utc, []
-
-
-def _orchestrate_synthetic_acquisition(
-    accession_document, raw_metadata_directory, review_decision, output_directory,
-    storage_directory, confirmation_callback, *, retriever, downloader,
-    disk_checker, provenance_document=None,
-):
-    """Offline orchestration harness. Never called by the production entry point.
-
-    All I/O dependencies are mandatory, injected test doubles; there are no
-    defaults to archive or FASTQ network clients. Production acquisition remains
-    unconditionally disabled in ``acquire_single_run`` below.
-    """
-    initial = plan_single_run(
-        accession_document, raw_metadata_directory, review_decision,
-        provenance_document=provenance_document,
-        storage_directory=storage_directory,
-    )
-    if initial.get("status") != "ready_for_operator_confirmation":
-        return {"status": "blocked", "plan": initial, "reasons": initial["reasons"]}
-
-    fresh_plan, fresh_document, files, retrieved_utc, fresh_reasons = _fresh_revalidation(
-        accession_document, review_decision,
-        provenance_document=provenance_document,
-        storage_directory=storage_directory,
-        retriever=retriever,
-    )
-    if fresh_reasons:
-        return {"status": "blocked", "plan": fresh_plan, "reasons": fresh_reasons}
-    if fresh_plan.get("fastq_manifest_sha256") != initial.get("fastq_manifest_sha256"):
-        return {
-            "status": "blocked", "plan": fresh_plan,
-            "reasons": [_blocked(
-                "fastq_manifest_changed",
-                "Fresh complete FASTQ manifest differs from the original reviewed plan.",
-            )],
-        }
-
-    run = fresh_plan["run_accession"]
-    scope = review_decision["scope"]
-    request = {
-        "run_accession": run,
-        "selected_virus": fresh_plan["selected_virus"],
-        "fastq_manifest_sha256": fresh_plan["fastq_manifest_sha256"],
-        "expected_compressed_bytes": fresh_plan["expected_compressed_bytes"],
-        "required_storage_headroom_bytes": fresh_plan["required_storage_headroom_bytes"],
-        "approved_max_compressed_bytes": scope["max_compressed_bytes"],
-        "approved_max_storage_bytes": scope["max_storage_bytes"],
-    }
-    confirmation = confirmation_callback(request) if callable(confirmation_callback) else None
-    if not isinstance(confirmation, dict) or any((
-        confirmation.get("run_accession") != run,
-        confirmation.get("max_compressed_bytes") != scope["max_compressed_bytes"],
-        confirmation.get("max_storage_bytes") != scope["max_storage_bytes"],
-    )):
-        return {
-            "status": "blocked", "plan": fresh_plan,
-            "reasons": [_blocked(
-                "operator_confirmation_missing_or_mismatched",
-                "After revalidation, confirm the exact run accession and both approved resource caps.",
-            )],
-        }
-
-    if not isinstance(files, list):
-        return {
-            "status": "blocked", "plan": fresh_plan,
-            "reasons": [_blocked("fresh_fastq_manifest_invalid", "Fresh FASTQ metadata is unavailable.")],
-        }
-    if fastq_manifest_sha256(files) != fresh_plan["fastq_manifest_sha256"]:
-        return {
-            "status": "blocked", "plan": fresh_plan,
-            "reasons": [_blocked("fastq_manifest_changed", "FASTQ manifest changed before transfer.")],
-        }
-    total_bytes = sum(item["bytes"] for item in files)
-    if total_bytes > MAX_COMPRESSED_BYTES or total_bytes > scope["max_compressed_bytes"]:
-        return {
-            "status": "blocked", "plan": fresh_plan,
-            "reasons": [_blocked("compressed_byte_limit_exceeded", "Complete run exceeds the approved byte limit.")],
-        }
-    try:
-        disk_checker(storage_directory, total_bytes)
-    except (OSError, RuntimeError, TypeError, ValueError):
-        return {
-            "status": "blocked", "plan": fresh_plan,
-            "reasons": [_blocked("insufficient_or_unavailable_storage", "Storage check failed immediately before transfer.")],
-        }
-
-    output = Path(output_directory)
-    output.mkdir(parents=True, exist_ok=True)
-    audit_path = output / "acquisition.json"
-    audit = {
-        "schema": "controlled-single-run-fastq-acquisition-v1",
-        "status": "in_progress",
-        "run_accession": run,
-        "selected_virus": fresh_plan["selected_virus"],
-        "review_decision_identifier": review_decision["decision_identifier"],
-        "operator_confirmation": confirmation,
-        "approved_scope": scope,
-        "fastq_manifest_sha256": fresh_plan["fastq_manifest_sha256"],
-        "fresh_retrieval_mode": "isolated_empty_snapshot_directory",
-        "fresh_archive_manifest": fresh_document.get("manifest", {}),
-        "fresh_archive_record": fresh_document.get("record", {}),
-        "retrieval_observed_utc": retrieved_utc,
-        "acquisition_started_utc": datetime.now(timezone.utc).isoformat(),
-        "download_attempts": [],
-        "files": [],
-        "limitations": [
-            "Local retrieval timestamps and snapshot hashes do not authenticate archive origin.",
-            "Acquisition records are audit evidence, not proof of biological identity.",
-        ],
-    }
-    sequence_downloader.write_json(audit_path, audit)
-    try:
-        for spec in files:
-            path = downloader(spec, output)
-            sequence_downloader.write_json(audit_path, audit)
-            item = {
-                "name": spec["name"], "url": spec["url"], "role": spec["role"],
-                "expected_bytes": spec["bytes"], "observed_bytes": path.stat().st_size,
-                "expected_md5": spec["md5"], "observed_md5": sequence_downloader.checksum(path, "md5"),
-                "path": path.name,
-            }
-            if item["observed_bytes"] != spec["bytes"] or item["observed_md5"] != spec["md5"]:
-                raise ValueError("Downloader output failed post-transfer integrity verification")
-            audit["files"].append(item)
-            sequence_downloader.write_json(audit_path, audit)
-    except BaseException as exc:
-        interrupted = isinstance(exc, (KeyboardInterrupt, SystemExit))
-        audit["status"] = "interrupted" if interrupted else "failed"
-        audit["failure"] = {"type": type(exc).__name__, "detail": str(exc)}
-        audit["finished_utc"] = datetime.now(timezone.utc).isoformat()
-        sequence_downloader.write_json(audit_path, audit)
-        if interrupted:
-            raise
-        return {"status": "failed", "audit_path": str(audit_path), "error": str(exc)}
-    audit["status"] = "complete"
-    audit["finished_utc"] = datetime.now(timezone.utc).isoformat()
-    sequence_downloader.write_json(audit_path, audit)
-    return {"status": "complete", "audit_path": str(audit_path), "files": audit["files"]}
 
 
 def acquire_single_run(

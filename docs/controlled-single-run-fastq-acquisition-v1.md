@@ -1,7 +1,8 @@
 # Controlled single-run FASTQ acquisition v1
 
-This workflow joins the existing public-virus preflight to the existing
-checksum-verified ENA downloader. It is opt-in and does not run QC, assembly,
+This documents a proposed workflow joining the existing public-virus preflight
+to the checksum-verified ENA downloader. Production acquisition is disabled;
+the CLI supports dry-run planning only. It does not run QC, assembly,
 classification, or satellite discovery.
 
 ## Dry run (default)
@@ -25,28 +26,35 @@ bytes, required storage, and any blocking reasons.
 
 ## Live acquisition disabled
 
-`--execute` is not an authorization mechanism. The controlled acquisition API
-and its transfer boundary fail closed before invoking archive, confirmation, or
+`--execute` is not an authorization mechanism. The production
+`acquire_single_run()` API fails before invoking archive, confirmation, or
 download callbacks. A locally editable decision, digest, environment variable,
 CLI option, or callback cannot authenticate an operator. This is intentional:
 no independent trust anchor is currently implemented.
 
-The module also contains a private orchestration harness used by synthetic
-tests with explicitly injected archive, transfer, and disk-check doubles. The
-production `acquire_single_run()` entry point never invokes that harness and
-has no test-mode selector.
+Synthetic end-to-end orchestration lives only in the `tests/` tree and is not
+part of the application package. It uses injected test doubles and cannot be
+selected from the production API or CLI.
 
-The prior implementation's temporary fresh archive response directory was
-deleted after checks. It did not safely retain exact source response bytes.
-Destination filesystem binding, safe output-path handling, concurrency locks,
-and redirect destination validation are also not complete. These limitations
-must be resolved and independently tested before any future implementation can
-enable live acquisition. In particular, the downloader follows HTTP redirects;
-the controlled acquisition workflow remains disabled rather than relying on
-the initial ENA URL check as redirect protection.
+The synthetic orchestration harness now copies the exact fresh response bytes
+to a separate, bounded evidence directory before its temporary retrieval
+directory is removed. It records each file's SHA256 and size, rejects unsafe,
+missing, duplicated, changed, oversized, or pre-existing evidence paths, and
+writes a local manifest. These hashes establish local consistency only, not
+archive authenticity. The production entry point remains disabled and does not
+invoke this harness.
 
-The legacy downloader remains unchanged for existing callers. Its availability
-does not authorize or enable the controlled acquisition workflow.
+The test harness also checks destination-scope containment, link-free output
+paths, destination-volume headroom, exclusive locks, no-overwrite collisions,
+and atomic audit writes. A controlled HTTPS redirect handler restricts ENA
+redirect hosts; the legacy downloader's default behavior remains unchanged.
+These checks have only been exercised with synthetic files and mocked
+responses, not live HTTP or real filesystems on every target platform. The
+production workflow remains disabled.
+
+The legacy downloader remains unchanged for existing callers. The redirect
+handler is tested separately and is not attached to a live transfer path;
+production acquisition remains disabled.
 
 ## Requirements for a future trusted authorization
 
@@ -58,10 +66,9 @@ permitted action. It must provide expiry and replay protection. No such
 mechanism is supplied by this project, and a local signature or hash alone is
 not an adequate substitute.
 
-After authorization exists, the implementation still needs bounded atomic
-retention and digest verification of fresh source snapshots, secure
-destination-scoped storage checks, collision-safe exclusive locking, atomic
-audit updates, verified-only resume, and strict redirect-host validation.
+No authenticated production transfer path exists. If one is proposed later,
+it must explicitly use the tested snapshot, destination, lock, audit, and
+redirect safeguards; resume/reuse remains disabled in the test harness.
 Network behavior, archive authenticity, and real-data performance are not
 established by synthetic tests. Do not use this feature as evidence of
 biological identity or independence.
