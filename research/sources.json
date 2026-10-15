@@ -24,6 +24,7 @@
     {"id":"S19","title":"NCBI UniVec database","url":"https://www.ncbi.nlm.nih.gov/tools/vecscreen/univec/","type":"official resource","supports":"Optional vector/linker screening and its database scope."},
     {"id":"S20","title":"Illumina adapter sequence documentation","url":"https://support-docs.illumina.com/SHARE/AdapterSequences/Content/Nextera_Illumina-Sequences.htm","type":"manufacturer documentation","supports":"Documented adapter sequences; does not establish this run's kit."},
     {"id":"S21","title":"Illumina PhiX controls","url":"https://www.illumina.com/products/by-type/sequencing-kits/cluster-gen-sequencing-reagents/phix-control-v3.html","type":"manufacturer documentation","supports":"Optional control context; does not identify the run's control lot."},
-    {"id":"S22","title":"NCBI genome sequence report specification","url":"https://ncbi.nlm.nih.gov/datasets/docs/v2/reference-docs/data-reports/genome-sequence/","type":"official documentation","supports":"Assembly sequence-report fields and accession/length metadata."}
+    {"id":"S22","title":"NCBI genome sequence report specification","url":"https://ncbi.nlm.nih.gov/datasets/docs/v2/reference-docs/data-reports/genome-sequence/","type":"official documentation","supports":"Assembly sequence-report fields and accession/length metadata."},
+    {"id":"S23","title":"NCBI PhiX174 RefSeq NC_001422.1","url":"https://www.ncbi.nlm.nih.gov/nuccore/NC_001422.1","type":"official nucleotide record","supports":"PhiX174 accession.version and 5,386-nt length."}
   ]
 }
