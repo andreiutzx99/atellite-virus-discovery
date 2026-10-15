@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from . import metadata_filter, public_virus, sequence_downloader
@@ -82,8 +82,15 @@ def _get(url):
                 if encoding not in {"", "identity"}:
                     raise SourceEvidenceError("source_content_encoding", "Compressed metadata response rejected.")
                 declared = response.headers.get("Content-Length")
-                if declared and int(declared) > MAX_RESPONSE_BYTES:
-                    raise SourceEvidenceError("source_response_oversized", "Metadata response exceeds byte limit.")
+                if declared is not None:
+                    try:
+                        declared_size = int(declared)
+                    except (TypeError, ValueError):
+                        raise SourceEvidenceError("source_content_length_invalid", "Metadata Content-Length is invalid.") from None
+                    if declared_size < 0:
+                        raise SourceEvidenceError("source_content_length_invalid", "Metadata Content-Length is invalid.")
+                    if declared_size > MAX_RESPONSE_BYTES:
+                        raise SourceEvidenceError("source_response_oversized", "Metadata response exceeds byte limit.")
                 body = response.read(MAX_RESPONSE_BYTES + 1)
                 if len(body) > MAX_RESPONSE_BYTES:
                     raise SourceEvidenceError("source_response_oversized", "Metadata response exceeds byte limit.")
@@ -181,6 +188,35 @@ def parse_geo_soft(data, record_kind, expected_accession):
     return {"values": values, "characteristics": characteristics}
 
 
+def _geo_relations(relations):
+    """Extract exact accession targets from labelled GEO relation links."""
+    result = {}
+    for relation in relations:
+        label, separator, target = relation.partition(":")
+        if not separator:
+            continue
+        label = label.strip().casefold()
+        target = target.strip()
+        parts = urlsplit(target)
+        if parts.scheme or parts.netloc:
+            if parts.scheme != "https" or parts.hostname not in {
+                "www.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov",
+            }:
+                continue
+            if label in {"biosample", "bioproject"}:
+                accession = parts.path.rstrip("/").rsplit("/", 1)[-1]
+            elif label == "sra":
+                terms = parse_qs(parts.query).get("term", [])
+                accession = terms[0] if len(terms) == 1 else ""
+            else:
+                continue
+        else:
+            accession = target
+        if accession:
+            result.setdefault(label, set()).add(accession)
+    return result
+
+
 def parse_biosample(data):
     root = _xml(data)
     samples = [e for e in root.iter() if e.tag.split("}")[-1] == "BioSample"]
@@ -214,9 +250,11 @@ def parse_sra(data):
         run = next((e for e in package.iter() if e.tag.split("}")[-1] == "RUN"), None)
         if run is None or run.get("accession") != TARGET["run"]:
             continue
-        experiment = next(e for e in package.iter() if e.tag.split("}")[-1] == "EXPERIMENT")
-        sample = next(e for e in package.iter() if e.tag.split("}")[-1] == "SAMPLE")
-        study = next(e for e in package.iter() if e.tag.split("}")[-1] == "STUDY")
+        experiment = next((e for e in package.iter() if e.tag.split("}")[-1] == "EXPERIMENT"), None)
+        sample = next((e for e in package.iter() if e.tag.split("}")[-1] == "SAMPLE"), None)
+        study = next((e for e in package.iter() if e.tag.split("}")[-1] == "STUDY"), None)
+        if experiment is None or sample is None or study is None:
+            raise SourceEvidenceError("sra_package_incomplete", "SRA run package is missing experiment, sample, or study links.")
         external = {}
         for element in package.iter():
             if element.tag.split("}")[-1] == "EXTERNAL_ID" and element.get("namespace"):
@@ -268,6 +306,8 @@ def parse_pubmed(data):
     if len(articles) != 1:
         raise SourceEvidenceError("publication_cardinality", "PubMed response must contain exactly one article.")
     article = next((e for e in articles[0].iter() if e.tag.split("}")[-1] == "Article"), None)
+    if article is None:
+        raise SourceEvidenceError("publication_article_missing", "PubMed record has no Article element.")
     dois = [e.text for e in article.findall("ELocationID") if e.get("EIdType") == "doi"]
     title = " ".join("".join(article.find("ArticleTitle").itertext()).split()) if article.find("ArticleTitle") is not None else ""
     abstract = " ".join(" ".join("".join(e.itertext()).split()) for e in article.findall(".//Abstract/AbstractText"))
@@ -281,22 +321,29 @@ def _material_check(evidence, geo_sample, geo_series, biosample, sra, ena, publi
     wanted = evidence.get("scope", {})
     if wanted != TARGET:
         raise SourceEvidenceError("signed_scope_mismatch", "Signed evidence scope is not the one-run target.")
+    sample_rel = _geo_relations(geo_sample["values"].get("relation", []))
+    series_rel = _geo_relations(geo_series["values"].get("relation", []))
     if (geo_sample["values"].get("geo_accession") != [TARGET["geo_sample"]]
             or not any(x.startswith("Public on ") for x in geo_sample["values"].get("status", []))
             or not any(x.startswith("Public on ") for x in geo_series["values"].get("status", []))
             or TARGET["geo_series"] not in geo_sample["values"].get("series_id", [])
             or TARGET["geo_sample"] not in geo_series["values"].get("sample_id", [])
-            or not any(TARGET["biosample"] in x for x in geo_sample["values"].get("relation", []))
-            or TARGET["experiment"] not in " ".join(geo_sample["values"].get("relation", []))
-            or TARGET["bioproject"] not in " ".join(geo_series["values"].get("relation", []))
-            or TARGET["study"] not in " ".join(geo_series["values"].get("relation", []))):
+            or sample_rel.get("biosample") != {TARGET["biosample"]}
+            or sample_rel.get("sra") != {TARGET["experiment"]}
+            or series_rel.get("bioproject") != {TARGET["bioproject"]}
+            or series_rel.get("sra") != {TARGET["study"]}):
         raise SourceEvidenceError("geo_relationship_conflict", "GEO sample/series links are missing or contradictory.")
     treatment = " ".join(geo_sample["characteristics"].get("treatment", []))
     cell = " ".join(geo_sample["characteristics"].get("cell line", []))
     if (biosample["accession"] != TARGET["biosample"] or biosample["status"] != "public"
             or biosample["ids"].get("geo") != TARGET["geo_sample"]
             or biosample["ids"].get("sra") != sra["sample"]
-            or not any(TARGET["bioproject"] in x["label"] + " " + x["value"] for x in biosample["links"])
+            or not any(
+                x["label"] == TARGET["bioproject"]
+                and x["target"].casefold() == "bioproject"
+                and x["value"] == TARGET["bioproject"][5:]
+                for x in biosample["links"]
+            )
             or biosample["attributes"].get("treatment") != [treatment]
             or biosample["attributes"].get("cell_line") != [cell]):
         raise SourceEvidenceError("biosample_relationship_or_treatment_conflict", "BioSample is missing or conflicts with GEO.")
