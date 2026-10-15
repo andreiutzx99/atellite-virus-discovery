@@ -155,6 +155,10 @@ def main():
         '--extended-stress', action='store_true',
         help='also run the bounded multi-genome detection-limit benchmark',
     )
+    parser.add_argument(
+        '--mismatch-quality-investigation', action='store_true',
+        help='run controlled synthetic mismatch, FASTQ quality, and caller-setting comparisons',
+    )
     arguments = parser.parse_args()
     report_dir = ROOT / '.tools' / f'virema-diagnostic-{os.getpid()}'
     report_dir.mkdir(parents=True, exist_ok=False)
@@ -424,6 +428,18 @@ def main():
                         'Extended stress benchmark had '
                         f'{stress_report["infrastructure_errors"]} execution errors'
                     )
+            if arguments.mismatch_quality_investigation:
+                from scripts.virema_mismatch_quality import run_failure_investigation
+
+                investigation = run_failure_investigation(
+                    adapter, report_dir / 'mismatch-quality-investigation'
+                )
+                report['mismatch_quality_investigation'] = investigation
+                if investigation['execution_errors']:
+                    raise RuntimeError(
+                        'Mismatch/quality investigation had '
+                        f'{investigation["execution_errors"]} execution errors'
+                    )
             report['status'] = 'passed'
     except BaseException as error:
         failure = error
@@ -446,6 +462,19 @@ def main():
         'quantitative_metrics': report.get('quantitative_metrics'),
         'extended_stress_metrics': (
             report.get('extended_stress', {}).get('metrics')
+        ),
+        'mismatch_quality_investigation': (
+            {
+                'conditions': report.get(
+                    'mismatch_quality_investigation', {}
+                ).get('design', {}).get('conditions'),
+                'execution_errors': report.get(
+                    'mismatch_quality_investigation', {}
+                ).get('execution_errors'),
+                'runtime_seconds_total': report.get(
+                    'mismatch_quality_investigation', {}
+                ).get('runtime_seconds_total'),
+            } if arguments.mismatch_quality_investigation else None
         ),
         'error': report.get('error'),
     }, sort_keys=True))
