@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation><PMID>33630927</PMID><Article>
+      <Journal><Title>PLoS One</Title><JournalIssue><PubDate><Year>2021</Year></PubDate></JournalIssue></Journal>
+      <ArticleTitle>Transcriptomic profiling and genomic mutational analysis of Human coronavirus (HCoV)-229E -infected human cells</ArticleTitle>
+      <ELocationID EIdType="doi" ValidYN="Y">10.1371/journal.pone.0247128</ELocationID>
+      <Abstract><AbstractText>HCoV-229E-infected MRC-5 cells showed marked downregulation</AbstractText></Abstract>
+    </Article></MedlineCitation>
+  </PubmedArticle>
+</PubmedArticleSet>

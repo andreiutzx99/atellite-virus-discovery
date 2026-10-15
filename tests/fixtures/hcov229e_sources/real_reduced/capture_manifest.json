@@ -1,0 +1,151 @@
+{
+  "schema": "hcov229e-public-source-capture-manifest-v1",
+  "scope": {
+    "run": "SRR12424250",
+    "experiment": "SRX8920123",
+    "biosample": "SAMN15776099",
+    "geo_sample": "GSM4718636",
+    "geo_series": "GSE155986",
+    "study": "SRP276927",
+    "bioproject": "PRJNA656274"
+  },
+  "fixture_policy": "Reduced real-source fixtures; submitter/contact fields and full publication abstract/reference list omitted. Each SHA256 below is for the exact original HTTP response body, not the reduced fixture.",
+  "sources": [
+    {
+      "name": "biosample",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:56:42 GMT",
+      "http_status": 200,
+      "content_type": "text/xml; charset=UTF-8",
+      "response_bytes": 1744,
+      "sha256": "3ccfd8124d3fa406b3510b1b032971a0bbd18177f425bfb728ce27cc31b36e66",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:56:42 GMT",
+        "content-type": "text/xml; charset=UTF-8",
+        "cache-control": "private"
+      },
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=biosample&id=15776099&retmode=xml",
+      "source_accession": "SAMN15776099"
+    },
+    {
+      "name": "biosample_search",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:58:31 GMT",
+      "http_status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "response_bytes": 286,
+      "sha256": "eb234c247645b93b658925c511c6168a35eb53d4686fea971989923708a6dc23",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:58:31 GMT",
+        "content-type": "application/json; charset=UTF-8",
+        "cache-control": "private"
+      },
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=biosample&term=SAMN15776099%5BACCN%5D&retmode=json",
+      "source_accession": "SAMN15776099"
+    },
+    {
+      "name": "ena_run",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:56:42 GMT",
+      "http_status": 200,
+      "content_type": "text/plain",
+      "response_bytes": 300,
+      "sha256": "dbbb5c989c3091b4f17a5305477390cc933be5a0f4f47d60bf9bc9c38f8ea0e0",
+      "headers": {
+        "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+        "content-type": "text/plain",
+        "date": "Wed, 14 Oct 2026 21:56:42 GMT",
+        "content-length": "300"
+      },
+      "url": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR12424250&result=read_run&format=tsv&fields=run_accession,experiment_accession,sample_accession,study_accession,secondary_study_accession,fastq_ftp,fastq_md5,fastq_bytes",
+      "source_accession": "SRR12424250"
+    },
+    {
+      "name": "geo_sample",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:56:41 GMT",
+      "http_status": 200,
+      "content_type": "geo/text",
+      "response_bytes": 3079,
+      "sha256": "ae02fb79ca7b2c5a56d2701d118153631298a1f18d452efec6d548b2f4df5045",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:56:41 GMT",
+        "cache-control": "private",
+        "content-type": "geo/text"
+      },
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4718636&targ=self&form=text&view=full",
+      "source_accession": "GSM4718636"
+    },
+    {
+      "name": "geo_series",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:56:41 GMT",
+      "http_status": 200,
+      "content_type": "geo/text",
+      "response_bytes": 3726,
+      "sha256": "4ab592ec06fede0a124d59c7569ed5247849b1f1f9f641bd97750ed5f799d317",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:56:41 GMT",
+        "cache-control": "private",
+        "content-type": "geo/text"
+      },
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE155986&targ=self&form=text&view=full",
+      "source_accession": "GSE155986"
+    },
+    {
+      "name": "pubmed",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:56:43 GMT",
+      "http_status": 200,
+      "content_type": "text/xml; charset=UTF-8",
+      "response_bytes": 39860,
+      "sha256": "ec842f62f3c44805e499148c979a21af5089cdc5c039ec82fe8c42e6e4643d8e",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:56:43 GMT",
+        "content-type": "text/xml; charset=UTF-8",
+        "cache-control": "private"
+      },
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=33630927&retmode=xml",
+      "source_accession": "10.1371/journal.pone.0247128"
+    },
+    {
+      "name": "pubmed_search",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:58:32 GMT",
+      "http_status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "response_bytes": 214,
+      "sha256": "1bf1aa2eb3ee93b58f7a24276a6acb71cc8a9945972531b906bb9bb20a707297",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:58:32 GMT",
+        "content-type": "application/json; charset=UTF-8",
+        "cache-control": "private"
+      },
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=10.1371%2Fjournal.pone.0247128%5BDOI%5D&retmode=json",
+      "source_accession": "10.1371/journal.pone.0247128"
+    },
+    {
+      "name": "sra",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:56:42 GMT",
+      "http_status": 200,
+      "content_type": "text/xml",
+      "response_bytes": 9479,
+      "sha256": "ec6e728e70a8746a2b920cf071d223624c3cce43c7e01af2cfa43231bd468047",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:56:42 GMT",
+        "content-type": "text/xml",
+        "cache-control": "private"
+      },
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=sra&id=11593710&retmode=xml",
+      "source_accession": "SRR12424250"
+    },
+    {
+      "name": "sra_search",
+      "retrieved_utc": "Wed, 14 Oct 2026 21:58:32 GMT",
+      "http_status": 200,
+      "content_type": "application/json; charset=UTF-8",
+      "response_bytes": 284,
+      "sha256": "9fb8a9977d98f940c95ea08a727c2a00289415e72aefbfa6e7e0716f316ca57d",
+      "headers": {
+        "date": "Wed, 14 Oct 2026 21:58:32 GMT",
+        "content-type": "application/json; charset=UTF-8",
+        "cache-control": "private"
+      },
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra&term=SRR12424250%5BACCN%5D&retmode=json",
+      "source_accession": "SRR12424250"
+    }
+  ]
+}

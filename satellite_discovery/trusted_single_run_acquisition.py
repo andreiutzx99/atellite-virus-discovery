@@ -24,7 +24,10 @@ from .controlled_fastq_acquisition import (
     _create_acquisition_lock, _safe_output_path,
     _validate_ena_redirect_target,
 )
-from .public_virus_exploratory_intake import MAX_BYTES, POLICY_ID, POLICY_SHA256, TARGET
+from .public_virus_exploratory_intake import (
+    MAX_BYTES, POLICY_ID, POLICY_SHA256, TARGET, evaluate_exploratory_intake,
+)
+from .hcov_229e_source_evidence_refresh import SourceEvidenceError, refresh_source_evidence
 from .public_virus_acquisition_preflight import fastq_manifest_sha256
 
 SCIENTIFIC_SCHEMA = "hcov-229e-scientific-approval-signatures-v1"
@@ -227,11 +230,23 @@ def consume_authorization(database, payload, *, now=None):
 
 
 def _fresh_exploratory_record(evidence, approval_template, evidence_directory):
-    """Fail closed until the fixed-endpoint, bounded source refresher is implemented."""
-    raise AuthorizationError(
-        "Production-owned GEO/BioSample/publication evidence refresh is not implemented; "
-        "live acquisition remains blocked."
+    """Refresh fixed public sources, then re-run the non-authorizing exact-scope intake."""
+    try:
+        fresh = refresh_source_evidence(evidence, evidence_directory)
+    except SourceEvidenceError as exc:
+        raise AuthorizationError(f"Fresh public metadata check failed ({exc.code}): {exc}") from exc
+    document = fresh["document"]
+    document["manifest"]["retained_archive_evidence"] = fresh["metadata"]["snapshot_manifest"]
+    evaluation = evaluate_exploratory_intake(
+        document, evidence_directory, evidence, approval_template,
     )
+    if evaluation.get("result") != "candidate_for_scientific_review":
+        codes = [reason.get("code", "unknown") for reason in evaluation.get("reasons", [])]
+        raise AuthorizationError(
+            "Fresh exact-scope evidence did not pass the non-authorizing review gate: "
+            + ",".join(codes)
+        )
+    return document
 
 
 def _transfer_one(spec, destination, opener=None):
