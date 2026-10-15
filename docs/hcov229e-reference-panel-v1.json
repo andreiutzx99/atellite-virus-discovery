@@ -12,6 +12,7 @@
   "retrieved_at": "2026-10-15",
   "retrieval_date_scope": "applies to every metadata record in this manifest",
   "panel_status": "proposed_metadata_only_not_downloaded",
+  "reference_activation_status": "NOT_ACTIVATED",
   "checksum_policy": "null means the exact sequence artifact was not retrieved and hashed; never infer a checksum from accession metadata",
   "categories": [
     {
@@ -64,6 +65,7 @@
           "organism": "Homo sapiens",
           "format": "rRNA features from the pinned host assembly annotation",
           "length_bp": null,
+          "resolution_status": "unresolved",
           "source_url": "https://www.ncbi.nlm.nih.gov/refseq/annotation_euk/Homo_sapiens/GCF_000001405.40-RS_2025_08",
           "sha256": null,
           "license_or_terms": "Review terms for the exact transcript artifacts.",
@@ -148,6 +150,7 @@
           "source_url": "https://www.ncbi.nlm.nih.gov/tools/vecscreen/univec/",
           "length_bp": null,
           "sha256": null,
+          "activation_status": "NOT_ACTIVATED",
           "status": "candidate_not_selected_pending_build_snapshot",
           "limitation": "Not an active panel reference. Pin and review an exact database build before use. NCBI documents representation limits; this is not a comprehensive contaminant screen."
         },
@@ -165,7 +168,7 @@
           "id": "illumina-adapter-core",
           "accession": null,
           "version": "documented-sequence-not-kit-confirmed",
-          "sequence": "AGATCGGAAGAGC",
+          "documented_adapter_sequence": "AGATCGGAAGAGC",
           "source_url": "https://support-docs.illumina.com/SHARE/AdapterSequences/Content/Nextera_Illumina-Sequences.htm",
           "length_bp": 13,
           "sha256": null,
