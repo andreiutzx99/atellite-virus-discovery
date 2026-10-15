@@ -100,6 +100,24 @@ class ScientificReadinessTests(unittest.TestCase):
         self.assertTrue(limits["co_detection_does_not_establish_helper_dependence"])
         self.assertTrue(limits["structure_prediction_does_not_establish_function"])
 
+    def test_single_run_feasibility_is_separate_from_blocked_interpretations(self):
+        matrix = {item["issue"]: item for item in self.decision["readiness_matrix"]}
+        self.assertIn("does not authorize", self.decision["readiness_matrix_scope"])
+        for issue in ("96-hour coverage", "Independent biological units", "0-hour controls"):
+            with self.subTest(issue=issue):
+                self.assertFalse(matrix[issue]["blocks_technical_pilot"])
+                self.assertTrue(matrix[issue]["blocks_biological_interpretation"])
+                self.assertTrue(matrix[issue]["blocked_conclusions"])
+        self.assertFalse(matrix["Accession crosswalk"]["blocks_biological_interpretation"])
+        self.assertTrue(matrix["Identity and sequence confirmation"]["blocks_biological_interpretation"])
+        decision = self.decision["decision"]
+        self.assertEqual(decision["scientific_status"], "HELD")
+        self.assertEqual(decision["sequence_confirmation"], "NOT_ASSESSED")
+        self.assertEqual(decision["technical_readiness"], "NO_GO_FOR_REAL_READ_ANALYSIS")
+        self.assertFalse(decision["acquisition_enabled"])
+        self.assertFalse(decision["acquisition_authorized"])
+        self.assertEqual(decision["reference_panel_status"], "NOT_ACTIVATED")
+
 
 if __name__ == "__main__":
     unittest.main()

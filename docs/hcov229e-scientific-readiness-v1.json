@@ -247,12 +247,14 @@
       }
     ]
   },
+  "readiness_matrix_scope": "blocks_technical_pilot refers to a limited, separately authorized feasibility test of the selected SRR12424250 run. It does not authorize access to or analysis of real reads; the overall technical_readiness remains NO_GO_FOR_REAL_READ_ANALYSIS.",
   "readiness_matrix": [
     {
       "issue": "Accession crosswalk",
       "evidence_status": "SUPPORTED",
       "blocks_technical_pilot": false,
-      "blocks_biological_interpretation": true,
+      "blocks_biological_interpretation": false,
+      "interpretation_note": "The verified mapping establishes record linkage only. Viral presence and biological identity remain unresolved in the separate identity and sequence-confirmation entry.",
       "next_step": "Recheck live accession relationships before any separately authorized action."
     },
     {
@@ -265,22 +267,33 @@
     {
       "issue": "0-hour controls",
       "evidence_status": "UNRESOLVED",
-      "blocks_technical_pilot": true,
+      "blocks_technical_pilot": false,
       "blocks_biological_interpretation": true,
+      "blocked_conclusions": [
+        "Treating the deposited 0-hour samples as confirmed infection-matched mock or uninfected controls",
+        "Infection-versus-control comparisons"
+      ],
       "next_step": "Resolve inoculation timing and control semantics from primary sample records."
     },
     {
       "issue": "96-hour coverage",
       "evidence_status": "UNRESOLVED",
-      "blocks_technical_pilot": true,
+      "blocks_technical_pilot": false,
       "blocks_biological_interpretation": true,
+      "blocked_conclusions": [
+        "A complete 0–96-hour deposited sequencing time course",
+        "Interpretation of 96-hour sequencing results or comparisons"
+      ],
       "next_step": "Reconcile the sample manifest and archive coverage with authors/curator."
     },
     {
       "issue": "Independent biological units",
       "evidence_status": "UNKNOWN",
-      "blocks_technical_pilot": true,
+      "blocks_technical_pilot": false,
       "blocks_biological_interpretation": true,
+      "blocked_conclusions": [
+        "Replicated biological inference based on R1/R2/R3 as independent infection or culture units"
+      ],
       "next_step": "Obtain experimental-unit and infection-batch records."
     },
     {
