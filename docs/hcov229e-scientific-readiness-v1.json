@@ -1,0 +1,400 @@
+{
+  "schema": "hcov229e-scientific-readiness-v1",
+  "schema_version": 1,
+  "review_date": "2026-10-15",
+  "review_scope": {
+    "metadata_only": true,
+    "reads_downloaded_or_inspected": false,
+    "biological_reference_sequences_downloaded": false,
+    "analysis_performed": false,
+    "scope": {
+      "virus": "HCoV-229E",
+      "geo_series": "GSE155986",
+      "geo_sample": "GSM4718636",
+      "bioproject": "PRJNA656274",
+      "sra_study": "SRP276927",
+      "biosample": "SAMN15776099",
+      "sra_experiment": "SRX8920123",
+      "sra_run": "SRR12424250",
+      "publication_doi": "10.1371/journal.pone.0247128"
+    }
+  },
+  "decision": {
+    "scientific_status": "HELD",
+    "sequence_confirmation": "NOT_ASSESSED",
+    "technical_readiness": "NO_GO_FOR_REAL_READ_ANALYSIS",
+    "acquisition_enabled": false,
+    "acquisition_authorized": false,
+    "authorizing": false,
+    "eligibility": "HELD",
+    "reference_panel_status": "NOT_ACTIVATED",
+    "biological_discovery_authorized": false,
+    "prior_conditional_go_is_approval": false,
+    "prior_recommendation_context": "The earlier CONDITIONAL GO was a non-authorizing recommendation only; it did not change policy, eligibility, acquisition, or the technical NO-GO."
+  },
+  "accession_crosswalk": {
+    "status": "SUPPORTED",
+    "relationships_verified_in_study_set": 15,
+    "unresolved_accession_mappings": 0,
+    "pilot_run": {
+      "run": "SRR12424250",
+      "experiment": "SRX8920123",
+      "biosample": "SAMN15776099",
+      "sra_sample": "SRS7176671",
+      "geo_sample": "GSM4718636",
+      "geo_series": "GSE155986",
+      "sra_study": "SRP276927",
+      "bioproject": "PRJNA656274",
+      "geo_title": "MRC5_24_R2",
+      "reported_condition": "Infected with HCoV-229E virus for 24 hours",
+      "reported_cell_line": "MRC-5",
+      "reported_host_organism": "Homo sapiens",
+      "library_strategy": "RNA-Seq",
+      "library_source": "TRANSCRIPTOMIC",
+      "library_selection": "cDNA",
+      "layout": "SINGLE",
+      "instrument": "Illumina HiSeq 2500",
+      "archive_spots": 24902615,
+      "archive_average_read_length_bases": 51,
+      "ena_fastq_bytes": 680887913,
+      "ena_fastq_md5": "9ac379cab68b8b5e2862ec167e95d3c9",
+      "fastq_downloaded_or_verified": false
+    },
+    "interpretation": "Explicit archive links support record identity at retrieval time. They do not establish read content, viral sequence presence, or independent biological replication."
+  },
+  "evidence_findings": [
+    {
+      "id": "archive_identity",
+      "category": "ARCHIVE_DECLARED_VIRUS_IDENTITY",
+      "status": "INSUFFICIENT",
+      "basis": "The sample records name Homo sapiens and report HCoV-229E in treatment text, not in an accepted public-virus-v1 typed virus-identity field.",
+      "consequence": "The run remains HELD under unchanged public-virus-v1."
+    },
+    {
+      "id": "reported_exposure",
+      "category": "STUDY_REPORTED_VIRUS_EXPOSURE",
+      "status": "SUPPORTED",
+      "basis": "The accession-linked GEO and BioSample records report HCoV-229E treatment for 24 hours; the publication supports study-level infection protocol.",
+      "consequence": "This records what the study/archive report, not sequence-confirmed presence in SRR12424250."
+    },
+    {
+      "id": "sequence_presence",
+      "category": "SEQUENCE_CONFIRMED_VIRUS_PRESENCE",
+      "status": "NOT_ASSESSED",
+      "basis": "No reads were acquired, inspected, or analyzed.",
+      "consequence": "Do not describe this exact run as sequence-confirmed."
+    },
+    {
+      "id": "zero_hour_control_semantics",
+      "category": "SAMPLE_CONDITION",
+      "status": "UNRESOLVED",
+      "basis": "The three 0-hour GEO/BioSample records say Untreated; the series and article describe a 0-hour post-infection collection and comparisons to uninfected cells.",
+      "consequence": "Do not call these samples mock, infected, or confirmed uninfected controls."
+    },
+    {
+      "id": "biological_independence",
+      "category": "EXPERIMENTAL_DESIGN",
+      "status": "UNKNOWN",
+      "basis": "The paper says three biological repeats per timepoint and GEO titles use R1/R2/R3, but separate culture preparations and independent infection events are not documented in reviewed sources.",
+      "consequence": "Do not count labels as independent biological units."
+    },
+    {
+      "id": "library_enrichment",
+      "category": "LIBRARY_PREPARATION",
+      "status": "NOT_ESTABLISHED",
+      "basis": "Archive selection is cDNA; the article/sample protocol name TruSeq RNA Library Preparation Kit v2. Neither specifies the actual poly-A selection or rRNA-depletion method.",
+      "consequence": "Expected viral recovery and final QC/reference choices remain uncertain."
+    },
+    {
+      "id": "stock_identity",
+      "category": "EXPERIMENTAL_PROVENANCE",
+      "status": "UNKNOWN",
+      "basis": "The article reports HCoV-229E VR-740 at study level, but no reviewed source links a specific lot, passage, or stock sequence to this run.",
+      "consequence": "NC_002645.1 is a comparison reference, not a verified experimental-stock sequence."
+    }
+  ],
+  "discrepancies": [
+    {
+      "id": "96_hour_timepoint",
+      "status": "UNRESOLVED",
+      "observations": [
+        {
+          "source_id": "geo_series",
+          "statement": "GSE155986 overall design lists 0, 6, 24, 48 and 72 hours; its 15 GSM records represent three samples at each of these five timepoints."
+        },
+        {
+          "source_id": "geo_sample",
+          "statement": "GSM4718636 sample extraction protocol lists 0, 6, 24, 48, 72 and 96 hours."
+        },
+        {
+          "source_id": "publication",
+          "statement": "The article Methods report extraction at 0, 6, 24, 48, 72 and 96 hours; Results mention cell-count decline at 96 HPI and transcriptomic changes through 48–72 HPI."
+        }
+      ],
+      "finding": "No 96-hour GSM/SRX/SRR was identified in the deposited 15-sample set reviewed.",
+      "possible_explanations": [
+        "96-hour material was collected but not deposited",
+        "96-hour material was used for another assay",
+        "the sample-level protocol text is broader than the deposited sequencing design"
+      ],
+      "resolution": "Not determined. Do not infer that a 96-hour sequencing run exists or that the archive is erroneous.",
+      "required_evidence": "Study sample manifest or contemporaneous laboratory records reconciled with the authors or archive curator."
+    },
+    {
+      "id": "zero_hour_condition",
+      "status": "UNRESOLVED",
+      "observations": [
+        "GEO/BioSample labels the 0-hour records Untreated.",
+        "The series/article describes a 0-hour post-infection timepoint and comparison with uninfected cells."
+      ],
+      "finding": "Available evidence does not establish inoculation timing or mock status at collection.",
+      "required_evidence": "Sample sheet or protocol specifying whether and when inoculum was added, and what Untreated means."
+    }
+  ],
+  "library_and_controls": {
+    "reported_kit": "Illumina TruSeq RNA Library Preparation Kit v2",
+    "reported_rna_quality": "RIN > 8",
+    "archive_selection": "cDNA",
+    "poly_a_selection": "UNKNOWN",
+    "rrna_depletion": "UNKNOWN",
+    "adapter_identity": "NOT_CONFIRMED_FOR_THIS_KIT_OR_RUN",
+    "confirmed_mock_controls_in_deposited_series": 0,
+    "confirmed_extraction_or_library_blanks": 0,
+    "controls_plan": "See HCoV-229E_CONTROLS_AND_INTERPRETATION_PLAN.md; no control is assigned by this review."
+  },
+  "reference_panel": {
+    "status": "PROPOSED_NOT_ACTIVATED",
+    "artifact_sequences_downloaded": false,
+    "all_unacquired_artifact_checksums_are_null": true,
+    "artifacts": [
+      {
+        "role": "human_host_assembly",
+        "accession_version": "GCF_000001405.40",
+        "assembly": "GRCh38.p14",
+        "source_ids": ["S01", "S02"],
+        "source_urls": [
+          "https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.40/",
+          "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_assembly_report.txt"
+        ],
+        "artifact_sha256": null,
+        "reuse_terms": "Review for exact artifact pending",
+        "limitations": "Multi-record assembly; not an MRC-5 genotype."
+      },
+      {
+        "role": "human_annotation_transcripts",
+        "accession_version": "GCF_000001405.40-RS_2025_08",
+        "source_ids": ["S03"],
+        "source_urls": ["https://www.ncbi.nlm.nih.gov/refseq/annotation_euk/Homo_sapiens/GCF_000001405.40-RS_2025_08"],
+        "artifact_sha256": null,
+        "reuse_terms": "Review for exact bundle pending",
+        "limitations": "Exact transcript membership/artifact not downloaded."
+      },
+      {
+        "role": "human_mitochondrial_comparator",
+        "accession_version": "NC_012920.1",
+        "source_ids": ["S04"],
+        "source_urls": ["https://www.ncbi.nlm.nih.gov/nuccore/NC_012920.1"],
+        "artifact_sha256": null,
+        "reuse_terms": "Review for exact artifact pending",
+        "limitations": "Reference comparator, not sample-specific sequence."
+      },
+      {
+        "role": "human_rrna",
+        "accession_version": null,
+        "source_ids": ["S03"],
+        "source_urls": ["https://www.ncbi.nlm.nih.gov/refseq/annotation_euk/Homo_sapiens/GCF_000001405.40-RS_2025_08"],
+        "artifact_sha256": null,
+        "reuse_terms": "Unreviewed",
+        "limitations": "Standalone nuclear rRNA accession/version set unresolved."
+      },
+      {
+        "role": "hcov229e_comparison",
+        "accession_version": "NC_002645.1",
+        "source_ids": ["S05", "S06"],
+        "source_urls": [
+          "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=nuccore&id=NC_002645.1&retmode=json",
+          "https://www.ncbi.nlm.nih.gov/assembly/GCF_000853505.1"
+        ],
+        "artifact_sha256": null,
+        "reuse_terms": "Review for exact artifact pending",
+        "limitations": "Clone inf-1 comparison; not verified as the experimental stock."
+      },
+      {
+        "role": "optional_hcov229e_diversity_comparator",
+        "accession_version": "MF542265.1",
+        "source_ids": ["S09", "S10"],
+        "source_urls": [
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC5701476/",
+          "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=nuccore&id=MF542265.1,LC654445.1,LC654446.1,AB691763.1,AB691764.1&retmode=json"
+        ],
+        "artifact_sha256": null,
+        "reuse_terms": "Review for exact artifact pending",
+        "limitations": "229E/Haiti-1/2016 comparator; not the helper stock."
+      },
+      {
+        "role": "technical_contamination_and_adapter_controls",
+        "accession_version": null,
+        "source_ids": ["S19", "S20", "S21", "S23"],
+        "source_urls": [
+          "https://www.ncbi.nlm.nih.gov/tools/vecscreen/univec/",
+          "https://support-docs.illumina.com/SHARE/AdapterSequences/Content/Nextera_Illumina-Sequences.htm",
+          "https://www.illumina.com/products/by-type/sequencing-kits/cluster-gen-sequencing-reagents/phix-control-v3.html",
+          "https://www.ncbi.nlm.nih.gov/nuccore/NC_001422.1"
+        ],
+        "artifact_sha256": null,
+        "reuse_terms": "Exact-build/lot review pending",
+        "limitations": "UniVec build unpinned; adapter identity not kit-confirmed; PhiX optional and lot not evidenced."
+      }
+    ]
+  },
+  "readiness_matrix": [
+    {
+      "issue": "Accession crosswalk",
+      "evidence_status": "SUPPORTED",
+      "blocks_technical_pilot": false,
+      "blocks_biological_interpretation": true,
+      "next_step": "Recheck live accession relationships before any separately authorized action."
+    },
+    {
+      "issue": "Identity and sequence confirmation",
+      "evidence_status": "INSUFFICIENT_AND_NOT_ASSESSED",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Maintain HELD; no metadata-only override or sequence claim."
+    },
+    {
+      "issue": "0-hour controls",
+      "evidence_status": "UNRESOLVED",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Resolve inoculation timing and control semantics from primary sample records."
+    },
+    {
+      "issue": "96-hour coverage",
+      "evidence_status": "UNRESOLVED",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Reconcile the sample manifest and archive coverage with authors/curator."
+    },
+    {
+      "issue": "Independent biological units",
+      "evidence_status": "UNKNOWN",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Obtain experimental-unit and infection-batch records."
+    },
+    {
+      "issue": "Cell and stock provenance",
+      "evidence_status": "UNKNOWN",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Obtain MRC-5 passage/authentication and VR-740 lot/passage/stock evidence."
+    },
+    {
+      "issue": "Library protocol",
+      "evidence_status": "NOT_ESTABLISHED",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Confirm enrichment/depletion, adapters and control outcomes."
+    },
+    {
+      "issue": "Reference artifact identity and reuse",
+      "evidence_status": "PENDING",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": true,
+      "next_step": "Review exact artifact terms, freeze versions and record hashes only after separate approval."
+    },
+    {
+      "issue": "Authorization",
+      "evidence_status": "NOT_GRANTED",
+      "blocks_technical_pilot": true,
+      "blocks_biological_interpretation": false,
+      "next_step": "Separate future scientific, policy, operator and acquisition reviews; none is created here."
+    }
+  ],
+  "interpretation_boundaries": {
+    "canonical_subgenomic_junction_is_not_automatically_a_dvg": true,
+    "dvg_caller_output_does_not_establish_function": true,
+    "no_hit_does_not_establish_novelty": true,
+    "co_detection_does_not_establish_helper_dependence": true,
+    "structure_prediction_does_not_establish_function": true,
+    "synthetic_tests_validate_software_mechanics_only": true,
+    "details_document": "HCoV-229E_CONTROLS_AND_INTERPRETATION_PLAN.md"
+  },
+  "sources": [
+    {
+      "id": "geo_sample",
+      "title": "GEO sample GSM4718636",
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4718636&targ=self&form=text&view=full",
+      "retrieved_at": "2026-10-14T21:56:41Z",
+      "http_status": 200,
+      "response_sha256": "ae02fb79ca7b2c5a56d2701d118153631298a1f18d452efec6d548b2f4df5045",
+      "supports": ["sample identity", "reported exposure", "sample-level extraction protocol", "library metadata"]
+    },
+    {
+      "id": "geo_series",
+      "title": "GEO series GSE155986",
+      "url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE155986&targ=self&form=text&view=full",
+      "retrieved_at": "2026-10-14T21:56:41Z",
+      "http_status": 200,
+      "response_sha256": "4ab592ec06fede0a124d59c7569ed5247849b1f1f9f641bd97750ed5f799d317",
+      "supports": ["series design", "sample list", "BioProject and SRA study relationships"]
+    },
+    {
+      "id": "biosample",
+      "title": "NCBI BioSample SAMN15776099",
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=biosample&id=15776099&retmode=xml",
+      "retrieved_at": "2026-10-14T21:56:42Z",
+      "http_status": 200,
+      "response_sha256": "3ccfd8124d3fa406b3510b1b032971a0bbd18177f425bfb728ce27cc31b36e66",
+      "supports": ["BioSample and GEO/SRA relationships", "host and treatment attributes"]
+    },
+    {
+      "id": "sra_run",
+      "title": "NCBI SRA record for SRR12424250",
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=sra&id=11593710&retmode=xml",
+      "retrieved_at": "2026-10-14T21:56:42Z",
+      "http_status": 200,
+      "response_sha256": "ec6e728e70a8746a2b920cf071d223624c3cce43c7e01af2cfa43231bd468047",
+      "supports": ["run and experiment identifiers", "library fields", "read statistics"]
+    },
+    {
+      "id": "ena_run",
+      "title": "ENA read-run file report for SRR12424250",
+      "url": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR12424250&result=read_run&format=tsv&fields=run_accession,experiment_accession,sample_accession,study_accession,secondary_study_accession,fastq_ftp,fastq_md5,fastq_bytes",
+      "retrieved_at": "2026-10-14T21:56:42Z",
+      "http_status": 200,
+      "response_sha256": "dbbb5c989c3091b4f17a5305477390cc933be5a0f4f47d60bf9bc9c38f8ea0e0",
+      "supports": ["run mapping", "FASTQ manifest metadata"]
+    },
+    {
+      "id": "publication",
+      "title": "Friedman et al. (2021), PLOS ONE",
+      "url": "https://doi.org/10.1371/journal.pone.0247128",
+      "full_text_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7906355/fullTextXML",
+      "retrieved_at": "2026-10-14T11:10:09Z",
+      "full_text_response_sha256": "6829081e18c0f1ba2dab93a16f58cd47b8399bbbfe1269eaa498f977c536f093",
+      "supports": ["study-level protocol and timecourse", "reported replicates", "reported virus and host-cell provenance"],
+      "limitation": "Article statements are not run-level sequence evidence."
+    },
+    {
+      "id": "pubmed",
+      "title": "PubMed record PMID 33630927",
+      "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=33630927&retmode=xml",
+      "retrieved_at": "2026-10-14T21:56:43Z",
+      "http_status": 200,
+      "response_sha256": "ec842f62f3c44805e499148c979a21af5089cdc5c039ec82fe8c42e6e4643d8e",
+      "supports": ["publication identity and DOI"],
+      "limitation": "Bibliographic record does not resolve sample-level discrepancies."
+    },
+    {
+      "id": "reference_registry",
+      "title": "Existing versioned reference source registry",
+      "url": "research/sources.json",
+      "retrieved_at": "2026-10-15",
+      "supports": ["reference accession/version provenance and source links"],
+      "limitation": "Metadata source records only; no biological reference artifacts were downloaded."
+    }
+  ],
+  "source_snapshot_note": "SHA-256 values identify captured response bytes and are not signatures, authenticity proof, or evidence that remote records are immutable."
+}
