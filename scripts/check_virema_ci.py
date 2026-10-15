@@ -44,20 +44,100 @@ def write_synthetic_inputs(folder):
     sequence = ''.join(
         random.Random(392 + index).choice('ACGT') for index in range(1500)
     )
+    repeated = list(sequence)
+    repeated[1200:1260] = sequence[600:660]
+    sequence = ''.join(repeated)
     reference = folder / 'reference.fasta'
     reference.write_text('>SYNTHETIC_REF\n' + sequence + '\n', encoding='ascii')
-    inputs = {}
-    layouts = {
-        'positive': [sequence[199:259] + sequence[749:809]] * 8,
-        'negative': [sequence[199:319]] * 8,
-    }
-    for layout, reads in layouts.items():
-        path = folder / (layout + '.fastq')
+
+    def write_fastq(path, reads):
         with path.open('w', encoding='ascii', newline='\n') as target:
-            for number, read in enumerate(reads, 1):
-                target.write(f'@{layout}_{number}\n{read}\n+\n{"I" * 120}\n')
-        inputs[layout] = path
-    return reference, inputs
+            for number, (read, quality) in enumerate(reads, 1):
+                target.write(f'@synthetic_read_{number:04d}\n{read}\n+\n{quality}\n')
+        return path
+
+    positive_specs = (
+        {
+            'label': 'leader_body_like',
+            'reads': [sequence[99:139] + sequence[499:539]] * 8,
+            'breakpoints': (139, 500),
+            'read_length': 80,
+            'support': 8,
+            'quality_char': 'I',
+            'quality_phred': 40,
+        },
+        {
+            'label': 'internal_deletion_like',
+            'reads': [sequence[199:259] + sequence[749:809]] * 4,
+            'breakpoints': (259, 750),
+            'read_length': 120,
+            'support': 4,
+            'quality_char': 'I',
+            'quality_phred': 40,
+        },
+        {
+            'label': 'alternative_order_rearrangement_like',
+            'reads': [sequence[899:939] + sequence[299:339]] * 2,
+            'breakpoints': (939, 300),
+            'read_length': 80,
+            'support': 2,
+            'quality_char': 'I',
+            'quality_phred': 40,
+        },
+        {
+            'label': 'leader_body_like_quality_20',
+            'reads': [sequence[99:139] + sequence[499:539]] * 8,
+            'breakpoints': (139, 500),
+            'read_length': 80,
+            'support': 8,
+            'quality_char': '5',
+            'quality_phred': 20,
+        },
+        {
+            'label': 'leader_body_like_quality_0',
+            'reads': [sequence[99:139] + sequence[499:539]] * 8,
+            'breakpoints': (139, 500),
+            'read_length': 80,
+            'support': 8,
+            'quality_char': '!',
+            'quality_phred': 0,
+        },
+    )
+    positive_cases = []
+    for index, spec in enumerate(positive_specs, 1):
+        path = write_fastq(
+            folder / f'fixture_{index:02d}.fastq',
+            [
+                (read, spec['quality_char'] * len(read))
+                for read in spec['reads']
+            ],
+        )
+        positive_cases.append({**spec, 'reads_path': path})
+
+    continuous = sequence[199:319]
+    substituted = list(continuous)
+    substituted[35] = 'A' if substituted[35] != 'A' else 'C'
+    negative_groups = (
+        ('continuous_genomic', [continuous] * 8, 'I'),
+        ('single_substitution', [''.join(substituted)] * 8, 'I'),
+        ('repetitive_ambiguous', [sequence[600:660]] * 8, 'I'),
+        ('low_complexity', ['A' * 80] * 8, 'I'),
+        ('adapter_like', [sequence[1300:1340] + 'AGATCGGAAGAGC'] * 8, 'I'),
+        ('short_continuous_alignment', [sequence[50:75]] * 8, 'I'),
+        ('low_quality_continuous', [continuous] * 8, '!'),
+    )
+    negative_reads = []
+    negative_counts = {}
+    for label, reads, quality_char in negative_groups:
+        negative_counts[label] = len(reads)
+        negative_reads.extend((read, quality_char * len(read)) for read in reads)
+    negative_path = write_fastq(folder / 'fixture_06.fastq', negative_reads)
+    return reference, positive_cases, {
+        'label': 'negative_controls',
+        'reads_path': negative_path,
+        'read_count': len(negative_reads),
+        'control_read_counts': negative_counts,
+    }
 
 
 def sha256(path):
@@ -79,6 +159,11 @@ def main():
         'status': 'failed',
         'runs': {},
         'diagnostics': [],
+            'fixture_design': {
+                'reference_records': 1,
+                'junction_transcript_references': 0,
+                'ground_truth_passed_to_caller': False,
+            },
     }
     report['runtime_platform'] = {
         'system': platform.system(),
@@ -180,49 +265,87 @@ def main():
                 check=True,
             )
             report['python_numpy'] = json.loads(version.stdout)
-            reference, reads = write_synthetic_inputs(report_dir / 'fixtures')
-            expected = {
-                'positive': {
-                    'status': 'DVG_EVIDENCE_DETECTED', 'event_count': 1,
-                    'breakpoints': (259, 750), 'support': 8,
+            reference, positive_cases, negative_case = write_synthetic_inputs(
+                report_dir / 'fixtures'
+            )
+            report['fixture_design'].update({
+                'positive_cases': [{
+                    'pattern': case['label'],
+                    'read_length': case['read_length'],
+                    'supporting_reads': case['support'],
+                    'quality_phred': case['quality_phred'],
+                    'expected_breakpoints': list(case['breakpoints']),
+                } for case in positive_cases],
+                'negative_controls': negative_case['control_read_counts'],
+                'negative_read_count': negative_case['read_count'],
+                'read_quality_note': (
+                    'ViReMa receives FASTQ quality strings; this diagnostic checks '
+                    'no calls on low-quality continuous reads, not quality-stratified '
+                    'positive sensitivity.'
+                ),
+            })
+            cases = [
+                *positive_cases,
+                {
+                    **negative_case,
+                    'status': 'NO_DVG_EVIDENCE_DETECTED',
+                    'breakpoints': None,
+                    'support': None,
                 },
-                'negative': {
-                    'status': 'NO_DVG_EVIDENCE_DETECTED', 'event_count': 0,
-                    'breakpoints': None, 'support': None,
-                },
-            }
-            for layout in ('positive', 'negative'):
-                sample = 'artificial_' + layout
-                output = report_dir / layout
+            ]
+            true_positives = 0
+            false_positives = 0
+            false_negatives = 0
+            for index, case in enumerate(cases, 1):
+                sample = f'synthetic_fixture_{index:02d}'
+                output = report_dir / f'case_{index:02d}'
                 outcome = adapter.execute(
-                    {'reads': reads[layout], 'reference': reference},
+                    {'reads': case['reads_path'], 'reference': reference},
                     output, {'sample_id': sample},
                 )
                 if outcome.execution != 'executed':
-                    raise AssertionError(f'{layout}: expected a fresh external-tool execution')
+                    raise AssertionError(f'{case["label"]}: expected a fresh external-tool execution')
                 native = output / 'raw' / 'Virus_Recombination_Results.txt'
                 evidence_path = output / 'evidence.json'
                 summary = json.loads((output / 'summary.json').read_text(encoding='utf-8'))
                 evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
-                want = expected[layout]
-                if (summary.get('status') != want['status']
-                        or summary.get('event_count') != want['event_count']
-                        or evidence.get('status') != want['status']
-                        or len(evidence.get('events', [])) != want['event_count']):
-                    raise AssertionError(f'{layout}: unexpected normalized status or event count')
-                if layout == 'positive':
+                expected_positive = case in positive_cases
+                expected_count = 1 if expected_positive else 0
+                expected_status = (
+                    'DVG_EVIDENCE_DETECTED' if expected_positive
+                    else 'NO_DVG_EVIDENCE_DETECTED'
+                )
+                if (summary.get('status') != expected_status
+                        or summary.get('event_count') != expected_count
+                        or evidence.get('status') != expected_status
+                        or len(evidence.get('events', [])) != expected_count):
+                    raise AssertionError(
+                        f'{case["label"]}: unexpected normalized status or event count'
+                    )
+                if expected_positive:
                     event = evidence['events'][0]
                     if (event.get('breakpoint_1'), event.get('breakpoint_2'),
-                            event.get('supporting_read_count')) != (259, 750, 8):
-                        raise AssertionError('positive event coordinates/support differ')
+                            event.get('supporting_read_count')) != (
+                                *case['breakpoints'], case['support']):
+                        raise AssertionError(
+                            f'{case["label"]}: event coordinates/support differ'
+                        )
                     expected_native = (
                         b'@NewLibrary: SYNTHETIC_REF_to_SYNTHETIC_REF\n'
-                        b'259_to_750_#_8\t\n@EndofLibrary\n'
+                        + f'{case["breakpoints"][0]}_to_{case["breakpoints"][1]}'
+                        f'_#_{case["support"]}\t\n@EndofLibrary\n'.encode('ascii')
                     )
                     if native.read_bytes() != expected_native:
-                        raise AssertionError('positive native ViReMa output differs')
+                        raise AssertionError(
+                            f'{case["label"]}: native ViReMa output differs'
+                        )
+                    true_positives += 1
                 elif native.read_bytes() != b'':
-                    raise AssertionError('negative native ViReMa output is not empty')
+                    false_positives += len(evidence.get('events', []))
+                    raise AssertionError(
+                        f'negative controls produced {len(evidence.get("events", []))} '
+                        'junction calls'
+                    )
 
                 raw_digest = sha256(native)
                 evidence_digest = sha256(evidence_path)
@@ -232,9 +355,11 @@ def main():
                 )
                 if (validated.get('raw_output_sha256') != raw_digest
                         or validated.get('evidence_sha256') != evidence_digest):
-                    raise AssertionError(f'{layout}: returned output hashes do not match files')
+                    raise AssertionError(
+                        f'{case["label"]}: returned output hashes do not match files'
+                    )
                 reused = adapter.execute(
-                    {'reads': reads[layout], 'reference': reference},
+                    {'reads': case['reads_path'], 'reference': reference},
                     output, {'sample_id': sample},
                 )
                 if (reused.execution != 'verified_reuse'
@@ -243,8 +368,10 @@ def main():
                         or sha256(native) != raw_digest
                         or sha256(evidence_path) != evidence_digest
                         or sha256(output / 'summary.json') != summary_digest):
-                    raise AssertionError(f'{layout}: reuse changed result or raw/normalized hashes')
-                report['runs'][layout] = {
+                    raise AssertionError(
+                        f'{case["label"]}: reuse changed result or raw/normalized hashes'
+                    )
+                report['runs'][case['label']] = {
                     'status': summary['status'],
                     'event_count': summary['event_count'],
                     'event': ({
@@ -258,6 +385,26 @@ def main():
                     'summary_sha256': summary_digest,
                     'reuse_verified': True,
                 }
+            false_negatives = len(positive_cases) - true_positives
+            report['quantitative_metrics'] = {
+                'true_positives': true_positives,
+                'false_positives': false_positives,
+                'false_negatives': false_negatives,
+                'expected_junctions': len(positive_cases),
+                'sensitivity': (
+                    true_positives / (true_positives + false_negatives)
+                    if true_positives + false_negatives else None
+                ),
+                'precision': (
+                    true_positives / (true_positives + false_positives)
+                    if true_positives + false_positives else None
+                ),
+                'breakpoint_exact_matches': true_positives,
+                'breakpoint_accuracy': (
+                    true_positives / len(positive_cases) if positive_cases else None
+                ),
+                'scope': 'these deterministic artificial fixtures only',
+            }
             report['status'] = 'passed'
     except BaseException as error:
         failure = error
@@ -277,6 +424,7 @@ def main():
         'status': report['status'],
         'report': str(report_path.relative_to(ROOT)),
         'runs': report.get('runs', {}),
+        'quantitative_metrics': report.get('quantitative_metrics'),
         'error': report.get('error'),
     }, sort_keys=True))
     if failure:
