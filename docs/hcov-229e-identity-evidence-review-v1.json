@@ -47,7 +47,7 @@
       "doi": "https://doi.org/10.1371/journal.pone.0247128",
       "full_text": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7906355/fullTextXML",
       "pmcid": "PMC7906355",
-      "methods_evidence": "The Methods state HCoV-229E VR740 at MOI 0.01, MRC-5 cells, RNA extraction at 0, 6, 24, 48 and 72 hours post-infection, and three biological repeats at each time point. The Methods do not establish independent donor/culture preparations for each repeat.",
+      "methods_evidence": "The Methods state HCoV-229E VR740 at MOI 0.01, MRC-5 cells, RNA extraction at 0, 6, 24, 48, 72 and 96 hours post-infection, and three biological repeats at each time point. The Methods do not establish independent culture preparations for each repeat. The GEO series design and deposited sample set list only 0-72 hours; the 96-hour discrepancy remains unresolved.",
       "study_exposure_evidence": "The Results describe HCoV-229E-infected MRC-5 cells and viral titers measured by qPCR in cells and supernatants. This is study-level evidence, not run-level sequence confirmation."
     },
     "biosample": "https://www.ncbi.nlm.nih.gov/biosample/{biosample}",

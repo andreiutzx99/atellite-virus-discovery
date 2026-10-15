@@ -14,7 +14,7 @@ supported by structured fields in independent records:
 
 | Source | Observed structured evidence |
 |---|---|
-| GEO GSM4718636 | `!Sample_geo_accession=GSM4718636`; `!Sample_series_id=GSE155986`; explicit BioSample `SAMN15776099` and SRA experiment `SRX8920123` relations; title `MRC5_24_R2`; cell line `MRC-5`; treatment `Infected with HCoV-229E virus for 24 hours`; library strategy `RNA-Seq`. |
+| GEO GSM4718636 | `!Sample_geo_accession=GSM4718636`; `!Sample_series_id=GSE155986`; explicit BioSample `SAMN15776099` and SRA experiment `SRX8920123` relations; title `MRC5_24_R2`; cell line `MRC-5`; treatment `Infected with HCoV-229E virus for 24 hours`; library strategy `RNA-Seq`. Its sample-level extraction protocol lists 0/6/24/48/72/**96** hours. |
 | GEO GSE155986 | Includes GSM4718636 in `!Series_sample_id`; links to BioProject PRJNA656274 and SRA study SRP276927; the overall design describes HCoV-229E exposure and 0/6/24/48/72-hour sampling. |
 | BioSample SAMN15776099 | Public record; structured identifiers include SRS7176671 and GSM4718636; links to PRJNA656274; attributes independently report MRC-5 and the same 24-hour HCoV-229E treatment. |
 | SRA package | One package links run SRR12424250, experiment SRX8920123, sample SRS7176671, study SRP276927, BioSample SAMN15776099, GEO sample GSM4718636, GSE155986 and PRJNA656274. Library strategy is RNA-Seq, source transcriptomic, selection cDNA, layout single-end. |
@@ -26,6 +26,14 @@ the same accession relationships and manifest. These observations establish a cu
 cross-source match at retrieval time, not continuous immutability. The sequence-confirmed
 viral-presence state remains `NOT_ASSESSED`; the strict public-virus identity remains
 `INSUFFICIENT` and eligibility remains `HELD`.
+
+The source texts also expose an unresolved 96-hour discrepancy. The GEO sample extraction
+protocol and the article's Methods mention 96 hours, while the GEO series overall design
+lists 0/6/24/48/72 hours and the 15 deposited GSM records represent three samples at each
+of those five timepoints. No 96-hour GSM/SRX/SRR was identified in the reviewed series.
+The available records do not establish whether 96-hour material was used for another
+assay, not deposited, or described by a broad protocol statement. Do not infer a
+96-hour sequencing run or treat the discrepancy as an archive error.
 
 ## Fixture handling
 
