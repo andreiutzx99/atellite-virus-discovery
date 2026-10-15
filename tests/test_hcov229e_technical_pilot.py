@@ -16,17 +16,24 @@ class SyntheticTechnicalPilotTests(unittest.TestCase):
 
             self.assertEqual(result["schema"], "hcov229e-technical-pilot-synthetic-v1")
             self.assertEqual(result["status"], "synthetic_fixture_only")
-            self.assertEqual(result["read_quality"]["reads_before"], 3)
-            self.assertEqual(result["read_quality"]["reads_after"], 3)
-            self.assertEqual(result["read_quality"]["reads_with_adapter_match"], 0)
-            self.assertEqual(result["mapping"]["records_total"], 3)
-            self.assertEqual(result["mapping"]["mapped_primary_records"], 2)
+            self.assertEqual(result["read_quality"]["reads_before"], 5)
+            self.assertEqual(result["read_quality"]["reads_after"], 4)
+            self.assertEqual(result["read_quality"]["reads_with_adapter_match"], 1)
+            self.assertGreater(result["read_quality"]["bases_trimmed"], 0)
+            self.assertEqual(result["read_quality"]["rejected_reads"], 1)
+            self.assertEqual(result["mapping"]["records_total"], 4)
+            self.assertEqual(result["mapping"]["mapped_primary_records"], 3)
             self.assertEqual(result["mapping"]["unmapped_records"], 1)
             self.assertTrue(result["mapping"]["unmapped_reads_retained_in_sam"])
             self.assertEqual(
                 {row["synthetic_role"] for row in result["mapping"]["references"]},
                 {"host_like", "virus_reference_like"},
             )
+            mapped_by_role = {
+                row["synthetic_role"]: row["mapped_records"]
+                for row in result["mapping"]["references"]
+            }
+            self.assertEqual(mapped_by_role, {"host_like": 2, "virus_reference_like": 1})
             self.assertTrue(all(row["breadth_fraction"] > 0 for row in result["coverage"]))
             self.assertEqual(result["biological_interpretation"]["viral_presence"], "not_assessed")
             self.assertEqual(result["biological_interpretation"]["satellite_virus_discovery"], "not_claimed")

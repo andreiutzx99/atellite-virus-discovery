@@ -44,8 +44,12 @@ def _sha256(path):
 def _write_fastq(path, reads):
     with Path(path).open("wb") as raw:
         with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as stream:
-            for name, sequence in reads:
-                stream.write(f"@{name}\n{sequence}\n+\n{'I' * len(sequence)}\n".encode("ascii"))
+            for item in reads:
+                name, sequence = item[:2]
+                quality = item[2] if len(item) == 3 else "I" * len(sequence)
+                if len(quality) != len(sequence):
+                    raise ValueError("Synthetic FASTQ sequence and quality lengths differ.")
+                stream.write(f"@{name}\n{sequence}\n+\n{quality}\n".encode("ascii"))
 
 
 def run_synthetic_demo(output_dir, minimap2_executable="minimap2"):
@@ -71,6 +75,8 @@ def run_synthetic_demo(output_dir, minimap2_executable="minimap2"):
         ("synthetic_host_read", references[0][2][61:136]),
         ("synthetic_virus_read", references[1][2][211:286]),
         ("synthetic_unrelated_read", _sequence(9901, 75)),
+        ("synthetic_adapter_read", references[0][2][251:299] + "AGATCGGAAGAGC"),
+        ("synthetic_low_quality_read", _sequence(9902, 75), "!" * 75),
     ]
     reference_path = input_dir / "synthetic_references.fasta"
     reference_path.write_text(
