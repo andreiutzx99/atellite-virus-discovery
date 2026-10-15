@@ -10,7 +10,7 @@ The essential HCoV-229E comparison is RefSeq **NC_002645.1** (27,317 nt; clone `
 
 The human mitochondrial record **NC_012920.1** is 16,569 nt and contains annotated 12S/16S rRNA features [S02, S04]. Nuclear and mitochondrial rRNA should be represented from the pinned host annotation/assembly, not by an unversioned hand-built consensus. The current manifest leaves stand-alone nuclear rRNA accessions unresolved rather than pinning stale or ambiguous records.
 
-NCBI **UniVec Core** is an optional vector/linker/primer screen, not a complete contaminant database [S19]. The exact Illumina kit is unknown; the current `AGATCGGAAGAGC` QC adapter is only a software setting, not evidence that this kit was used [S20]. PhiX174 **NC_001422.1** (5,386 nt) is an optional technical-control comparator; the manufacturer's PhiX product page does not establish that exact accession for a control lot [S21]. None of these optional references establishes contamination in this sample.
+NCBI **UniVec Core** is an optional vector/linker/primer screen, not a complete contaminant database [S19]. The exact Illumina kit is unknown; the current `AGATCGGAAGAGC` QC adapter is only a software setting, not evidence that this kit was used [S20]. PhiX174 **NC_001422.1** (5,386 nt) is an optional technical-control comparator [S21, S23]; the manufacturer's PhiX product page does not establish that exact accession for a control lot [S21]. None of these optional references establishes contamination in this sample.
 
 ## Interpretation
 
