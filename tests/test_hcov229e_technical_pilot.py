@@ -16,6 +16,9 @@ class SyntheticTechnicalPilotTests(unittest.TestCase):
 
             self.assertEqual(result["schema"], "hcov229e-technical-pilot-synthetic-v1")
             self.assertEqual(result["status"], "synthetic_fixture_only")
+            self.assertEqual(result["public_virus_status"], "HELD")
+            self.assertEqual(result["sequence_confirmation_status"], "NOT_ASSESSED")
+            self.assertFalse(result["authorizing"])
             self.assertEqual(result["read_quality"]["reads_before"], 5)
             self.assertEqual(result["read_quality"]["reads_after"], 4)
             self.assertEqual(result["read_quality"]["reads_with_adapter_match"], 1)

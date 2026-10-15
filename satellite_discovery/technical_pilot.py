@@ -163,6 +163,9 @@ def run_synthetic_demo(output_dir, minimap2_executable="minimap2"):
     elapsed = time.monotonic() - started
     summary = {
         "schema": SCHEMA, "status": "synthetic_fixture_only",
+        "public_virus_status": "HELD",
+        "sequence_confirmation_status": "NOT_ASSESSED",
+        "authorizing": False,
         "input_integrity": {
             "reads": {"sha256": _sha256(reads_path), "bytes": reads_path.stat().st_size},
             "reference_panel": {"sha256": _sha256(reference_path), "bytes": reference_path.stat().st_size},
