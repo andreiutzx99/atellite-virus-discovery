@@ -1,4 +1,5 @@
-"""Run bounded positive/negative ViReMa checks using the pinned upstream commit."""
+"""Run pinned ViReMa smoke checks and an optional synthetic stress benchmark."""
+import argparse
 import hashlib
 import json
 import os
@@ -149,6 +150,12 @@ def sha256(path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--extended-stress', action='store_true',
+        help='also run the bounded multi-genome detection-limit benchmark',
+    )
+    arguments = parser.parse_args()
     report_dir = ROOT / '.tools' / f'virema-diagnostic-{os.getpid()}'
     report_dir.mkdir(parents=True, exist_ok=False)
     report_path = report_dir / 'report.json'
@@ -405,6 +412,18 @@ def main():
                 ),
                 'scope': 'these deterministic artificial fixtures only',
             }
+            if arguments.extended_stress:
+                from scripts.virema_stress import run_stress_benchmark
+
+                stress_report = run_stress_benchmark(
+                    adapter, report_dir / 'extended-stress'
+                )
+                report['extended_stress'] = stress_report
+                if stress_report['infrastructure_errors']:
+                    raise RuntimeError(
+                        'Extended stress benchmark had '
+                        f'{stress_report["infrastructure_errors"]} execution errors'
+                    )
             report['status'] = 'passed'
     except BaseException as error:
         failure = error
@@ -425,6 +444,9 @@ def main():
         'report': str(report_path.relative_to(ROOT)),
         'runs': report.get('runs', {}),
         'quantitative_metrics': report.get('quantitative_metrics'),
+        'extended_stress_metrics': (
+            report.get('extended_stress', {}).get('metrics')
+        ),
         'error': report.get('error'),
     }, sort_keys=True))
     if failure:
