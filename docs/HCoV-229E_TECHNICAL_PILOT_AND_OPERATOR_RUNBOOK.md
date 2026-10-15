@@ -23,7 +23,8 @@ confirmation remains **NOT_ASSESSED**.
 
 ## Synthetic-only workflow
 
-The versioned demonstration generates three artificial reads and two
+The versioned demonstration generates five artificial reads—host-like,
+virus-reference-like, unrelated, adapter-bearing, and low-quality—and two
 deterministically generated reference sequences, runs the portable QC and
 minimap2 against those synthetic references, parses the resulting SAM with the
 existing coverage review, and writes:
