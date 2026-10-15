@@ -126,21 +126,13 @@
           "accession": "NC_002645.1",
           "version": "1",
           "organism": "Human coronavirus 229E",
-          "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7204879/",
+          "strain_or_clone": "clone inf-1",
+          "length_bp": 27317,
+          "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/NC_002645.1",
+          "comparison_literature_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7204879/",
           "sequence_artifact": false,
-          "length_bp": null,
           "sha256": null,
           "limitation": "Use as a source genome only. TRS/sgRNA annotations are literature-derived hypotheses and require stock-matched validation."
-        },
-        {
-          "id": "synthetic-junction-patterns",
-          "accession": null,
-          "version": "synthetic-fixture-v1",
-          "organism": null,
-          "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10294654/",
-          "sequence_artifact": false,
-          "sha256": null,
-          "limitation": "Literature motivates test patterns; all test molecules are generated software fixtures, not viral sequences."
         }
       ]
     },
@@ -151,12 +143,13 @@
         {
           "id": "ncbi-univec-core",
           "accession": "UniVec_Core",
-          "version": null,
+          "version": "not-pinned",
           "organism": null,
           "source_url": "https://www.ncbi.nlm.nih.gov/tools/vecscreen/univec/",
           "length_bp": null,
           "sha256": null,
-          "limitation": "Pin an exact database build before use. NCBI documents representation limits; this is not a comprehensive contaminant screen."
+          "status": "candidate_not_selected_pending_build_snapshot",
+          "limitation": "Not an active panel reference. Pin and review an exact database build before use. NCBI documents representation limits; this is not a comprehensive contaminant screen."
         },
         {
           "id": "phix174-reference",
@@ -179,6 +172,15 @@
           "limitation": "Kit-specific adapter selection is unresolved; this sequence is the existing QC setting, not evidence of this study's library kit."
         }
       ]
+    }
+  ],
+  "synthetic_fixtures": [
+    {
+      "id": "generated-sgrna-and-dvg-like-patterns",
+      "version": "test-fixtures-v1",
+      "source": "deterministically generated in tests; not derived from a downloaded biological sequence",
+      "length_bp": null,
+      "interpretation": "Software-pattern test only; not a biological sequence reference or classification."
     }
   ],
   "interpretation_rules": [
