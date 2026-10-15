@@ -1,0 +1,195 @@
+{
+  "schema": "hcov229e-reference-panel-v1",
+  "scope": {
+    "geo": "GSE155986",
+    "bioproject": "PRJNA656274",
+    "sra_study": "SRP276927",
+    "sra_run": "SRR12424250",
+    "biosample": "SAMN15776099",
+    "sequence_confirmation": "NOT_ASSESSED",
+    "scientific_status": "HELD"
+  },
+  "retrieved_at": "2026-10-15",
+  "retrieval_date_scope": "applies to every metadata record in this manifest",
+  "panel_status": "proposed_metadata_only_not_downloaded",
+  "reference_activation_status": "NOT_ACTIVATED",
+  "checksum_policy": "null means the exact sequence artifact was not retrieved and hashed; never infer a checksum from accession metadata",
+  "categories": [
+    {
+      "name": "host",
+      "role": "essential",
+      "records": [
+        {
+          "id": "human-grch38-p14-primary",
+          "accession": "GCF_000001405.40",
+          "version": "GRCh38.p14",
+          "annotation_release": "GCF_000001405.40-RS_2025_08",
+          "organism": "Homo sapiens",
+          "format": "multi-record assembly and annotation bundle",
+          "length_bp": null,
+          "source_url": "https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000001405.40/",
+          "assembly_report_url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_assembly_report.txt",
+          "sha256": null,
+          "license_or_terms": "NCBI source terms require review for the exact artifact and redistribution; no artifact-specific license is asserted here.",
+          "limitation": "Assembly and annotation are distinct versioned bundles. No sequence or transcript package was downloaded."
+        },
+        {
+          "id": "human-mitochondrial-genome",
+          "accession": "NC_012920.1",
+          "version": "1",
+          "organism": "Homo sapiens",
+          "strain_or_assembly": "GRCh38.p14 mitochondrial record",
+          "length_bp": 16569,
+          "format": "RefSeq nucleotide record",
+          "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/NC_012920.1",
+          "sha256": null,
+          "license_or_terms": "Review source record and reuse terms before redistribution.",
+          "limitation": "Reference record, not sample-specific mitochondrial genotype."
+        },
+        {
+          "id": "human-transcriptome",
+          "accession": "GCF_000001405.40",
+          "version": "GCF_000001405.40-RS_2025_08",
+          "organism": "Homo sapiens",
+          "format": "NCBI RefSeq annotation/transcript collection",
+          "length_bp": null,
+          "source_url": "https://www.ncbi.nlm.nih.gov/refseq/annotation_euk/Homo_sapiens/GCF_000001405.40-RS_2025_08",
+          "sha256": null,
+          "license_or_terms": "Review terms for the exact transcript artifacts.",
+          "limitation": "A versioned collection, not one sequence accession. Exact transcript membership and aggregate length must be recorded at separately approved retrieval."
+        },
+        {
+          "id": "human-rrna",
+          "accession": "GCF_000001405.40",
+          "version": "GCF_000001405.40-RS_2025_08",
+          "organism": "Homo sapiens",
+          "format": "rRNA features from the pinned host assembly annotation",
+          "length_bp": null,
+          "resolution_status": "unresolved",
+          "source_url": "https://www.ncbi.nlm.nih.gov/refseq/annotation_euk/Homo_sapiens/GCF_000001405.40-RS_2025_08",
+          "sha256": null,
+          "license_or_terms": "Review terms for the exact transcript artifacts.",
+          "limitation": "Standalone nuclear rRNA accession.version records were not pinned; do not substitute stale records or infer full rRNA coverage."
+        }
+      ],
+      "primary_chromosomes": [
+        ["NC_000001.11", 248956422], ["NC_000002.12", 242193529],
+        ["NC_000003.12", 198295559], ["NC_000004.12", 190214555],
+        ["NC_000005.10", 181538259], ["NC_000006.12", 170805979],
+        ["NC_000007.14", 159345973], ["NC_000008.11", 145138636],
+        ["NC_000009.12", 138394717], ["NC_000010.11", 133797422],
+        ["NC_000011.10", 135086622], ["NC_000012.12", 133275309],
+        ["NC_000013.11", 114364328], ["NC_000014.9", 107043718],
+        ["NC_000015.10", 101991189], ["NC_000016.10", 90338345],
+        ["NC_000017.11", 83257441], ["NC_000018.10", 80373285],
+        ["NC_000019.10", 58617616], ["NC_000020.11", 64444167],
+        ["NC_000021.9", 46709983], ["NC_000022.11", 50818468],
+        ["NC_000023.11", 156040895], ["NC_000024.10", 57227415],
+        ["NC_012920.1", 16569]
+      ],
+      "chromosome_length_note": "Accession.version and length pairs above are from the GRCh38.p14 NCBI assembly report. They identify records; no sequence files were downloaded."
+    },
+    {
+      "name": "helper-virus",
+      "role": "essential_comparison",
+      "records": [
+        {
+          "id": "hcov-229e-refseq-inf-1",
+          "accession": "NC_002645.1",
+          "version": "1",
+          "organism": "Human coronavirus 229E",
+          "strain_or_clone": "clone inf-1",
+          "length_bp": 27317,
+          "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/NC_002645.1",
+          "sha256": null,
+          "license_or_terms": "Review source record and reuse terms before redistribution.",
+          "limitation": "Not established as the exact experimental stock."
+        },
+        {
+          "id": "hcov-229e-haiti-2016",
+          "accession": "MF542265.1",
+          "version": "1",
+          "organism": "Human coronavirus 229E",
+          "strain_or_clone": "229E/Haiti-1/2016",
+          "length_bp": 27271,
+          "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/MF542265.1",
+          "sha256": null,
+          "license_or_terms": "Review submitter record and reuse terms before redistribution.",
+          "limitation": "Optional diversity comparator only; not a helper-stock substitute."
+        }
+      ]
+    },
+    {
+      "name": "viral-rna-structure-comparisons",
+      "role": "optional_exploratory",
+      "records": [
+        {
+          "id": "229e-trs-sgrna-reference",
+          "accession": "NC_002645.1",
+          "version": "1",
+          "organism": "Human coronavirus 229E",
+          "strain_or_clone": "clone inf-1",
+          "length_bp": 27317,
+          "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/NC_002645.1",
+          "comparison_literature_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7204879/",
+          "sequence_artifact": false,
+          "sha256": null,
+          "limitation": "Use as a source genome only. TRS/sgRNA annotations are literature-derived hypotheses and require stock-matched validation."
+        }
+      ]
+    },
+    {
+      "name": "contamination-and-technical-artifacts",
+      "role": "optional_screening",
+      "records": [
+        {
+          "id": "ncbi-univec-core",
+          "accession": "UniVec_Core",
+          "version": "not-pinned",
+          "organism": null,
+          "source_url": "https://www.ncbi.nlm.nih.gov/tools/vecscreen/univec/",
+          "length_bp": null,
+          "sha256": null,
+          "activation_status": "NOT_ACTIVATED",
+          "status": "candidate_not_selected_pending_build_snapshot",
+          "limitation": "Not an active panel reference. Pin and review an exact database build before use. NCBI documents representation limits; this is not a comprehensive contaminant screen."
+        },
+        {
+          "id": "phix174-reference",
+          "accession": "NC_001422.1",
+          "version": "1",
+          "organism": "Escherichia phage phiX174",
+          "length_bp": 5386,
+          "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/NC_001422.1",
+          "sha256": null,
+          "limitation": "Optional comparison only; does not prove the run used a PhiX control or that its lot exactly matches this record."
+        },
+        {
+          "id": "illumina-adapter-core",
+          "accession": null,
+          "version": "documented-sequence-not-kit-confirmed",
+          "documented_adapter_sequence": "AGATCGGAAGAGC",
+          "source_url": "https://support-docs.illumina.com/SHARE/AdapterSequences/Content/Nextera_Illumina-Sequences.htm",
+          "length_bp": 13,
+          "sha256": null,
+          "limitation": "Kit-specific adapter selection is unresolved; this sequence is the existing QC setting, not evidence of this study's library kit."
+        }
+      ]
+    }
+  ],
+  "synthetic_fixtures": [
+    {
+      "id": "generated-sgrna-and-dvg-like-patterns",
+      "version": "test-fixtures-v1",
+      "source": "deterministically generated in tests; not derived from a downloaded biological sequence",
+      "length_bp": null,
+      "interpretation": "Software-pattern test only; not a biological sequence reference or classification."
+    }
+  ],
+  "interpretation_rules": [
+    "A missing reference match is not evidence of novelty.",
+    "A leader-body junction is not by itself a DVG or satellite classification.",
+    "Computational DVG evidence does not establish replication, interference, or helper dependence.",
+    "All biological conclusions remain not assessed."
+  ]
+}
