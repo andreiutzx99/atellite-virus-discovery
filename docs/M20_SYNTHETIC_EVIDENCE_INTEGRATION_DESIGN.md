@@ -257,6 +257,45 @@ a separately versioned fixture with independently justified coverage and read
 sampling characteristics. Do not alter the Phase 1 fixture bytes, seeds,
 thresholds, or digests to force recovery.
 
+## Phase 2B v2 assembler-recovery benchmark
+
+Phase 2B is an opt-in follow-on benchmark. It does not replace or amend the
+Phase 1 fixture or the original Phase 2 report. Run it in its own output
+directory:
+
+```sh
+python -m satellite_discovery.m20_phase2b --output generated-artifacts/m20-phase2b
+```
+
+The versioned schema is `m20-phase2b-synthetic-benchmark-v2`. Its frozen
+matrix crosses random-start and stratified-start read sampling with 10x and
+30x nominal coverage. Each of the four strata has two independently seeded
+positive read sets for the same 400-nt artificial candidate. Two additional,
+independently seeded negative controls contain separate artificial background
+sequences; all cases use independently generated unrelated reference decoys.
+Reads are 100 nt. A case has 40 or 120 reads; the resource bound is 120 reads,
+one assembly thread, and 2 GiB. The fixed generator seed, per-case seeds,
+parameters, byte counts, and SHA-256 digests are recorded in
+`benchmark_manifest.json`. The expected role, positive candidate, and pair
+labels remain in `heldout_truth.json`, outside `inputs/`.
+
+All ten cases are retained regardless of outcome. The runner executes the
+registered M4/M6 workflow, constructs M7 inputs only from digest-verified typed
+M6 artifacts, and reports failed/unavailable cases as such. The JSON, Markdown,
+and HTML reports give per-case QC and residual eligibility, SPAdes status,
+version, configuration, logs and errors, candidate/support state, exact
+full-length recovery, alignment breadth/identity/terminal losses and
+fragmentation where measurable. Negative controls are marked evaluable only
+when M6 supplies a validated candidate set. Pairwise recurrence is evaluated
+only when both members have read-supported M6 outputs and M7 completes.
+`report.json` also records the Python/platform environment and verifies the
+frozen Phase 1 manifest and truth digests against their known values.
+
+This is a synthetic software-recovery benchmark, not an estimate of biological
+sensitivity, specificity, absence, or classification. Its matrix is
+prespecified; failed seeds must not be discarded, and no M6 thresholds may be
+relaxed to improve recovery.
+
 ## Scientific limitations
 
 Every sequence and reference is artificial. The test evaluates software
