@@ -74,6 +74,7 @@ class M18LiveWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="m18-live-") as folder:
             report = m18_workflow.run(Path(folder) / "m18")
             self.assertEqual("complete", report["workflow_status"])
+            self.assertEqual("COMPLETE", report["integration_status"])
             cases = {case["case_id"]: case for case in report["cases"]}
             for case_id in ("rna_supported", "dna_supported"):
                 row = cases[case_id]
