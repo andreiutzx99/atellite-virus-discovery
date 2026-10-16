@@ -209,6 +209,38 @@ python -m satellite_discovery.m20_phase1 \
 
 Focused Phase 1 tests are in `tests/test_m20_phase1.py`.
 
+## Phase 2 use
+
+Run the registered M4 QC → M6 residual-evidence → M7 recurrence workflow on
+the frozen three-sample fixtures:
+
+```sh
+python -m satellite_discovery.m20_phase2 --output generated-artifacts/m20-phase2
+```
+
+The runner validates the fixture bytes before execution and again afterward.
+M4/M6 and M7 run as two workflows so the M7 handoff is constructed only from
+completed M6 outputs. Every handed-off file must match the M6 producer
+inventory digest and declared artifact type. Supported contigs are optional
+only when M6 does not report a read-supported assembly. The two workflow
+specifications and manifests are under `stages/m4_m6/` and `stages/m7/`;
+machine-readable `report.json` and readable `report.md` / `report.html` are
+written in the output directory.
+
+Held-out roles and exact-sequence checks are loaded only after M4/M6 and M7
+return; they are never included in workflow specifications, stage inputs, or
+cache keys. Exact recovery is evaluated only when M6 supplies an available,
+digest-verified candidate FASTA. Per-sample run/study identifiers are synthetic
+independence metadata declared for M7, not claims about experimental samples.
+
+QC, M6 candidate availability, read-back support, exact recovery, and M7
+recurrence states remain separate. Missing or invalid outputs stay unavailable,
+failed, or not evaluated rather than becoming zero counts. Optional minimap2
+and SPAdes outcomes are reported by the registered stages; do not lower support
+thresholds or alter fixtures when a stage cannot complete. A zero-prediction
+negative control is not evidence of biological absence. Focused runner tests
+are in `tests/test_m20_phase2.py`.
+
 ## Scientific limitations
 
 Every sequence and reference is artificial. The test evaluates software
