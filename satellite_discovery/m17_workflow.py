@@ -9,6 +9,12 @@ from . import artifact_workflow
 from .m8_candidate_handoff import validate_candidate_sequence_set
 
 SCHEMA = "m17-synthetic-workflow-v1"
+SYNTHETIC_PROVENANCE = {
+    "synthetic_only": True,
+    "real_m6_reconstruction": False,
+    "read_support": False,
+    "independent_biological_evidence": False,
+}
 SCENARIOS = (
     ("syn-candidate-001", "reference-compatible-like RNA control", "RNA",
      "ATG" * 10 + "TAA" + "ACGT" * 6),
@@ -100,18 +106,18 @@ def generate_fixture_bundle(root):
     fasta_ref = _write(root / "candidate_sequences.fasta", fasta)
     source_ref = _write(
         root / "synthetic_source_manifest.json",
-        _json_bytes({"schema": "m17-synthetic-source-v1", "synthetic_only": True,
+        _json_bytes({"schema": "m17-synthetic-source-v1", **SYNTHETIC_PROVENANCE,
                      "note": "No reads, specimens, or biological references are represented."}),
     )
     assembly = _json_bytes({
         "schema": "assembly-manifest-v1", "workflow_status": "complete",
         "contig_count": len(SCENARIOS), "assembler": "M17 deterministic fixture generator",
-        "external_tool_version": "not-run",
+        "external_tool_version": "not-run", **SYNTHETIC_PROVENANCE,
     })
     assembly_ref = _write(root / "assembly_manifest.json", assembly)
     reconstruction = _json_bytes({
         "schema": "m6-reconstruction-evidence-v1",
-        "status": "SYNTHETIC_FIXTURE_ONLY", "contigs": [],
+        "status": "SYNTHETIC_FIXTURE_ONLY", **SYNTHETIC_PROVENANCE, "contigs": [],
         "configuration": {"synthetic_fixture_generator": SCHEMA}, "provenance": {},
     })
     evidence_ref = _write(root / "reconstruction_evidence.json", reconstruction)
@@ -126,16 +132,19 @@ def generate_fixture_bundle(root):
             "sequence_alphabet": "IUPAC_NUCLEOTIDE", "completeness_state": "UNKNOWN",
             "source_artifact_id": source_ref["path"],
             "source_artifact_sha256": source_ref["sha256"],
-            "m6_support_status": "LOW_SUPPORT_ASSEMBLY", "m7_context": None,
+            "m6_support_status": "SYNTHETIC_FIXTURE_ONLY", "m7_context": None,
         })
     candidate = {
         "schema": "m8-candidate-sequence-set-v1",
+        **SYNTHETIC_PROVENANCE,
+        "provenance": dict(SYNTHETIC_PROVENANCE),
         "producer": {"stage_kind": "residual_evidence", "stage_id": "m17-fixture",
                      "adapter_name": "m17-synthetic-fixture", "adapter_version": "1"},
         "source_artifact": source_ref, "assembly_manifest": assembly_ref,
         "m6_evidence": {
             "reconstruction_status": "SYNTHETIC_FIXTURE_ONLY",
             "support_status": "SYNTHETIC_FIXTURE_ONLY", "artifact": evidence_ref,
+            **SYNTHETIC_PROVENANCE,
         },
         "m7_context": None,
         "availability": {"state": "AVAILABLE", "reason": None,
@@ -159,6 +168,121 @@ def generate_fixture_bundle(root):
 
 def _read_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _validate_synthetic_provenance(candidate_path):
+    """Enforce the M17-only fixture boundary before dispatching any stage."""
+    candidate_path = Path(candidate_path)
+    validate_candidate_sequence_set(candidate_path)
+    root = candidate_path.parent
+    candidate = _read_json(candidate_path)
+
+    expected_candidate_keys = {
+        "schema", "synthetic_only", "real_m6_reconstruction", "read_support",
+        "independent_biological_evidence", "provenance", "producer",
+        "source_artifact", "assembly_manifest", "m6_evidence", "m7_context",
+        "availability", "records",
+    }
+    if set(candidate) != expected_candidate_keys:
+        raise ValueError("M17 synthetic provenance guard rejected candidate fields")
+    if any(candidate.get(key) != value for key, value in SYNTHETIC_PROVENANCE.items()):
+        raise ValueError("M17 synthetic provenance guard rejected candidate claims")
+    if candidate.get("provenance") != SYNTHETIC_PROVENANCE:
+        raise ValueError("M17 synthetic provenance guard rejected candidate provenance")
+    if candidate.get("producer") != {
+        "stage_kind": "residual_evidence", "stage_id": "m17-fixture",
+        "adapter_name": "m17-synthetic-fixture", "adapter_version": "1",
+    }:
+        raise ValueError("M17 synthetic provenance guard rejected producer identity")
+    expected_record_keys = {
+        "candidate_id", "sequence_id", "fasta_record_id", "sequence_sha256",
+        "sequence_length", "sequence_bytes_available", "sequence_unavailable_reason",
+        "molecule_type", "sequence_alphabet", "completeness_state",
+        "source_artifact_id", "source_artifact_sha256", "m6_support_status",
+        "m7_context",
+    }
+    if any(set(record) != expected_record_keys for record in candidate["records"]):
+        raise ValueError("M17 synthetic provenance guard rejected record evidence fields")
+
+    source = _read_json(root / "synthetic_source_manifest.json")
+    if source != {
+        "schema": "m17-synthetic-source-v1", **SYNTHETIC_PROVENANCE,
+        "note": "No reads, specimens, or biological references are represented.",
+    }:
+        raise ValueError("M17 synthetic provenance guard rejected source manifest")
+
+    assembly = _read_json(root / "assembly_manifest.json")
+    if assembly != {
+        "schema": "assembly-manifest-v1", "workflow_status": "complete",
+        "contig_count": len(SCENARIOS),
+        "assembler": "M17 deterministic fixture generator",
+        "external_tool_version": "not-run", **SYNTHETIC_PROVENANCE,
+    }:
+        raise ValueError("M17 synthetic provenance guard rejected assembly manifest")
+
+    evidence = _read_json(root / "reconstruction_evidence.json")
+    if evidence != {
+        "schema": "m6-reconstruction-evidence-v1",
+        "status": "SYNTHETIC_FIXTURE_ONLY", **SYNTHETIC_PROVENANCE,
+        "contigs": [],
+        "configuration": {"synthetic_fixture_generator": SCHEMA},
+        "provenance": {},
+    }:
+        raise ValueError("M17 synthetic provenance guard rejected M6-shaped evidence")
+
+    expected_m6 = {
+        "reconstruction_status": "SYNTHETIC_FIXTURE_ONLY",
+        "support_status": "SYNTHETIC_FIXTURE_ONLY",
+        "artifact": candidate["m6_evidence"]["artifact"],
+        **SYNTHETIC_PROVENANCE,
+    }
+    if candidate["m6_evidence"] != expected_m6:
+        raise ValueError("M17 synthetic provenance guard rejected M6 support claims")
+    for reference, expected_path in (
+        (candidate["source_artifact"], "synthetic_source_manifest.json"),
+        (candidate["assembly_manifest"], "assembly_manifest.json"),
+        (candidate["m6_evidence"]["artifact"], "reconstruction_evidence.json"),
+        (candidate["availability"]["fasta_artifact"], "candidate_sequences.fasta"),
+    ):
+        if set(reference) != {"path", "sha256"} or reference["path"] != expected_path:
+            raise ValueError("M17 synthetic provenance guard rejected artifact references")
+    if any(record.get("m6_support_status") != "SYNTHETIC_FIXTURE_ONLY"
+           for record in candidate["records"]):
+        raise ValueError("M17 synthetic provenance guard rejected record support claims")
+    source_ref = candidate["source_artifact"]
+    expected_records = []
+    for candidate_id, _label, molecule, sequence in SCENARIOS:
+        sequence_bytes = sequence.encode("ascii")
+        expected_records.append({
+            "candidate_id": candidate_id, "sequence_id": candidate_id,
+            "fasta_record_id": candidate_id, "sequence_sha256": _sha(sequence_bytes),
+            "sequence_length": len(sequence), "sequence_bytes_available": True,
+            "sequence_unavailable_reason": None, "molecule_type": molecule,
+            "sequence_alphabet": "IUPAC_NUCLEOTIDE", "completeness_state": "UNKNOWN",
+            "source_artifact_id": source_ref["path"],
+            "source_artifact_sha256": source_ref["sha256"],
+            "m6_support_status": "SYNTHETIC_FIXTURE_ONLY", "m7_context": None,
+        })
+    if candidate["records"] != expected_records:
+        raise ValueError("M17 synthetic provenance guard rejected generated candidates")
+    if candidate["availability"] != {
+        "state": "AVAILABLE", "reason": None,
+        "fasta_artifact": candidate["availability"]["fasta_artifact"],
+        "record_count": len(SCENARIOS),
+    }:
+        raise ValueError("M17 synthetic provenance guard rejected candidate availability")
+
+    truth = _read_json(root / "fixture_truth.json")
+    expected_truth = {
+        "schema": "m17-synthetic-fixture-truth-v1", "synthetic_only": True,
+        "warning": "These generator labels are not pipeline inferences or biological truth.",
+        "scenarios": [
+            {"candidate_id": candidate_id, "pathway": molecule, "scenario_label": label}
+            for candidate_id, label, molecule, _sequence in SCENARIOS
+        ],
+    }
+    if truth != expected_truth:
+        raise ValueError("M17 synthetic provenance guard rejected fixture truth")
 
 
 def _m10_scope_result(candidate_id, branches):
@@ -193,6 +317,7 @@ def run(output):
     output = Path(output).resolve()
     input_root = output / "inputs"
     candidate_path = generate_fixture_bundle(input_root)
+    _validate_synthetic_provenance(candidate_path)
     workflow_spec = output / "m17-workflow.json"
     spec = {
         "schema": "artifact-workflow-v1",

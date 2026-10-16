@@ -22,6 +22,11 @@ an ambiguous-contaminant control, and a short low-information control. Opaque
 candidate identifiers are used in pipeline inputs; descriptive scenario labels
 are isolated in `fixture_truth.json` and are not passed to M9/M10. Candidate
 sequence and source digests are validated using the frozen M8 handoff validator.
+An M17-local guard also checks the generated candidate, source manifest,
+assembly manifest, and M6-shaped reconstruction fixture for exact synthetic-only
+markers and explicit absence of genuine M6 reconstruction, read support, and
+independent biological evidence. It runs before M9/M10 dispatch and rejects
+hash-consistent provenance edits without changing M8 or any M1-M16 contract.
 
 M9 ORF hypotheses and M10 exact repeat/topology observations are the only
 analysis outputs connected in this version. Homology, recurrence, caller-
