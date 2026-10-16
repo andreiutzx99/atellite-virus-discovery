@@ -42,6 +42,7 @@ dossier-state projection; M12–M14 content adapters are not implemented.
 | Milestone | Status | Question / intended evidence layer | Dependencies and limits |
 | --- | --- | --- | --- |
 | M16 — Blinded synthetic benchmarking and claim-appropriate evaluation mechanics | **IMPLEMENTED (SCOPED SOFTWARE)** | Do the frozen software workflow's synthetic benchmark, leakage controls, custody transitions, and outcome accounting behave as specified? | Synthetic software evaluation only. Empirical holdouts, biological validation, orthogonal/experimental assays, and biological or functional claims are outside this implementation. |
+| M19 — Controlled synthetic quantitative benchmarking | **IMPLEMENTED (INITIAL ENGINEERING MATRIX)** | How does the registered M6 path behave under fixed read-error, coverage, divergence, and repeat-complexity conditions? | Deterministic synthetic inputs and held-out synthetic truth only; one case per factor setting, strict exact-sequence recovery, and no biological performance claims. See [M19 benchmark](M19_SYNTHETIC_BENCHMARK.md). |
 
 M12 keeps `NO_SIGNAL_WITHIN_SCOPE` distinct from `NO_OBSERVATION`, `UNKNOWN`,
 `UNAVAILABLE`, `INCOMPLETE`, `FAILED`, `INTERRUPTED`, `NOT_EVALUATED`, and
