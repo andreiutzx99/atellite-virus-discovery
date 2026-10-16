@@ -144,9 +144,10 @@ must identify the failed edge and preserve unaffected upstream evidence.
   2 GiB memory per assembly, and 10 minutes wall time per optional external-tool
   stage. Skip optional-tool assertions explicitly when dependencies are absent.
 
-## Phased implementation plan (preparation only)
+## Phased implementation plan
 
-No M20 code is authorized by this plan.
+The current implementation branch completes Phase 1 only. Phases 2–5 remain
+deferred and must not be included in this change.
 
 1. **Freeze the contract map and fixtures.** Record the live registry's input
    and output contracts for every planned edge. Build a fixed-seed fixture
@@ -182,6 +183,31 @@ No M20 code is authorized by this plan.
    as a hit/no-hit. Deliver the synthetic fixture manifest, machine-readable
    report, human-readable limitations, and test results; do not change M1–M19
    contracts.
+
+## Phase 1 use
+
+Generate the fixture set in a dedicated output directory:
+
+```sh
+python -m satellite_discovery.m20_phase1 --output generated-artifacts/m20-phase1
+```
+
+Verify an existing fixture directory with
+`satellite_discovery.m20_phase1.verify_fixtures(path)`. The verifier rebuilds
+expected bytes from the fixed seed and rejects edited or extra inputs even if
+their manifest hashes were recomputed. The sidecar `heldout_truth.json` is kept
+outside `inputs/`; do not pass it to a workflow stage.
+
+The machine-readable contract map is
+`docs/M20_REGISTERED_CONTRACT_MAP.json`. Regenerate it from the live registry
+with:
+
+```sh
+python -m satellite_discovery.m20_phase1 \
+  --write-contract-map docs/M20_REGISTERED_CONTRACT_MAP.json
+```
+
+Focused Phase 1 tests are in `tests/test_m20_phase1.py`.
 
 ## Scientific limitations
 
