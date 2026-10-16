@@ -13,6 +13,7 @@ dependencies = ["cryptography>=44,<51"]
 satellite-discovery = "satellite_discovery.cli:main"
 satellite-reviews = "satellite_discovery.review_ui:main"
 satellite-m17 = "satellite_discovery.m17_workflow:main"
+satellite-m18 = "satellite_discovery.m18_workflow:main"
 satellite-controlled-fastq = "satellite_discovery.controlled_fastq_acquisition:main"
 satellite-controlled-exploratory-fastq = "satellite_discovery.trusted_single_run_acquisition:main"
 
