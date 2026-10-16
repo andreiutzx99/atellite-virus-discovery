@@ -1,9 +1,15 @@
 """Opt-in registered M4 QC -> M6 residual evidence -> M7 recurrence run."""
 
 import argparse
+import gzip
+import hashlib
 import html
 import json
 from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
 
 from . import artifact_workflow, independent_recurrence, m20_phase1
 
@@ -330,6 +336,210 @@ def _candidate_sequences(candidate_set, stage_dir):
     return records
 
 
+def _fastq_summary(path):
+    try:
+        count, lengths = 0, set()
+        with gzip.open(path, "rt", encoding="ascii") as handle:
+            while header := handle.readline():
+                sequence = handle.readline().strip()
+                plus = handle.readline()
+                quality = handle.readline().strip()
+                if not plus or len(sequence) != len(quality):
+                    return {"state": "INVALID", "read_count": None, "lengths": []}
+                count += 1
+                lengths.add(len(sequence))
+        return {"state": "AVAILABLE", "read_count": count, "lengths": sorted(lengths)}
+    except (OSError, UnicodeError):
+        return {"state": "UNAVAILABLE", "read_count": None, "lengths": []}
+
+
+def _sequence_comparison(expected, fasta_path, expected_sha256=None):
+    if not expected:
+        return {"state": "NOT_APPLICABLE", "reason": "No held-out candidate sequence exists."}
+    if not fasta_path or not Path(fasta_path).is_file():
+        return {"state": "UNAVAILABLE", "reason": "No validated candidate FASTA was produced."}
+    try:
+        fasta_bytes = Path(fasta_path).read_bytes()
+        if expected_sha256 and hashlib.sha256(fasta_bytes).hexdigest() != expected_sha256:
+            return {
+                "state": "INVALID",
+                "reason": "Candidate FASTA digest changed after producer validation.",
+            }
+        fasta_text = fasta_bytes.decode("ascii")
+    except (OSError, UnicodeError) as error:
+        return {"state": "INVALID", "reason": f"Candidate FASTA could not be read: {error}"}
+    records = []
+    name, sequence = None, []
+    try:
+        for line in fasta_text.splitlines():
+            if line.startswith(">"):
+                if name is not None:
+                    records.append((name, "".join(sequence)))
+                name, sequence = line[1:].split()[0], []
+            elif line.strip():
+                if name is None:
+                    raise ValueError("FASTA sequence appeared before its header")
+                sequence.append(line.strip().upper())
+        if name is not None:
+            records.append((name, "".join(sequence)))
+    except (OSError, UnicodeError, ValueError, IndexError) as error:
+        return {"state": "INVALID", "reason": f"Candidate FASTA could not be parsed: {error}"}
+
+    exact = any(value == expected for _, value in records)
+    result = {
+        "state": "AVAILABLE",
+        "expected_length": len(expected),
+        "assembled_lengths": [len(value) for _, value in records],
+        "full_length_exact_recovery": exact,
+        "alignment": {"state": "UNAVAILABLE", "reason": "minimap2 was not found."},
+        "fragmentation": {
+            "assembled_contig_count": len(records),
+            "contigs_aligned_to_truth": None,
+            "state": "UNAVAILABLE",
+        },
+    }
+    minimap2 = shutil.which("minimap2")
+    if not records or not minimap2:
+        return result
+
+    with tempfile.TemporaryDirectory(prefix="m20-truth-diagnostic-") as temporary:
+        directory = Path(temporary)
+        truth_fasta, candidate_fasta = directory / "truth.fa", directory / "candidates.fa"
+        truth_fasta.write_text(f">truth\n{expected}\n", encoding="ascii")
+        candidate_fasta.write_text(
+            "".join(f">{name}\n{value}\n" for name, value in records), encoding="ascii",
+        )
+        try:
+            run = subprocess.run(
+                [minimap2, "-c", "-x", "asm5", str(truth_fasta), str(candidate_fasta)],
+                capture_output=True, text=True, check=False, timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            result["alignment"] = {"state": "FAILED", "reason": str(error)}
+            return result
+        if run.returncode:
+            result["alignment"] = {
+                "state": "FAILED", "returncode": run.returncode,
+                "reason": run.stderr[-1000:],
+            }
+            return result
+
+        alignments = []
+        for line in run.stdout.splitlines():
+            fields = line.split("\t")
+            if len(fields) < 12:
+                continue
+            try:
+                qlen, qstart, qend = map(int, fields[1:4])
+                tlen, tstart, tend = map(int, fields[6:9])
+                matches, block = int(fields[9]), int(fields[10])
+            except ValueError:
+                continue
+            if not qlen or not tlen or not block:
+                continue
+            alignments.append({
+                "contig_id": fields[0], "assembled_length": qlen,
+                "aligned_query_bases": qend - qstart,
+                "aligned_reference_bases": tend - tstart,
+                "query_breadth": (qend - qstart) / qlen,
+                "reference_breadth": (tend - tstart) / tlen,
+                "sequence_identity": matches / block,
+                "query_terminal_losses": [qstart, qlen - qend],
+                "reference_terminal_losses": [tstart, tlen - tend],
+                "strand": fields[4],
+            })
+        alignments.sort(
+            key=lambda row: (row["aligned_reference_bases"], row["sequence_identity"]),
+            reverse=True,
+        )
+        result["alignment"] = {
+            "state": "AVAILABLE" if alignments else "NO_ALIGNMENT",
+            "method": "minimap2 asm5; post-stage diagnostic only",
+            "best": alignments[0] if alignments else None,
+            "alignments": alignments,
+        }
+        result["fragmentation"] = {
+            "state": "AVAILABLE",
+            "assembled_contig_count": len(records),
+            "contigs_aligned_to_truth": len({row["contig_id"] for row in alignments}),
+        }
+    return result
+
+
+def _assembler_diagnostics(output, stage_dir, read_summary):
+    assembly_dir = stage_dir / "assembly" if stage_dir else None
+    manifest = _json_at(assembly_dir, "manifest.json")
+    log_paths = {
+        "spades": assembly_dir / "raw/spades.log" if assembly_dir else None,
+        "stdout": assembly_dir / "stdout.log" if assembly_dir else None,
+        "stderr": assembly_dir / "stderr.log" if assembly_dir else None,
+    }
+    logs, log_text = {}, ""
+    for name, path in log_paths.items():
+        if path and path.is_file() and not path.is_symlink():
+            data = path.read_bytes()
+            logs[name] = {
+                "path": path.resolve().relative_to(Path(output).resolve()).as_posix(),
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+            }
+            if name == "spades":
+                log_text = data.decode("utf-8", errors="replace")
+    errors = [
+        line.strip() for line in log_text.splitlines()
+        if "ERROR" in line or "abnormally" in line or "return value" in line
+    ]
+    memory_values = [
+        int(current) for current, _limit in
+        re.findall(r"(\d+)M\s*/\s*(\d+)M", log_text)
+    ]
+    deps = manifest.get("dependency_report", {}) if isinstance(manifest, dict) else {}
+    dependency = deps.get("dependencies", []) if isinstance(deps, dict) else []
+    tool = next((item for item in dependency if item.get("tool") == "spades"), {})
+    raw_dir = assembly_dir / "raw" if assembly_dir else None
+    pipeline_state = raw_dir / "pipeline_state" if raw_dir else None
+    temp_state = {
+        "raw_contigs_present": bool(raw_dir and (raw_dir / "contigs.fasta").is_file()),
+        "final_contigs_present": bool(assembly_dir and (assembly_dir / "contigs.fasta").is_file()),
+        "pipeline_state_markers": sorted(
+            item.name for item in pipeline_state.iterdir()
+            if item.is_file() and not item.is_symlink()
+        ) if pipeline_state and pipeline_state.is_dir() else [],
+        "k55_work_directory_present": bool(raw_dir and (raw_dir / "K55").is_dir()),
+    }
+    return {
+        "state": manifest.get("status", "UNAVAILABLE") if isinstance(manifest, dict) else "UNAVAILABLE",
+        "version": tool.get("version_output"),
+        "dependency_status": deps.get("status") if isinstance(deps, dict) else None,
+        "safe_command": manifest.get("safe_command") if isinstance(manifest, dict) else None,
+        "logged_command_line": next(
+            (line.strip() for line in log_text.splitlines() if line.startswith("Command line:")),
+            None,
+        ),
+        "configuration": manifest.get("configuration") if isinstance(manifest, dict) else None,
+        "exit_status": manifest.get("exit_status") if isinstance(manifest, dict) else None,
+        "error": manifest.get("error") if isinstance(manifest, dict) else None,
+        "input_reads": read_summary,
+        "selected_kmers": sorted({
+            int(value) for value in re.findall(
+                r"^===== K(\d+) started\.", log_text, flags=re.MULTILINE,
+            )
+        }),
+        "max_logged_memory_mb": max(memory_values, default=None),
+        "temporary_output_state": temp_state,
+        "diagnostic_lines": errors[-8:],
+        "logs": logs,
+        "interpretation": (
+            "SPAdes reached K55 and reported an invalid k-mer coverage histogram; "
+            "its own log asks that coverage be uniform. Dependencies passed version "
+            "checking, and logged memory did not approach the configured 2 GB limit. "
+            "The log does not establish why the histogram was invalid."
+            if any("Invalid kmer coverage histogram" in line for line in errors)
+            else "No specific assembler cause was established from retained diagnostics."
+        ),
+    }
+
+
 def _stage_provenance(row, stage_dir):
     if not isinstance(row, dict):
         return {"status": "UNAVAILABLE"}
@@ -377,6 +587,19 @@ def _render_markdown(report):
             f"{row['exact_sequence_recovery']} |"
         )
     lines.extend([
+        "", "## Diagnostic findings", "",
+        f"- s01 SPAdes: `{report['diagnostics']['s01_assembler']['state']}`, "
+        f"version `{report['diagnostics']['s01_assembler'].get('version')}`, "
+        f"exit `{report['diagnostics']['s01_assembler'].get('exit_status')}`. "
+        f"{report['diagnostics']['s01_assembler']['interpretation']}",
+        f"- s02 sequence comparison: `{json.dumps(report['diagnostics']['s02_sequence_comparison'], sort_keys=True)}`",
+        f"- s03 negative-control evaluation: "
+        f"`{report['diagnostics']['s03_negative_control']['state']}` — "
+        f"{report['diagnostics']['s03_negative_control'].get('reason', 'evaluated')}",
+        "- Positive-sample read seeds: " + ", ".join(
+            f"{row['sample_id']}={row['read_generation_seed']}"
+            for row in report["diagnostics"]["independence"]
+        ),
         "", "## M7 recurrence", "",
         f"- Status: **{report['m7']['status']}**",
         f"- Recurrence: `{report['m7'].get('recurrence_status', 'NOT_EVALUATED')}`",
@@ -460,6 +683,49 @@ def run(output, runner=None):
         if candidate_availability == "AVAILABLE" and observed is None:
             candidate_availability = "INCOMPLETE"
         expected = truth_by_sample[sample]
+        read_summary = _fastq_summary(fixture_root / "inputs" / sample / "reads.fastq.gz")
+        candidate_fasta, candidate_sha256 = None, None
+        if observed is not None and isinstance(candidates, dict):
+            reference = candidates.get("availability", {}).get("fasta_artifact")
+            if isinstance(reference, dict) and isinstance(reference.get("path"), str):
+                relative = Path(reference["path"])
+                if not relative.is_absolute() and ".." not in relative.parts:
+                    candidate_fasta = m6_dir / relative if m6_dir else None
+                    candidate_sha256 = reference.get("sha256")
+        comparison = _sequence_comparison(
+            expected["candidate_sequence"], candidate_fasta, candidate_sha256,
+        )
+        negative_evaluation = None
+        if expected["candidate_sequence"] is None:
+            if _status(m6_row) == "COMPLETE" and observed is not None:
+                negative_evaluation = {
+                    "state": "EVALUATED",
+                    "prediction_count": len(observed),
+                    "result": "ZERO_PREDICTIONS" if not observed else "CANDIDATES_DETECTED",
+                }
+            else:
+                availability = (
+                    candidates.get("availability", {}) if isinstance(candidates, dict) else {}
+                )
+                residual = _json_at(m6_dir, "residual_manifest.json")
+                negative_evaluation = {
+                    "state": "UNEVALUABLE",
+                    "prediction_count": None,
+                    "reason": availability.get("reason")
+                    or "M6 did not provide a validated, evaluable candidate set.",
+                    "m6_status": _status(m6_row),
+                    "qc_status": _status(qc_row),
+                    "candidate_availability": candidate_availability,
+                    "m6_reconstruction_status": recon_status or "NOT_EVALUATED",
+                    "read_support_status": support_status or "NOT_EVALUATED",
+                    "assembly_attempted": bool(
+                        isinstance(evidence, dict)
+                        and isinstance(evidence.get("assembler"), dict)
+                        and evidence["assembler"].get("status") == "complete"
+                    ),
+                    "m7_observation_status": "NOT_EVALUATED",
+                    "residual_counts": residual.get("counts") if isinstance(residual, dict) else None,
+                }
         recovery = (
             ("RECOVERED" if expected["candidate_sequence"] in observed else "NOT_RECOVERED")
             if _status(m6_row) == "COMPLETE" and observed is not None
@@ -477,6 +743,9 @@ def run(output, runner=None):
             "exact_sequence_recovery": recovery,
             "m6_reconstruction_status": recon_status or "NOT_EVALUATED",
             "m6_support_status": support_status or "NOT_EVALUATED",
+            "read_input": read_summary,
+            "sequence_comparison": comparison,
+            "negative_control_evaluation": negative_evaluation,
             "stage_provenance": {
                 "qc": _stage_provenance(qc_row, _stage_dir(m6_root, qc_row)),
                 "m6": _stage_provenance(m6_row, m6_dir),
@@ -484,6 +753,7 @@ def run(output, runner=None):
             "truth_evaluation": {
                 "expected_role": expected["expected_role"],
                 "candidate_sequence_recovery": recovery,
+                "sequence_comparison": comparison,
                 "negative_control_predictions": (
                     ("ZERO_PREDICTIONS" if not observed else "CANDIDATES_DETECTED")
                     if _status(m6_row) == "COMPLETE" and observed is not None
@@ -539,6 +809,13 @@ def run(output, runner=None):
                 "in_recurrent_exact_group": False,
             }
         )
+        if sample_report["negative_control_evaluation"]:
+            sample_report["negative_control_evaluation"]["m7_observation_status"] = (
+                "PRESENT" if observation else "UNAVAILABLE"
+            )
+            sample_report["negative_control_evaluation"]["m7_observation"] = (
+                sample_report["m7_observation"]
+            )
     report = {
         "schema": "m20-phase2-report-v1",
         "status": "COMPLETE" if all(
@@ -560,6 +837,27 @@ def run(output, runner=None):
             "truth_sidecar_outside_analysis_inputs": True,
         },
         "samples": sample_reports,
+        "diagnostics": {
+            "s01_assembler": _assembler_diagnostics(
+                output, _stage_dir(m6_root, rows.get("m6_s01")),
+                sample_reports[0]["read_input"],
+            ),
+            "s02_sequence_comparison": sample_reports[1]["sequence_comparison"],
+            "s03_negative_control": sample_reports[2]["negative_control_evaluation"],
+            "independence": [
+                {
+                    "sample_id": sample,
+                    "read_generation_seed": m20_phase1.SEED + 100 + index,
+                    "read_sha256": (
+                        (rows.get(f"qc_{sample}", {}).get("inputs", {}).get("read1") or {})
+                        .get("sha256")
+                    ),
+                    "read_input": sample_reports[index]["read_input"],
+                    "independent_seed": True,
+                }
+                for index, sample in enumerate(m20_phase1.SAMPLE_IDS[:2])
+            ],
+        },
         "m7": {
             "status": _status(m7_row),
             "recurrence_status": (

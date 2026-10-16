@@ -3,6 +3,8 @@ import hashlib
 import shutil
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 
 from satellite_discovery import artifact_workflow, m20_phase1, m20_phase2
@@ -123,6 +125,57 @@ class M20Phase2SpecTests(unittest.TestCase):
             _data, error = m20_phase2._safe_manifest(manifest, digest)
             self.assertEqual("StaleWorkflowManifest", error["type"])
 
+    def test_post_stage_sequence_diagnostics_keep_strict_recovery_separate_from_alignment(self):
+        expected = "A" * 400
+        paf = (
+            "contig_a\t398\t0\t398\t+\ttruth\t400\t1\t399\t398\t398\t60"
+            "\tNM:i:0\tcg:Z:398M\n"
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            fasta = Path(temporary) / "contigs.fasta"
+            fasta.write_text(">contig_a\n" + "A" * 398 + "\n")
+            with patch.object(m20_phase2.shutil, "which", return_value="/usr/bin/minimap2"), \
+                    patch.object(m20_phase2.subprocess, "run", return_value=SimpleNamespace(
+                        returncode=0, stdout=paf, stderr="",
+                    )):
+                result = m20_phase2._sequence_comparison(expected, fasta)
+        self.assertFalse(result["full_length_exact_recovery"])
+        best = result["alignment"]["best"]
+        self.assertEqual(1.0, best["query_breadth"])
+        self.assertEqual(0.995, best["reference_breadth"])
+        self.assertEqual(1.0, best["sequence_identity"])
+        self.assertEqual([1, 1], best["reference_terminal_losses"])
+        self.assertEqual(1, result["fragmentation"]["contigs_aligned_to_truth"])
+
+    def test_assembler_diagnostics_preserve_logs_and_distinguish_failure_cause(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            stage = output / "m6_s01"
+            (stage / "assembly/raw").mkdir(parents=True)
+            (stage / "assembly/manifest.json").write_text(json.dumps({
+                "status": "failed", "exit_status": 21,
+                "safe_command": ["spades.py", "--only-assembler", "-t", "1", "-m", "2"],
+                "configuration": {"threads": 1, "memory_mb": 2048},
+                "error": "External tool failed with exit status 21",
+                "dependency_report": {
+                    "status": "available",
+                    "dependencies": [{"tool": "spades", "version_output": "SPAdes 4.1.0"}],
+                },
+            }))
+            (stage / "assembly/raw/spades.log").write_text(
+                "Memory limit set to 2 Gb\n"
+                "601M / 601M\n"
+                "ERROR Invalid kmer coverage histogram, make sure that the coverage is indeed uniform\n"
+            )
+            result = m20_phase2._assembler_diagnostics(
+                output, stage, {"read_count": 40, "lengths": [100]},
+            )
+        self.assertEqual(21, result["exit_status"])
+        self.assertEqual("available", result["dependency_status"])
+        self.assertEqual(601, result["max_logged_memory_mb"])
+        self.assertEqual(64, len(result["logs"]["spades"]["sha256"]))
+        self.assertIn("does not establish why", result["interpretation"])
+
     def test_missing_dependency_and_symlinked_producer_outputs_are_not_handed_to_m7(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "dependency"
@@ -181,6 +234,15 @@ class M20Phase2LiveTests(unittest.TestCase):
                     "RECURRENT", "NO_RECURRENCE_DETECTED_WITHIN_EVALUATED_OBSERVATIONS",
                     "NOT_EVALUATED",
                 })
+            self.assertEqual("UNEVALUABLE", report["diagnostics"]["s03_negative_control"]["state"])
+            self.assertIsNone(report["diagnostics"]["s03_negative_control"]["prediction_count"])
+            self.assertEqual(60, report["diagnostics"]["s03_negative_control"]["residual_counts"]["input_fragments"])
+            self.assertEqual(0, report["diagnostics"]["s03_negative_control"]["residual_counts"]["eligible_fragments"])
+            self.assertFalse(report["diagnostics"]["s03_negative_control"]["assembly_attempted"])
+            self.assertNotEqual(
+                report["diagnostics"]["independence"][0]["read_generation_seed"],
+                report["diagnostics"]["independence"][1]["read_generation_seed"],
+            )
             m6_workflow = json.loads(
                 (Path(temporary) / "run/stages/m4_m6/workflow.json").read_text()
             )

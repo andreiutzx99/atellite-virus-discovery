@@ -241,6 +241,22 @@ thresholds or alter fixtures when a stage cannot complete. A zero-prediction
 negative control is not evidence of biological absence. Focused runner tests
 are in `tests/test_m20_phase2.py`.
 
+Phase 2 diagnostics are computed after registered execution. They retain the
+SPAdes manifest and raw log path/digest, distinguish the assembler's logged
+failure from dependency checks, and compare supported contigs to held-out
+synthetic truth using strict full-length recovery separately from local
+minimap2 alignment measurements. These comparisons never enter stage inputs or
+cache keys. Positive samples have separate deterministic read-generation seeds
+and distinct fixture digests. In the current fixture, s03 has no eligible
+residual reads, so M6 does not expose a validated candidate set and the
+negative-control prediction count is unevaluable—not a measured zero.
+
+The current 40-read, 100-nt positive-sample fixture is only a contract test. If
+future benchmark work needs an assembler-compatible recovery target, introduce
+a separately versioned fixture with independently justified coverage and read
+sampling characteristics. Do not alter the Phase 1 fixture bytes, seeds,
+thresholds, or digests to force recovery.
+
 ## Scientific limitations
 
 Every sequence and reference is artificial. The test evaluates software
