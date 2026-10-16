@@ -21,6 +21,10 @@ truth sidecar is not an input to any analysis stage. M4 invokes the registered
 QC engine, M6 residual screening/assembly/read-back, M9 ORF derivation, and M10
 architecture analysis.
 
+The full integration requires `minimap2` and SPAdes on `PATH`. The report
+distinguishes M4 graph completion from M18 expected-outcome completion; an M6
+assembly failure remains explicit and gives the CLI a nonzero exit status.
+
 The workflow intentionally includes RNA- and DNA-labelled fixture metadata,
 mapped-only controls, residual overlaps, low-quality and ambiguous reads,
 low-complexity reads, and a stringent low-support read-back case. RNA/DNA labels
