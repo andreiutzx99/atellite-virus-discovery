@@ -379,9 +379,28 @@ def run(output):
                 "ORFs and M10 repeats do not establish biological identity, function, novelty, or satellite status.",
             ],
         })
+    expected_outcomes = {
+        "rna_supported": lambda case: case["assembly_and_read_back"]["candidate_support_statuses"]
+        == ["READ_SUPPORTED_ASSEMBLY"],
+        "dna_supported": lambda case: case["assembly_and_read_back"]["candidate_support_statuses"]
+        == ["READ_SUPPORTED_ASSEMBLY"],
+        "rna_reference_only": lambda case: (
+            case["assembly_and_read_back"]["candidate_availability"] == "UPSTREAM_UNAVAILABLE"
+            and case["reference_screening"]["residual_fragments"] == 0
+        ),
+        "dna_insufficient_support": lambda case: case["assembly_and_read_back"]["candidate_support_statuses"]
+        == ["LOW_SUPPORT_ASSEMBLY"],
+    }
+    for case in cases:
+        case["expected_fixture_outcome_met"] = expected_outcomes[case["case_id"]](case)
+    integration_complete = (
+        manifest.get("status") == "complete"
+        and all(case["expected_fixture_outcome_met"] for case in cases)
+    )
     report = {
         "schema": SCHEMA, **SYNTHETIC_FLAGS,
         "workflow_status": manifest.get("status", "not_evaluated"),
+        "integration_status": "COMPLETE" if integration_complete else "INCOMPLETE",
         "execution_manifest": "stages/workflow.json",
         "source_manifest": "inputs/synthetic_source_manifest.json",
         "cases": cases,
@@ -436,7 +455,7 @@ def main(argv=None):
     result = run(args.output)
     print(f"M18 {result['workflow_status']}: {len(result['cases'])} synthetic datasets")
     print(Path(args.output).resolve() / "m18-report.html")
-    return 0 if result["workflow_status"] == "complete" else 2
+    return 0 if result["integration_status"] == "COMPLETE" else 2
 
 
 if __name__ == "__main__":
