@@ -19,7 +19,8 @@ manifest, a `heldout_truth.json` sidecar, and JSON/HTML summaries. The workflow
 graph receives only reads, technical reference sequences, and reference-role
 metadata. Held-out candidate sequences and positive/negative labels are kept
 outside the analysis graph and used for scoring only after both QC and M6
-complete.
+complete. Stage IDs, sample IDs, FASTQ headers, reference IDs, and source
+manifest paths use opaque IDs rather than factor or outcome labels.
 
 If a stage is blocked, unavailable, incomplete, or not evaluated, its metrics
 remain `null`; the report does not convert missing evidence into zero recovery
