@@ -25,6 +25,42 @@ The full integration requires `minimap2` and SPAdes on `PATH`. The report
 distinguishes M4 graph completion from M18 expected-outcome completion; an M6
 assembly failure remains explicit and gives the CLI a nonzero exit status.
 
+For a simulated missing-assembler dependency, an incomplete case reports fields
+like these. The `null` counts mean “not evaluated,” not zero findings:
+
+```json
+{
+  "m4_stage_statuses": {
+    "qc": "complete",
+    "m6": "dependency_missing",
+    "m9": "blocked",
+    "m10": "blocked"
+  },
+  "stage_diagnostics": {
+    "m6": {
+      "m4_status": "dependency_missing",
+      "report_status": "UNAVAILABLE",
+      "error": {"code": "DEPENDENCY_MISSING", "message": "SPAdes is unavailable"},
+      "reason": "Required optional assembler was not found."
+    }
+  },
+  "assembly_and_read_back": {
+    "candidate_availability": "UNAVAILABLE",
+    "candidate_count": null,
+    "support_status": "NOT_EVALUATED"
+  },
+  "m9_orf_evidence": {
+    "aggregate_status": "BLOCKED",
+    "observed_orf_count": null
+  },
+  "m10_architecture_evidence": {
+    "aggregate_status": "BLOCKED",
+    "candidate_count": null,
+    "branch_statuses": null
+  }
+}
+```
+
 The workflow intentionally includes RNA- and DNA-labelled fixture metadata,
 mapped-only controls, residual overlaps, low-quality and ambiguous reads,
 low-complexity reads, and a stringent low-support read-back case. RNA/DNA labels
