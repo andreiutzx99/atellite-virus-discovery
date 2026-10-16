@@ -18,12 +18,14 @@ The output contains deterministic FASTQ/reference inputs, an M4 workflow
 manifest, a `heldout_truth.json` sidecar, and JSON/HTML summaries. The workflow
 graph receives only reads, technical reference sequences, and reference-role
 metadata. Held-out candidate sequences and positive/negative labels are kept
-outside the analysis graph and used for scoring only after M6 completes.
+outside the analysis graph and used for scoring only after both QC and M6
+complete.
 
 If a stage is blocked, unavailable, incomplete, or not evaluated, its metrics
 remain `null`; the report does not convert missing evidence into zero recovery
-or zero false positives. The CLI exits nonzero unless every M6 case completed
-with its required output artifacts.
+or zero false positives. A pre-existing M4 workflow manifest that is not
+refreshed by the current invocation is ignored. The CLI exits nonzero unless
+every case's QC and M6 stages complete with valid required output artifacts.
 
 ## Metrics
 
