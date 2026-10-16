@@ -23,17 +23,17 @@ SYNTHETIC_FLAGS = {
     "biological_claims_authorized": False,
 }
 CASES = (
-    {"case_id": "baseline", "error_rate": 0.0, "coverage": 60, "divergence": 0.25,
+    {"case_id": "baseline", "analysis_id": "s01", "error_rate": 0.0, "coverage": 60, "divergence": 0.25,
      "repeat_complexity": "low", "positive": True},
-    {"case_id": "high_error", "error_rate": 0.05, "coverage": 60, "divergence": 0.25,
+    {"case_id": "high_error", "analysis_id": "s02", "error_rate": 0.05, "coverage": 60, "divergence": 0.25,
      "repeat_complexity": "low", "positive": True},
-    {"case_id": "low_coverage", "error_rate": 0.0, "coverage": 16, "divergence": 0.25,
+    {"case_id": "low_coverage", "analysis_id": "s03", "error_rate": 0.0, "coverage": 16, "divergence": 0.25,
      "repeat_complexity": "low", "positive": True},
-    {"case_id": "high_divergence", "error_rate": 0.0, "coverage": 60, "divergence": 0.45,
+    {"case_id": "high_divergence", "analysis_id": "s04", "error_rate": 0.0, "coverage": 60, "divergence": 0.45,
      "repeat_complexity": "low", "positive": True},
-    {"case_id": "high_repeat", "error_rate": 0.0, "coverage": 60, "divergence": 0.25,
+    {"case_id": "high_repeat", "analysis_id": "s05", "error_rate": 0.0, "coverage": 60, "divergence": 0.25,
      "repeat_complexity": "high", "positive": True},
-    {"case_id": "negative_control", "error_rate": 0.0, "coverage": 60, "divergence": 0.25,
+    {"case_id": "negative_control", "analysis_id": "s06", "error_rate": 0.0, "coverage": 60, "divergence": 0.25,
      "repeat_complexity": "low", "positive": False},
 )
 M6_CONFIG = {
@@ -95,11 +95,12 @@ def _mutate(sequence, rate, rng):
 
 
 def _fastq(case, truth, reference, params):
-    rng = random.Random(SEED + sum(case["case_id"].encode()))
+    analysis_id = case["analysis_id"]
+    rng = random.Random(SEED + sum(analysis_id.encode()))
     reads = []
     for i in range(8):
         start = round(i * (len(reference) - READ_LENGTH) / 7)
-        reads.append((f"{case['case_id']}-ref-{i}", reference[start:start + READ_LENGTH], "I" * READ_LENGTH))
+        reads.append((f"{analysis_id}-ref-{i}", reference[start:start + READ_LENGTH], "I" * READ_LENGTH))
     if truth is not None:
         count = math.ceil(params["coverage"] * len(truth) / READ_LENGTH)
         starts = [round(i * (len(truth) - READ_LENGTH) / max(1, count - 1)) for i in range(count)]
@@ -111,7 +112,7 @@ def _fastq(case, truth, reference, params):
             for position in rng.sample(range(len(sequence)), errors):
                 sequence[position] = rng.choice("ACGT".replace(sequence[position], ""))
                 quality[position] = "5"
-            reads.append((f"{case['case_id']}-cand-{i:04d}", "".join(sequence), "".join(quality)))
+            reads.append((f"{analysis_id}-cand-{i:04d}", "".join(sequence), "".join(quality)))
     text = "".join(f"@{name}\n{seq}\n+\n{qual}\n" for name, seq, qual in reads).encode()
     buffer = BytesIO()
     with gzip.GzipFile(fileobj=buffer, mode="wb", filename="", mtime=0) as out:
@@ -129,11 +130,12 @@ def generate_inputs(root):
         if truth and case["repeat_complexity"] == "high":
             truth = ("ACGTGCAATG" * 80)
         reference = _mutate(truth, case["divergence"], random.Random(SEED + index * 101 + 1)) if truth else _sequence(rng)
-        folder = Path("datasets") / case["case_id"]
+        analysis_id = case["analysis_id"]
+        folder = Path("datasets") / analysis_id
         fastq = _fastq(case, truth, reference, case)
-        reference_fasta = f">m19-reference-{case['case_id']}\n{reference}\n".encode()
+        reference_fasta = f">m19-reference-{analysis_id}\n{reference}\n".encode()
         roles = ("reference_id,reference_role,reference_source,reference_version\n"
-                 f"m19-reference-{case['case_id']},technical_reference,m19-synthetic,M19-v1\n").encode()
+                 f"m19-reference-{analysis_id},technical_reference,m19-synthetic,M19-v1\n").encode()
         for name, data in (("reads.fastq.gz", fastq), ("reference.fasta", reference_fasta),
                            ("reference_roles.csv", roles)):
             rel = (folder / name).as_posix()
@@ -154,7 +156,7 @@ def generate_inputs(root):
 def _workflow_spec():
     stages = []
     for case in CASES:
-        cid = case["case_id"]
+        cid = case["analysis_id"]
         qc, m6 = f"qc_{cid}", f"m6_{cid}"
         folder = f"inputs/datasets/{cid}"
         stages.extend([
@@ -259,8 +261,9 @@ def run(output, runner=None):
     stages = {row.get("id"): row for row in manifest["stages"] if isinstance(row, dict)}
     for case in CASES:
         cid = case["case_id"]
-        qc_row = stages.get(f"qc_{cid}")
-        m6_row = stages.get(f"m6_{cid}")
+        aid = case["analysis_id"]
+        qc_row = stages.get(f"qc_{aid}")
+        m6_row = stages.get(f"m6_{aid}")
         qc_state = _stage_state(qc_row)
         m6_state = _stage_state(m6_row)
         status = m6_row.get("status") if m6_row else "unavailable"
