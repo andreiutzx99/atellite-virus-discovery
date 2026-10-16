@@ -65,6 +65,22 @@ def _write(path, data):
         path.write_bytes(data)
 
 
+def _generated_path(root, relative):
+    root = Path(root).resolve()
+    relative = Path(relative)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("M19 generated inputs must remain inside their input root")
+    target = root / relative
+    current = root
+    for part in relative.parts[:-1]:
+        current = current / part
+        if current.is_symlink() or (current.exists() and not current.is_dir()):
+            raise ValueError("Refusing symlink or non-directory in M19 input path")
+    if target.is_symlink() or not target.resolve().is_relative_to(root):
+        raise ValueError("M19 generated input escapes its input root")
+    return target
+
+
 def _sequence(rng):
     return "".join(rng.choice("ACGT") for _ in range(SEQUENCE_LENGTH))
 
@@ -128,7 +144,7 @@ def generate_inputs(root):
             "candidate_sha256": _sha(truth.encode()) if truth else None,
         })
     for rel, data in files.items():
-        _write(root / rel, data)
+        _write(_generated_path(root, rel), data)
     source = {"schema": "m19-synthetic-inputs-v1", "seed": SEED, **SYNTHETIC_FLAGS,
               "files": {k: {"sha256": _sha(v), "bytes": len(v)} for k, v in sorted(files.items())}}
     _write(root / "source_manifest.json", _json_bytes(source))
@@ -188,6 +204,18 @@ def _read_fasta(path):
     return records
 
 
+def _stage_state(row):
+    if not isinstance(row, dict):
+        return "UNAVAILABLE"
+    status = row.get("status")
+    return {
+        "complete": "COMPLETE",
+        "blocked": "BLOCKED",
+        "dependency_missing": "UNAVAILABLE",
+        "unavailable": "UNAVAILABLE",
+    }.get(status, "INCOMPLETE")
+
+
 def run(output, runner=None):
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -208,7 +236,12 @@ def run(output, runner=None):
     except Exception as exc:
         execution_error = {"type": type(exc).__name__, "message": str(exc)}
     manifest_after = _sha(manifest_path.read_bytes()) if manifest_path.is_file() else None
-    stale_manifest = execution_error is not None and manifest_before == manifest_after
+    stale_manifest = manifest_before is not None and manifest_before == manifest_after
+    if stale_manifest:
+        execution_error = execution_error or {
+            "type": "StaleWorkflowManifest",
+            "message": "M4 did not refresh the pre-existing workflow manifest",
+        }
     try:
         manifest = json.loads(manifest_path.read_text()) if manifest_path.is_file() and not stale_manifest else {
             "status": "execution_error" if stale_manifest else "unavailable", "stages": [],
@@ -226,25 +259,28 @@ def run(output, runner=None):
     stages = {row.get("id"): row for row in manifest["stages"] if isinstance(row, dict)}
     for case in CASES:
         cid = case["case_id"]
-        row = stages.get(f"m6_{cid}")
-        status = row.get("status") if row else "unavailable"
+        qc_row = stages.get(f"qc_{cid}")
+        m6_row = stages.get(f"m6_{cid}")
+        qc_state = _stage_state(qc_row)
+        m6_state = _stage_state(m6_row)
+        status = m6_row.get("status") if m6_row else "unavailable"
         stage_root = (output / "stages").resolve()
         stage_dir = None
-        if row and isinstance(row.get("output_path"), str):
-            relative = Path(row["output_path"])
+        if m6_row and isinstance(m6_row.get("output_path"), str):
+            relative = Path(m6_row["output_path"])
             unresolved = stage_root / relative
             candidate = unresolved.resolve()
             if (not relative.is_absolute() and ".." not in relative.parts
                     and not unresolved.is_symlink() and candidate.is_relative_to(stage_root)):
                 stage_dir = candidate
             else:
-                status = "incomplete"
+                m6_state = "INCOMPLETE"
         candidate_manifest = stage_dir / "candidate_sequence_set.json" if stage_dir else None
         predictions, diagnostics = [], None
-        state = {"complete": "COMPLETE", "blocked": "BLOCKED",
-                 "dependency_missing": "UNAVAILABLE", "unavailable": "UNAVAILABLE",
-                 "incomplete": "INCOMPLETE", "failed": "INCOMPLETE"}.get(
-                     status, "NOT_EVALUATED")
+        state = qc_state if qc_state != "COMPLETE" else m6_state
+        if execution_error and state == "COMPLETE":
+            state = "INCOMPLETE"
+            diagnostics = "M4 reported an execution error; refusing to score this run"
         if state == "COMPLETE":
             if (candidate_manifest is None or candidate_manifest.is_symlink()
                     or not candidate_manifest.is_file()):
@@ -273,8 +309,12 @@ def run(output, runner=None):
             "metric_definition": "not evaluated because M6 output is unavailable or incomplete",
         }
         reports.append({
-            **case, "status": state, "m4_stage_status": status,
-            "m4_error": row.get("error") or row.get("reason") if row else "M6 stage row is absent",
+            **case, "status": state, "qc_stage_status": qc_state,
+            "m6_stage_status": m6_state, "m6_raw_stage_status": status,
+            "stage_errors": {
+                "qc": (qc_row.get("error") or qc_row.get("reason")) if qc_row else "QC stage row is absent",
+                "m6": (m6_row.get("error") or m6_row.get("reason")) if m6_row else "M6 stage row is absent",
+            },
             "diagnostics": diagnostics, **metrics,
         })
     complete = all(row["status"] == "COMPLETE" for row in reports)
