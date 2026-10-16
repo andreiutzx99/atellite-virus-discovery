@@ -15,13 +15,16 @@ provenance. The goal is to test typed handoffs, status propagation, artifact
 identity, cache/resume behavior, and report completeness—not to identify a
 satellite, infer function, or test helper dependence.
 
-Use three small synthetic samples: a positive with a fixed artificial candidate,
-a second independently generated positive for exact recurrence, and a negative
+Use three small synthetic samples: two independently generated read sets for
+the same fixed artificial candidate, enabling exact recurrence, and a negative
 control with no candidate reads. Include an unrelated synthetic reference
 decoy. A separately seeded truth sidecar records intended sample membership,
 candidate sequence, expected recurrence, and planted synthetic ORF coordinates.
-No truth file, truth-derived label, or expected result enters any analysis
-stage. Score only after all permitted stages finish.
+Use opaque sample/stage IDs and neutral FASTQ/reference identifiers: case,
+factor, positive/negative, and truth-derived labels must not appear in paths,
+headers, stage names, workflow inputs, or cache keys. No truth file, truth-derived
+label, or expected result enters any analysis stage. Score only after all
+permitted stages finish.
 
 ## Typed handoffs
 
@@ -29,11 +32,13 @@ The implementation must validate every edge against the live registry and
 contract validators; this outline does not authorize weakening or extending
 contracts.
 
-1. **M4 → M6:** `fastq_qc` consumes declared `raw_read` fixtures and emits its
-   existing QC artifacts. `residual_evidence` consumes the typed QC handoff,
-   synthetic technical reference (`raw_fasta`), and `reference_roles`. Require
-   complete QC and M6 states before scoring. Preserve the M6 candidate sequence
-   set, reconstruction evidence, residual-read manifest, and canonical contigs.
+1. **M4 → M6:** the registered `fastq_qc` stage consumes declared `raw_read`
+   fixtures and emits `qc_fastq` plus `qc_manifest`. `residual_evidence`
+   consumes the registered QC outputs, a synthetic technical reference
+   (`raw_fasta`), and `reference_roles`. Require complete QC and M6 states
+   before scoring. Preserve the M6 candidate sequence set, reconstruction
+   evidence, residual-read manifest, and `supported_contigs.fasta` typed as
+   `canonical_contig_fasta`.
 2. **M6 → M7:** `independent_recurrence` receives its exact declared roles:
    `reconstruction_evidence`, `residual_read_manifest`, and
    `canonical_contig_fasta`. Require the M7 observation, exact-recurrence,
@@ -53,13 +58,39 @@ contracts.
    supported typed optional contexts. Assert exact architecture/interval
    serialization and provenance only; an ORF or sequence motif is not a
    functional annotation.
-6. **M4–M10 → M12 → M15:** M12 is built from its existing
-   `m12_input_manifest` and supported milestone-typed artifacts from the same
-   workflow; it reviews handoffs and does not rerun producers. M15 consumes only
-   the input types and producer bundles accepted by the live `m15_contracts`
-   allowlist, then validates its input manifest, edge list, result bundle, and
-   output digests. Where a direct M12→M15 or producer→M15 edge is not accepted
-   by those contracts, omit it and record the unsupported edge as out of scope.
+6. **M6 → M12 → M15, plus direct typed producers → M15:** M12 accepts only its
+   existing `m12_input_manifest` and the M5/M6 artifact types in
+   `m12_contracts.PRODUCER_TYPES`. This design has no M5 producer, so M12 reviews
+   only supported M6 artifacts from this workflow; it does not rerun producers.
+   The current M12 contract does **not** accept M4 QC artifacts or M7–M10
+   artifacts. M15 may consume only producer-bound types and producer stage kinds
+   in `m15_contracts`; the current allowlist supports the selected M6, M7, M8,
+   M9, M10, and M12 outputs. Pass M7–M10 outputs directly to M15 when their
+   registered producer bindings validate, rather than routing them through M12.
+   M4 QC artifacts are represented through the M6 input lineage and are not
+   direct M12/M15 inputs.
+
+## Live contract review
+
+The design was checked against the registered workflow at the base revision.
+The following edges are supported only with the listed existing types and
+validators:
+
+- M4 QC outputs to M6; M6 reconstruction evidence, residual manifest, and
+  canonical contigs to M7.
+- M6 candidate set plus all required M8 snapshot/payload inputs to M8; M7's
+  five typed context artifacts are optional M8 inputs.
+- M6 candidate set plus optional typed M7/M8 context to M9 ORF translation.
+  M9 BLASTP is a separate stage requiring M9 ORF/protein outputs and an explicit
+  typed synthetic protein reference snapshot/payload.
+- M6 candidate set plus the M7–M9 context artifact types declared by M10.
+- M6's supported M5/M6 producer types to M12; M6–M10 and M12's declared output
+  types to M15, each bound to the registered producing stage kind.
+
+Unsupported connections excluded from this design are M4→M12, M4→M15,
+M7–M10→M12, and any M12 claim to validate those unsupported inputs. M12 is not
+a general-purpose aggregator. No edge may be added by changing registry
+contracts, bypassing validators, or passing untyped filesystem paths.
 
 ## Truth, provenance, and expected evidence
 
@@ -112,6 +143,45 @@ must identify the failed edge and preserve unaffected upstream evidence.
   reads of at most 100 bases, at most 10x nominal target coverage, one worker,
   2 GiB memory per assembly, and 10 minutes wall time per optional external-tool
   stage. Skip optional-tool assertions explicitly when dependencies are absent.
+
+## Phased implementation plan (preparation only)
+
+No M20 code is authorized by this plan.
+
+1. **Freeze the contract map and fixtures.** Record the live registry's input
+   and output contracts for every planned edge. Build a fixed-seed fixture
+   generator for two independent positive read sets, one no-candidate negative,
+   and one unrelated decoy. Use opaque analysis IDs; keep exact expected
+   sequences, labels, recurrence, and ORF coordinates in a separate held-out
+   sidecar. Test exact generated bytes, manifest digests, label non-leakage,
+   and tamper rejection before invoking any stage.
+2. **Implement and test the M4→M6→M7 path.** Reuse the existing
+   `fastq_qc`, `residual_evidence`, and `independent_recurrence` adapters. Feed
+   only contract-declared typed outputs; run M7 across independently generated
+   sample observations without pooling read data. Test completed recurrence,
+   negative control, missing QC/M6 outputs, interrupted runs, stale manifests,
+   changed inputs, and path/symlink escapes.
+3. **Add typed M8/M9/M10 consumers.** Reuse the registered M8 homology, M9 ORF
+   translation, optional M9 BLASTP, and M10 stages. Validate every artifact
+   with its existing contract before constructing the next stage input. Keep
+   BLASTN/BLASTP reference snapshots synthetic and digest-bound. Test completed
+   no-hit separately from unavailable dependencies, invalid snapshots, and
+   failed searches; do not turn any missing search into a negative biological
+   result.
+4. **Add the supported M12/M15 review path.** Construct M12 input only from its
+   accepted M6 artifacts. Construct M15's authenticated producer bindings from
+   the accepted M6–M10 and M12 outputs, preserving exact producer run identity,
+   artifact digest, edge, and stage-kind checks. Test omitted, mismatched, stale,
+   tampered, and cross-run artifacts without relaxing either allowlist.
+5. **Complete regression and release checks.** Add focused tests for each
+   supported/unsupported edge, truth isolation, negative controls, each
+   missingness/failure state, deterministic output, resume/cache invalidation,
+   and wall-time/resource bounds. Re-run the full offline suite. Exercise each
+   external-tool path when present; when absent, assert an explicit skipped,
+   unavailable, or blocked state and verify downstream evidence is not scored
+   as a hit/no-hit. Deliver the synthetic fixture manifest, machine-readable
+   report, human-readable limitations, and test results; do not change M1–M19
+   contracts.
 
 ## Scientific limitations
 
