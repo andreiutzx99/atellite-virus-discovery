@@ -1,3 +1,4 @@
+import gzip
 import json
 import os
 import shutil
@@ -41,8 +42,14 @@ class M19BenchmarkTests(unittest.TestCase):
             self.assertIn("high_divergence", ids)
             self.assertIn("high_repeat", ids)
             spec = m19_benchmark._workflow_spec()
-            self.assertNotIn("candidate_sequence", json.dumps(spec))
-            self.assertNotIn("heldout_truth", json.dumps(spec))
+            spec_json = json.dumps(spec)
+            self.assertNotIn("candidate_sequence", spec_json)
+            self.assertNotIn("heldout_truth", spec_json)
+            for case in m19_benchmark.CASES:
+                self.assertNotIn(case["case_id"], spec_json)
+                self.assertNotIn(case["case_id"], json.dumps(source1))
+            reads = gzip.decompress((first / "datasets/s06/reads.fastq.gz").read_bytes()).decode()
+            self.assertNotIn("negative_control", reads)
             self.assertFalse((first / "heldout_truth.json").exists())
 
     def test_exact_scoring_reports_recovery_and_false_positives(self):
@@ -127,8 +134,8 @@ class M19BenchmarkTests(unittest.TestCase):
                 rows = []
                 for case in m19_benchmark.CASES:
                     rows.extend([
-                        {"id": f"qc_{case['case_id']}", "status": "failed", "reason": "QC fixture failure"},
-                        {"id": f"m6_{case['case_id']}", "status": "complete", "output_path": "reused-old-run"},
+                        {"id": f"qc_{case['analysis_id']}", "status": "failed", "reason": "QC fixture failure"},
+                        {"id": f"m6_{case['analysis_id']}", "status": "complete", "output_path": "reused-old-run"},
                     ])
                 root = Path(output_path)
                 root.mkdir(parents=True, exist_ok=True)
@@ -146,8 +153,8 @@ class M19BenchmarkTests(unittest.TestCase):
                 rows = []
                 for case in m19_benchmark.CASES:
                     rows.extend([
-                        {"id": f"qc_{case['case_id']}", "status": "complete"},
-                        {"id": f"m6_{case['case_id']}", "status": "complete"},
+                        {"id": f"qc_{case['analysis_id']}", "status": "complete"},
+                        {"id": f"m6_{case['analysis_id']}", "status": "complete"},
                     ])
                 root = Path(output_path)
                 root.mkdir(parents=True, exist_ok=True)
@@ -162,7 +169,7 @@ class M19BenchmarkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             m19_benchmark.generate_inputs(root)
-            target = root / "datasets/baseline/reads.fastq.gz"
+            target = root / "datasets/s01/reads.fastq.gz"
             target.write_bytes(b"modified")
             with self.assertRaisesRegex(ValueError, "overwrite changed M19 input"):
                 m19_benchmark.generate_inputs(root)
