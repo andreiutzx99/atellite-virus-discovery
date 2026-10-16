@@ -270,14 +270,117 @@ def _read_json(path):
 
 
 def _stage_row(manifest, stage_id):
-    row = next((item for item in manifest["stages"] if item.get("id") == stage_id), None)
-    if row is None:
-        raise ValueError(f"M18 expected registered stage is missing: {stage_id}")
-    return row
+    stages = manifest.get("stages", [])
+    return next((item for item in stages if item.get("id") == stage_id), None)
 
 
 def _jsonl(path):
     return [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _stage_artifacts(output, manifest, stage_id, required):
+    """Gate reads on M4 completion and the presence of every required artifact."""
+    row = _stage_row(manifest, stage_id)
+    raw_status = row.get("status") if row else None
+    if row is None:
+        report_status = "UNAVAILABLE"
+    elif raw_status == "complete":
+        report_status = "COMPLETE"
+    elif raw_status == "blocked":
+        report_status = "BLOCKED"
+    elif raw_status in {"dependency_missing", "unavailable"}:
+        report_status = "UNAVAILABLE"
+    else:
+        report_status = "NOT_EVALUATED"
+
+    stage_root = (Path(output) / "stages").resolve()
+    base = None
+    if row and isinstance(row.get("output_path"), str):
+        relative = Path(row["output_path"])
+        if not relative.is_absolute() and ".." not in relative.parts:
+            candidate = stage_root / relative
+            if candidate.resolve().is_relative_to(stage_root) and not candidate.is_symlink():
+                base = candidate
+
+    paths = {}
+    missing = []
+    if report_status == "COMPLETE":
+        for name in required:
+            path = base / name if base is not None else None
+            if (path is None or path.is_symlink() or not path.is_file()
+                    or not path.resolve().is_relative_to(stage_root)):
+                missing.append(name)
+            else:
+                paths[name] = path
+        if missing:
+            report_status = "INCOMPLETE"
+
+    diagnostics = {"m4_status": raw_status or "UNAVAILABLE", "report_status": report_status}
+    if row is None:
+        diagnostics["reason"] = "M4 execution manifest has no row for this stage."
+    else:
+        for key in ("error", "reason", "message", "errors", "failure_reason",
+                    "dependency_status", "dependency"):
+            if key in row:
+                diagnostics[key] = row[key]
+    if missing:
+        diagnostics["missing_artifacts"] = missing
+        diagnostics.setdefault("reason", "M4 marked the stage complete but required outputs are missing.")
+    return report_status, paths, diagnostics
+
+
+def _validate_report_payloads(name, payload):
+    if name == "m10":
+        if not isinstance(payload, list) or any(not isinstance(row, dict) for row in payload):
+            raise ValueError("M10 candidate accounting is not a list of JSON objects")
+    elif not isinstance(payload, dict) or any(not isinstance(value, dict) for value in payload.values()):
+        raise ValueError(f"{name.upper()} artifact bundle is not a JSON object bundle")
+    if name == "qc":
+        document = payload["qc.json"]
+        if not all(isinstance(document.get(section), dict) for section in ("before", "after", "counts")):
+            raise ValueError("QC manifest is missing before/after/counts summaries")
+        for section in ("before", "after"):
+            if not isinstance(document[section].get("reads"), int):
+                raise ValueError(f"QC manifest has no integer {section}.reads count")
+        if document["before"]["reads"] < document["after"]["reads"]:
+            raise ValueError("QC manifest retained more reads than it received")
+    elif name == "m6":
+        residual = payload["residual_manifest.json"]
+        if not isinstance(residual.get("comparison"), dict) or not isinstance(residual.get("counts"), dict):
+            raise ValueError("M6 residual manifest is missing comparison/count summaries")
+        if not isinstance(residual["comparison"].get("status"), str) or not isinstance(
+                residual["comparison"].get("accounted_read_count"), int):
+            raise ValueError("M6 residual manifest has incomplete reference-accounting evidence")
+        for key in ("residual_fragments", "eligible_fragments", "retained_unassembled_fragments"):
+            if not isinstance(residual["counts"].get(key), int):
+                raise ValueError(f"M6 residual manifest has no integer {key} count")
+        if not isinstance(payload["reconstruction_evidence.json"].get("status"), str):
+            raise ValueError("M6 reconstruction evidence has no status")
+        support = payload["read_support.json"]
+        if not isinstance(support.get("status"), str) or not isinstance(support.get("contigs"), list):
+            raise ValueError("M6 read-support evidence is incomplete")
+        document = payload["candidate_sequence_set.json"]
+        if not isinstance(document.get("availability"), dict) or not isinstance(document.get("records"), list):
+            raise ValueError("M6 candidate sequence set is incomplete")
+    elif name == "m9":
+        document = payload["orf_results.json"]
+        if not isinstance(document.get("aggregate_status"), str) or not isinstance(document.get("candidates"), list):
+            raise ValueError("M9 ORF results are incomplete")
+        for key in ("candidate_count", "expected_orf_count", "observed_orf_count"):
+            if not isinstance(document.get(key), int):
+                raise ValueError(f"M9 ORF results have no integer {key}")
+    elif name == "m10":
+        manifest = next((row for row in payload if row.get("record_type") == "manifest"), None)
+        if (manifest is None or not isinstance(manifest.get("aggregate_status"), str)
+                or not isinstance(manifest.get("candidate_count"), int)
+                or not isinstance(manifest.get("required_branches"), list)):
+            raise ValueError("M10 candidate accounting has no manifest row")
+
+
+def _stage_failure_status(report_status):
+    if report_status in {"BLOCKED", "UNAVAILABLE"}:
+        return report_status
+    return "NOT_EVALUATED"
 
 
 def run(output):
@@ -287,85 +390,157 @@ def run(output):
     generate_fixture_bundle(input_root)
     validate_fixture_bundle(input_root)
     _build_workflow(output)
-    artifact_workflow.run(
-        output / "m18-workflow.json", output / "stages",
-        artifact_workflow.build_default_registry(),
-    )
-    manifest = _read_json(output / "stages" / "workflow.json")
+    manifest_path = output / "stages" / "workflow.json"
+    manifest_before = _sha(manifest_path.read_bytes()) if manifest_path.is_file() else None
+    execution_error = None
+    try:
+        artifact_workflow.run(
+            output / "m18-workflow.json", output / "stages",
+            artifact_workflow.build_default_registry(),
+        )
+    except Exception as error:
+        execution_error = {"type": type(error).__name__, "message": str(error)}
+    if not manifest_path.is_file():
+        if execution_error:
+            raise RuntimeError(
+                "M4 did not leave an execution manifest; no M18 scientific summary can be generated. "
+                f"{execution_error['type']}: {execution_error['message']}"
+            )
+        raise FileNotFoundError("M4 execution manifest was not produced.")
+    manifest_after = _sha(manifest_path.read_bytes())
+    stale_manifest = execution_error is not None and manifest_before == manifest_after
+    try:
+        manifest = _read_json(manifest_path) if not stale_manifest else {"status": "execution_error", "stages": []}
+        if (not isinstance(manifest, dict) or not isinstance(manifest.get("stages"), list)
+                or any(not isinstance(row, dict) for row in manifest["stages"])):
+            raise ValueError("M4 execution manifest has an invalid structure")
+    except (OSError, ValueError, TypeError) as error:
+        manifest = {"status": "invalid_manifest", "stages": []}
+        execution_error = execution_error or {
+            "type": type(error).__name__, "message": f"M4 execution manifest could not be parsed: {error}"
+        }
+    if stale_manifest:
+        execution_error["stale_manifest_ignored"] = True
+
     cases = []
     for case_id, pathway, label, seed, mode in CASE_SPECS:
-        qc = _stage_row(manifest, f"qc_{case_id}")
-        m6 = _stage_row(manifest, f"m6_{case_id}")
-        m9 = _stage_row(manifest, f"m9_{case_id}")
-        m10 = _stage_row(manifest, f"m10_{case_id}")
-        m6_dir = output / "stages" / m6["output_path"]
-        m9_dir = output / "stages" / m9["output_path"]
-        m10_dir = output / "stages" / m10["output_path"]
-        qc_dir = output / "stages" / qc["output_path"]
-        qc_doc = _read_json(qc_dir / "qc.json")
-        residual = _read_json(m6_dir / "residual_manifest.json")
-        evidence = _read_json(m6_dir / "reconstruction_evidence.json")
-        support = _read_json(m6_dir / "read_support.json")
-        candidate_set = _read_json(m6_dir / "candidate_sequence_set.json")
-        validate_candidate_sequence_set(m6_dir / "candidate_sequence_set.json")
-        orfs = _read_json(m9_dir / "orf_results.json")
-        accounting = _jsonl(m10_dir / "candidate_accounting.jsonl")
+        stages = {
+            "qc": _stage_artifacts(output, manifest, f"qc_{case_id}", ["qc.json"]),
+            "m6": _stage_artifacts(output, manifest, f"m6_{case_id}", [
+                "residual_manifest.json", "reconstruction_evidence.json",
+                "read_support.json", "candidate_sequence_set.json",
+            ]),
+            "m9": _stage_artifacts(output, manifest, f"m9_{case_id}", ["orf_results.json"]),
+            "m10": _stage_artifacts(output, manifest, f"m10_{case_id}", ["candidate_accounting.jsonl"]),
+        }
+        diagnostics = {name: item[2] for name, item in stages.items()
+                       if item[2]["report_status"] != "COMPLETE"}
+        parsed = {}
+        for name, required in (("qc", ["qc.json"]), ("m6", [
+                "residual_manifest.json", "reconstruction_evidence.json",
+                "read_support.json", "candidate_sequence_set.json"]),
+                ("m9", ["orf_results.json"]), ("m10", ["candidate_accounting.jsonl"])):
+            report_status, paths, stage_diagnostic = stages[name]
+            if report_status == "COMPLETE":
+                try:
+                    if name == "m10":
+                        parsed[name] = _jsonl(paths[required[0]])
+                    else:
+                        parsed[name] = {
+                            artifact: _read_json(paths[artifact]) for artifact in required
+                        }
+                    if name == "m6":
+                        validate_candidate_sequence_set(paths["candidate_sequence_set.json"])
+                    _validate_report_payloads(name, parsed[name])
+                except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+                    stage_diagnostic["report_status"] = "INCOMPLETE"
+                    stage_diagnostic["reason"] = (
+                        f"Required stage artifact validation failed: {type(error).__name__}: {error}"
+                    )
+                    diagnostics[name] = stage_diagnostic
+                    parsed[name] = None
+
+        qc_doc = parsed.get("qc", {}).get("qc.json") if parsed.get("qc") else None
+        residual = parsed.get("m6", {}).get("residual_manifest.json") if parsed.get("m6") else None
+        evidence = parsed.get("m6", {}).get("reconstruction_evidence.json") if parsed.get("m6") else None
+        support = parsed.get("m6", {}).get("read_support.json") if parsed.get("m6") else None
+        candidate_set = parsed.get("m6", {}).get("candidate_sequence_set.json") if parsed.get("m6") else None
+        orfs = parsed.get("m9", {}).get("orf_results.json") if parsed.get("m9") else None
+        accounting = parsed.get("m10")
         accounting_manifest = next(
             (row for row in accounting if row.get("record_type") == "manifest"), {}
-        )
+        ) if accounting is not None else {}
         accounting_candidates = [
             row for row in accounting if row.get("record_type") == "candidate"
-        ]
-        cases.append({
+        ] if accounting is not None else []
+        qc_success = qc_doc is not None and stages["qc"][2]["report_status"] == "COMPLETE"
+        m6_success = residual is not None and stages["m6"][2]["report_status"] == "COMPLETE"
+        m9_success = orfs is not None and stages["m9"][2]["report_status"] == "COMPLETE"
+        m10_success = accounting is not None and stages["m10"][2]["report_status"] == "COMPLETE"
+        case = {
             "case_id": case_id, "pathway": pathway,
             "scenario_label": label, "source_dataset": f"inputs/datasets/{case_id}/reads.fastq.gz",
             "source_seed": seed, "m4_stage_statuses": {
-                "qc": qc.get("status"), "m6": m6.get("status"),
-                "m9": m9.get("status"), "m10": m10.get("status"),
+                name: diagnostic["m4_status"] for name, diagnostic in
+                ((name, stages[name][2]) for name in ("qc", "m6", "m9", "m10"))
             },
-            "qc": {"input_reads": qc_doc["before"]["reads"],
-                   "retained_reads": qc_doc["after"]["reads"],
-                   "rejected_reads": qc_doc["counts"].get("rejected_reads", 0)},
+            "qc": ({
+                "input_reads": qc_doc["before"]["reads"],
+                "retained_reads": qc_doc["after"]["reads"],
+                "rejected_reads": qc_doc["before"]["reads"] - qc_doc["after"]["reads"],
+            } if qc_success else {
+                "status": stages["qc"][2]["report_status"],
+                "input_reads": None, "retained_reads": None, "rejected_reads": None,
+            }),
             "reference_screening": {
-                "status": residual["comparison"]["status"],
-                "accounted_reads": residual["comparison"]["accounted_read_count"],
-                "residual_fragments": residual["counts"]["residual_fragments"],
-                "eligible_fragments": residual["counts"]["eligible_fragments"],
-                "retained_unassembled_fragments":
-                    residual["counts"]["retained_unassembled_fragments"],
+                "status": (residual["comparison"]["status"] if m6_success else
+                           _stage_failure_status(stages["m6"][2]["report_status"])),
+                "accounted_reads": (residual["comparison"]["accounted_read_count"] if m6_success else None),
+                "residual_fragments": (residual["counts"]["residual_fragments"] if m6_success else None),
+                "eligible_fragments": (residual["counts"]["eligible_fragments"] if m6_success else None),
+                "retained_unassembled_fragments": (
+                    residual["counts"]["retained_unassembled_fragments"] if m6_success else None
+                ),
             },
             "assembly_and_read_back": {
-                "status": evidence["status"],
-                "candidate_availability": candidate_set["availability"]["state"],
-                "candidate_count": len(candidate_set["records"]),
-                "support_status": support["status"],
-                "candidate_support_statuses": sorted({
+                "status": (evidence["status"] if m6_success else
+                           _stage_failure_status(stages["m6"][2]["report_status"])),
+                "candidate_availability": (
+                    candidate_set["availability"]["state"] if m6_success else
+                    _stage_failure_status(stages["m6"][2]["report_status"])
+                ),
+                "candidate_count": len(candidate_set["records"]) if m6_success else None,
+                "support_status": support["status"] if m6_success else "NOT_EVALUATED",
+                "candidate_support_statuses": (sorted({
                     record["m6_support_status"] for record in candidate_set["records"]
-                }),
-                "support_thresholds": evidence.get("support_criteria", {}),
-                "supported_contig_count": sum(
+                }) if m6_success else None),
+                "support_thresholds": evidence.get("support_criteria", {}) if m6_success else None,
+                "supported_contig_count": (sum(
                     row.get("status") == "READ_SUPPORTED_ASSEMBLY"
                     for row in support.get("contigs", [])
-                ),
-                "assembler": evidence.get("assembler", {}).get("assembler"),
+                ) if m6_success else None),
+                "assembler": evidence.get("assembler", {}).get("assembler") if m6_success else None,
             },
             "m9_orf_evidence": {
-                "aggregate_status": orfs["aggregate_status"],
-                "candidate_count": orfs["candidate_count"],
-                "expected_orf_count": orfs["expected_orf_count"],
-                "observed_orf_count": orfs["observed_orf_count"],
+                "aggregate_status": (orfs["aggregate_status"] if m9_success else
+                                     _stage_failure_status(stages["m9"][2]["report_status"])),
+                "candidate_count": orfs["candidate_count"] if m9_success else None,
+                "expected_orf_count": orfs["expected_orf_count"] if m9_success else None,
+                "observed_orf_count": orfs["observed_orf_count"] if m9_success else None,
             },
             "m10_architecture_evidence": {
-                "aggregate_status": accounting_manifest.get("aggregate_status", "UNAVAILABLE"),
-                "candidate_count": accounting_manifest.get("candidate_count", 0),
-                "branch_statuses": {
+                "aggregate_status": (accounting_manifest.get("aggregate_status", "UNAVAILABLE")
+                                     if m10_success else
+                                     _stage_failure_status(stages["m10"][2]["report_status"])),
+                "candidate_count": accounting_manifest.get("candidate_count") if m10_success else None,
+                "branch_statuses": ({
                     branch: sorted({
                         details.get("branch_status", "UNAVAILABLE")
                         for row in accounting_candidates
                         for details in [row.get("branches", {}).get(branch, {})]
                     })
                     for branch in accounting_manifest.get("required_branches", [])
-                },
+                } if m10_success else None),
             },
             "not_run_or_unavailable": [
                 "M8 homology: no biological reference snapshot is used.",
@@ -378,7 +553,19 @@ def run(output):
                 "M6 mapping, assembly, and read-back are synthetic technical execution only.",
                 "ORFs and M10 repeats do not establish biological identity, function, novelty, or satellite status.",
             ],
-        })
+        }
+        if diagnostics:
+            case["stage_diagnostics"] = diagnostics
+        if m6_success and evidence.get("status") in {"EXECUTION_FAILED", "DEPENDENCY_MISSING"}:
+            case.setdefault("stage_diagnostics", {})["m6"] = {
+                "m4_status": stages["m6"][2]["m4_status"],
+                "report_status": (
+                    "UNAVAILABLE" if evidence["status"] == "DEPENDENCY_MISSING" else "INCOMPLETE"
+                ),
+                "evidence_status": evidence["status"],
+                **{key: evidence[key] for key in ("error", "reason") if key in evidence},
+            }
+        cases.append(case)
     expected_outcomes = {
         "rna_supported": lambda case: case["assembly_and_read_back"]["candidate_support_statuses"]
         == ["READ_SUPPORTED_ASSEMBLY"],
@@ -400,7 +587,7 @@ def run(output):
     report = {
         "schema": SCHEMA, **SYNTHETIC_FLAGS,
         "workflow_status": manifest.get("status", "not_evaluated"),
-        "integration_status": "COMPLETE" if integration_complete else "INCOMPLETE",
+        "integration_status": "COMPLETE" if integration_complete and not execution_error else "INCOMPLETE",
         "execution_manifest": "stages/workflow.json",
         "source_manifest": "inputs/synthetic_source_manifest.json",
         "cases": cases,
@@ -415,14 +602,18 @@ def run(output):
             "Add explicitly declared artificial reference snapshots to test M8 homology without biological curation.",
         ],
     }
+    if execution_error:
+        report["execution_error"] = execution_error
     _replace_generated(output / "m18-report.json", _json_bytes(report))
     rows = [
         "<!doctype html><meta charset='utf-8'><title>M18 synthetic workflow</title>",
         "<h1>M18 synthetic read-to-candidate workflow</h1>",
-        "<p>Artificial reads only. Technical execution is not biological validation.</p>",
+        f"<p>M4: {html.escape(str(report['workflow_status']))}; M18: "
+        f"{html.escape(report['integration_status'])}. Artificial reads only; "
+        "technical execution is not biological validation.</p>",
         "<table><thead><tr><th>Case</th><th>Pathway</th><th>QC retained/rejected</th>",
         "<th>M6 status</th><th>Candidate availability</th><th>Read-back support</th>",
-        "<th>M9 ORFs</th><th>M10 scope</th></tr></thead><tbody>",
+        "<th>M9 ORFs</th><th>M10 scope</th><th>Stage diagnostics</th></tr></thead><tbody>",
     ]
     for case in cases:
         rows.append("<tr>" + "".join(
@@ -435,7 +626,13 @@ def run(output):
                 case["m9_orf_evidence"]["observed_orf_count"],
                 ", ".join(
                     f"{branch}:{'|'.join(statuses)}"
-                    for branch, statuses in case["m10_architecture_evidence"]["branch_statuses"].items()
+                    for branch, statuses in
+                    (case["m10_architecture_evidence"]["branch_statuses"] or {}).items()
+                ),
+                "; ".join(
+                    f"{stage}: {detail.get('report_status')} — "
+                    f"{detail.get('reason') or detail.get('error') or 'incomplete'}"
+                    for stage, detail in case.get("stage_diagnostics", {}).items()
                 ),
             )
         ) + "</tr>")
