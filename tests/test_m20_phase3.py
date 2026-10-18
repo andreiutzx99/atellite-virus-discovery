@@ -4,8 +4,11 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from satellite_discovery import m20_phase2b, m20_phase3, m9_reference_snapshot
+from satellite_discovery import (
+    artifact_contracts, m20_phase2b, m20_phase3, m9_reference_snapshot,
+)
 
 
 def _fixture_report(root, result):
@@ -45,6 +48,70 @@ class M20Phase3FixtureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "input changed"):
                 m20_phase3._verify_frozen_phase2b(root, _fixture_report(root, result))
 
+    def test_legacy_manifest_exception_rejects_unrelated_missing_fields(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            result = m20_phase2b.generate_fixtures(root)
+            path = root / "benchmark_manifest.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest.pop("cases")
+            path.write_bytes(m20_phase2b._canonical(manifest))
+            result["manifest_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            with self.assertRaisesRegex(ValueError, "manifest differs"):
+                m20_phase3._verify_frozen_phase2b(
+                    root, _fixture_report(root, result),
+                )
+
+    def test_output_verification_is_pinned_to_stage_manifest_and_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            stage = root / "m6_c001"
+            stage.mkdir()
+            output = stage / "candidate_sequence_set.json"
+            output.write_bytes(b"{}")
+            identity = {"stage": "m6-residual-evidence", "producer_run": "run-a"}
+            document = {
+                "identity": identity,
+                "output_contract": {
+                    "candidate_sequence_set.json": "m8_candidate_sequence_set",
+                },
+                "output_inventory": [{
+                    "path": output.name,
+                    "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+                }],
+            }
+            manifest_path = stage / "manifest.json"
+            manifest_path.write_bytes(m20_phase2b._canonical(document))
+            row = {
+                "output_path": stage.name,
+                "stage_manifest_sha256": hashlib.sha256(
+                    manifest_path.read_bytes(),
+                ).hexdigest(),
+                "stage_manifest_identity": identity,
+            }
+            with patch.object(artifact_contracts, "validate_artifact"):
+                self.assertEqual(
+                    output,
+                    m20_phase3._verified_output(
+                        root, row, output.name, "m8_candidate_sequence_set",
+                    ),
+                )
+                output.write_bytes(b'{"changed":true}')
+                self.assertIsNone(m20_phase3._verified_output(
+                    root, row, output.name, "m8_candidate_sequence_set",
+                ))
+                output.write_bytes(b"{}")
+                document["identity"] = {
+                    "stage": "m6-residual-evidence", "producer_run": "run-b",
+                }
+                manifest_path.write_bytes(m20_phase2b._canonical(document))
+                row["stage_manifest_sha256"] = hashlib.sha256(
+                    manifest_path.read_bytes(),
+                ).hexdigest()
+                self.assertIsNone(m20_phase3._verified_output(
+                    root, row, output.name, "m8_candidate_sequence_set",
+                ))
+
     def test_synthetic_protein_snapshot_is_digest_validated(self):
         with tempfile.TemporaryDirectory() as temporary:
             manifest_path, payload_path = m20_phase3._protein_snapshot(Path(temporary))
@@ -57,6 +124,28 @@ class M20Phase3FixtureTests(unittest.TestCase):
         workflow = {"stages": [{"id": "blastp", "status": "dependency_missing"}]}
         self.assertEqual("DEPENDENCY_MISSING", m20_phase3._stage_state(workflow, "blastp"))
         self.assertEqual("NOT_EVALUATED", m20_phase3._stage_state(workflow, "absent"))
+
+    def test_m8_summary_preserves_no_match_and_dependency_missing_as_distinct(self):
+        document = {
+            "aggregate_status": "PARTIAL",
+            "panel_state": "COMPLETE",
+            "queries": [{
+                "candidate_id": "synthetic-candidate",
+                "branches": [
+                    {"masking_branch": "plain",
+                     "status": "SEARCH_COMPLETED_NO_MATCH_WITHIN_SEARCHED_REFERENCES"},
+                    {"masking_branch": "softmask",
+                     "status": "DEPENDENCY_UNAVAILABLE"},
+                ],
+            }],
+        }
+        summary = m20_phase3._m8_result_summary(document)
+        statuses = [branch["status"] for branch in summary["queries"][0]["branches"]]
+        self.assertEqual([
+            "SEARCH_COMPLETED_NO_MATCH_WITHIN_SEARCHED_REFERENCES",
+            "DEPENDENCY_UNAVAILABLE",
+        ], statuses)
+        self.assertNotEqual(statuses[0], statuses[1])
 
 
 @unittest.skipUnless(
@@ -112,6 +201,13 @@ class M20Phase3LiveTests(unittest.TestCase):
                 self.assertIn(row["m8"]["stage_status"],
                               {"COMPLETE", "DEPENDENCY_UNAVAILABLE"})
                 self.assertTrue(row["candidate_producer"]["stage_manifest_sha256"])
+                if row["m8"]["stage_status"] == "COMPLETE":
+                    branch_statuses = {
+                        branch["status"]
+                        for query in row["m8"]["query_status"]["queries"]
+                        for branch in query["branches"]
+                    }
+                    self.assertTrue(branch_statuses)
                 contexts = row["m10"]["summary"]["optional_context_state"]
                 self.assertEqual("SUPPLIED", contexts["m7"]["state"])
                 self.assertEqual("SUPPLIED", contexts["m9"]["state"])
@@ -131,6 +227,10 @@ class M20Phase3LiveTests(unittest.TestCase):
                 spec = json.loads(path.read_text(encoding="utf-8"))
                 self.assertNotIn("heldout_truth", json.dumps(spec).lower())
                 self.assertNotIn("expected_role", json.dumps(spec).lower())
+            self.assertTrue(any(
+                "M10 exact architecture is not functional annotation" in item
+                for item in report["limitations"]
+            ))
 
 
 if __name__ == "__main__":

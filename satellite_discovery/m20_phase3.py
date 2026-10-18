@@ -38,6 +38,10 @@ def _verified_output(root, row, filename, artifact_type):
     manifest = m20_phase2._json_at(stage_dir, "manifest.json")
     if not isinstance(manifest, dict):
         return None
+    manifest_bytes = manifest_path.read_bytes()
+    if (row.get("stage_manifest_sha256") != _sha(manifest_bytes)
+            or row.get("stage_manifest_identity") != manifest.get("identity")):
+        return None
     path = stage_dir / filename
     if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(stage_dir):
         return None
@@ -47,8 +51,6 @@ def _verified_output(root, row, filename, artifact_type):
         if (descriptor.get("artifact_type") != artifact_type
                 or descriptor.get("sha256") != _sha(data)
                 or descriptor.get("path") != (Path(row["output_path"]) / filename).as_posix()):
-            return None
-        if row.get("stage_manifest_sha256") != _sha(manifest_path.read_bytes()):
             return None
         if manifest.get("output_sha256", {}).get(filename) != _sha(data):
             return None
@@ -73,10 +75,22 @@ def _m7_inputs(output):
         return {}
     row = next((r for r in manifest.get("stages", [])
                 if isinstance(r, dict) and r.get("id") == "m7_recurrence"), None)
+    if not row or row.get("kind") != "independent_recurrence":
+        return {}
     stage_dir = m20_phase2._stage_dir(root, row)
     stage_manifest = m20_phase2._json_at(stage_dir, "manifest.json")
     if (not isinstance(stage_manifest, dict) or stage_manifest.get("status") != "complete"
             or stage_dir is None):
+        return {}
+    stage_manifest_path = stage_dir / "manifest.json"
+    identity = stage_manifest.get("identity")
+    if (row.get("stage_manifest_sha256") != _sha(stage_manifest_path.read_bytes())
+            or row.get("stage_manifest_identity") != identity
+            or not isinstance(identity, dict)
+            or not isinstance(identity.get("implementation"), dict)
+            or identity.get("schema") != "m7-stage-identity-v2"
+            or identity["implementation"].get("algorithm")
+            != "m7-exact-sequence-recurrence-v1"):
         return {}
     hashes = stage_manifest.get("output_sha256", {})
     artifacts = {}
