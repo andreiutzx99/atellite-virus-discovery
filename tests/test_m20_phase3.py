@@ -90,12 +90,11 @@ class M20Phase3FixtureTests(unittest.TestCase):
                 "stage_manifest_identity": identity,
             }
             with patch.object(artifact_contracts, "validate_artifact"):
-                self.assertEqual(
-                    output,
-                    m20_phase3._verified_output(
-                        root, row, output.name, "m8_candidate_sequence_set",
-                    ),
+                verified = m20_phase3._verified_output(
+                    root, row, output.name, "m8_candidate_sequence_set",
                 )
+                self.assertIsNotNone(verified)
+                self.assertTrue(output.samefile(verified))
                 output.write_bytes(b'{"changed":true}')
                 self.assertIsNone(m20_phase3._verified_output(
                     root, row, output.name, "m8_candidate_sequence_set",
