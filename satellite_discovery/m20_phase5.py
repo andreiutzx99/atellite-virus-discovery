@@ -141,8 +141,8 @@ def _replay_difference_audit(phase2b, phase4, sample):
         return {"classification": "UNRESOLVED", "changed_artifacts": []}
     old_dir = original_root / old["output_path"]
     new_dir = replay_root / new["output_path"]
-    old_workflow = str(original_root.resolve()).replace("\\", "/")
-    new_workflow = str(replay_root.resolve()).replace("\\", "/")
+    old_workflow = str(original_root).replace("\\", "/")
+    new_workflow = str(replay_root).replace("\\", "/")
     changed, unexplained, changed_paths = [], [], set()
     for name in sorted(set(old.get("artifacts", {})) | set(new.get("artifacts", {}))):
         left = old.get("artifacts", {}).get(name, {})
