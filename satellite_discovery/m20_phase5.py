@@ -141,8 +141,8 @@ def _replay_difference_audit(phase2b, phase4, sample):
         return {"classification": "UNRESOLVED", "changed_artifacts": []}
     old_dir = original_root / old["output_path"]
     new_dir = replay_root / new["output_path"]
-    old_workflow = str(original_root.resolve())
-    new_workflow = str(replay_root.resolve())
+    old_workflow = str(original_root.resolve()).replace("\\", "/")
+    new_workflow = str(replay_root.resolve()).replace("\\", "/")
     changed, unexplained, changed_paths = [], [], set()
     for name in sorted(set(old.get("artifacts", {})) | set(new.get("artifacts", {}))):
         left = old.get("artifacts", {}).get(name, {})
@@ -162,7 +162,9 @@ def _replay_difference_audit(phase2b, phase4, sample):
             new_records = [line for line in new_text if not line.startswith("@PG")]
             path_only = (
                 old_records == new_records and len(old_pg) == len(new_pg)
-                and all(a.replace(old_workflow, new_workflow) == b
+                and all(
+                    a.replace("\\", "/").replace(old_workflow, new_workflow)
+                    == b.replace("\\", "/")
                         for a, b in zip(old_pg, new_pg))
             )
             if not path_only:
