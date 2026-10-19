@@ -415,8 +415,14 @@ class StageIdentityDecouplingTests(unittest.TestCase):
         for snapshot in (relocated, crlf):
             profile = snapshot["m12_source_profile"]
             self.assertIn(profile, {"lf", "crlf", "mixed"})
-            expected = expected_m12_aliases.get(
-                profile, snapshot["m12_raw_source_sha256"]
+            source_sha256 = snapshot["m12_raw_source_sha256"]
+            legacy_identity = identity_compatibility[
+                "source.m12_artifact_review.identity_sha256"
+            ]
+            expected = (
+                expected_m12_aliases.get(profile)
+                if source_sha256 == legacy_identity
+                else source_sha256
             )
             with self.subTest(m12_source_profile=profile):
                 self.assertEqual(snapshot["source"]["m12"]["source_sha256"], expected)
