@@ -334,6 +334,27 @@ class M12ArtifactReviewTests(unittest.TestCase):
             "UNKNOWN",
         )
 
+    def test_m6_not_evaluated_empty_support_is_unknown_not_invalid(self):
+        evidence = {
+            "status": "NOT_EVALUATED",
+            "provenance": {"support_input_fragment_ids": ["fragment-a"]},
+            "read_support": [],
+        }
+        group = {
+            "residual_read_manifest": [{
+                "payload": {"source_reads": {"read1": {"sha256": "c" * 64}}},
+            }],
+        }
+        result = m12_artifact_review._support_query_accounting(group, evidence)
+        self.assertEqual(result["status"], "UNKNOWN")
+        self.assertIn("not evaluated", result["reason"])
+        self.assertEqual(
+            m12_artifact_review._m6_support_mapping(
+                evidence["status"], result["status"]
+            )[:3],
+            ("NOT_STARTED", "UNKNOWN", "NO_OBSERVATION"),
+        )
+
     def test_m5_failure_and_unknown_statuses_do_not_become_negative_results(self):
         self.assertEqual(
             m12_artifact_review._m5_mapping("ANALYSIS_FAILED"),
@@ -609,6 +630,16 @@ class M12ArtifactReviewTests(unittest.TestCase):
                 inputs, bindings, producer_records, output
             )
             stage_output = output / rows["m12"]["output_path"]
+            cached_manifest = m12_artifact_review._output_identity(
+                stage_output, context["cache_identity"]
+            )
+            self.assertIsNotNone(cached_manifest)
+            self.assertEqual(
+                m12_artifact_review.run_stage(
+                    inputs, stage_output, {}, workflow_context=context
+                ),
+                cached_manifest,
+            )
             table_path = stage_output / "artifact_review_table.json"
             table_path.write_bytes(table_path.read_bytes() + b" ")
             self.assertIsNone(
