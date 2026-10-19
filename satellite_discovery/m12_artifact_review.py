@@ -525,7 +525,7 @@ def _check_cross_artifact_consistency(prepared):
 
 
 def _support_query_accounting(group, evidence):
-    if evidence.get("status") == "NOT_EVALUATED" and not evidence.get("read_support"):
+    if evidence.get("status") == "NOT_EVALUATED" and evidence.get("read_support") == []:
         return {
             "status": "UNKNOWN",
             "reason": "M6 read-support was not evaluated; query accounting is unavailable.",

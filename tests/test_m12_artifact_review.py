@@ -348,6 +348,14 @@ class M12ArtifactReviewTests(unittest.TestCase):
         result = m12_artifact_review._support_query_accounting(group, evidence)
         self.assertEqual(result["status"], "UNKNOWN")
         self.assertIn("not evaluated", result["reason"])
+        for malformed in (
+            {key: value for key, value in evidence.items() if key != "read_support"},
+            {**evidence, "read_support": None},
+        ):
+            self.assertEqual(
+                m12_artifact_review._support_query_accounting(group, malformed)["status"],
+                "INVALID",
+            )
         self.assertEqual(
             m12_artifact_review._m6_support_mapping(
                 evidence["status"], result["status"]
