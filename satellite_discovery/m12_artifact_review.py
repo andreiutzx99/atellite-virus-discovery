@@ -525,6 +525,11 @@ def _check_cross_artifact_consistency(prepared):
 
 
 def _support_query_accounting(group, evidence):
+    if evidence.get("status") == "NOT_EVALUATED" and evidence.get("read_support") == []:
+        return {
+            "status": "UNKNOWN",
+            "reason": "M6 read-support was not evaluated; query accounting is unavailable.",
+        }
     residual_rows = group.get("residual_read_manifest", [])
     residual_rows = [item for item in residual_rows if item["payload"] is not None]
     if len(residual_rows) != 1:
@@ -1063,7 +1068,10 @@ def _output_identity(output, identity):
             or bundle["input_manifest_sha256"] != identity["input_manifest_sha256"]
             or bundle["implementation_source_sha256"]
             != identity["implementation"]["source_sha256"]
-            or bundle["resolved_handoffs"] != identity["resolved_handoffs"]
+            or bundle["resolved_handoffs"] != [
+                {"artifact_ref": item["artifact_ref"], "resolved": item["resolved"]}
+                for item in expected_handoffs
+            ]
             or bundle["external_evidence"] != identity["external_evidence"]
         ):
             return None
