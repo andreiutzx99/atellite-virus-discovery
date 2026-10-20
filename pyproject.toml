@@ -17,6 +17,7 @@ satellite-m18 = "satellite_discovery.m18_workflow:main"
 satellite-m19 = "satellite_discovery.m19_benchmark:main"
 satellite-controlled-fastq = "satellite_discovery.controlled_fastq_acquisition:main"
 satellite-controlled-exploratory-fastq = "satellite_discovery.trusted_single_run_acquisition:main"
+satellite-m21-readiness = "satellite_discovery.m21_benchmark_readiness:main"
 
 [tool.setuptools.packages.find]
 include = ["satellite_discovery*"]
@@ -30,6 +31,8 @@ satellite_discovery = [
     "m12_legacy_cache_compatibility.txt",
     "m5_execution_outcome_cache_compatibility.txt",
     "stage_cache_identity_compatibility.txt",
+    "m21_benchmark_manifest.schema.json",
+    "m21_reference_panel_manifest.schema.json",
 ]
 
 [project.optional-dependencies]

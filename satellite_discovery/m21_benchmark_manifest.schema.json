@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/m21-benchmark-manifest-v1.schema.json",
+  "title": "M21 blinded benchmark readiness manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "dataset_id", "sample_id", "provenance", "read_input", "reference_panel_sha256", "ground_truth_review", "gates"],
+  "properties": {
+    "schema_version": {"const": "m21-benchmark-manifest-v1"},
+    "dataset_id": {"type": "string", "pattern": "^DS-[A-Z0-9]{10}$"},
+    "sample_id": {"type": "string", "pattern": "^BLD-[A-F0-9]{24}$"},
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_catalog", "custodian_record_ref", "accession_refs"],
+      "properties": {
+        "source_catalog": {"type": "string", "minLength": 1},
+        "custodian_record_ref": {"type": "string", "pattern": "^SRC-[A-Z0-9]{10}$"},
+        "accession_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^ACCREF-[A-Z0-9]{10}$"}}
+      }
+    },
+    "read_input": {
+      "type": "object", "additionalProperties": false,
+      "required": ["layout", "format", "files"],
+      "properties": {
+        "layout": {"enum": ["SINGLE", "PAIRED"]},
+        "format": {"enum": ["FASTQ", "FASTQ_GZ"]},
+        "files": {"type": "array", "items": {"$ref": "#/$defs/readFile"}}
+      }
+    },
+    "reference_panel_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "ground_truth_review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["assayed_region_evidence", "full_length_reconstruction", "negative_control_assessment"],
+      "properties": {
+        "assayed_region_evidence": {"enum": ["NOT_ASSESSED", "REVIEWED"]},
+        "full_length_reconstruction": {"enum": ["NOT_ASSESSED", "REVIEWED"]},
+        "negative_control_assessment": {"enum": ["NOT_CLAIMED", "PENDING", "REVIEWED"]}
+      }
+    },
+    "gates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metadata_verification", "file_byte_verification", "data_use", "technical_qc", "reference_panel", "blinding", "ground_truth_review", "negative_control_review", "execution_authorization"],
+      "properties": {
+        "metadata_verification": {"$ref": "#/$defs/approval"},
+        "file_byte_verification": {"$ref": "#/$defs/approval"},
+        "data_use": {"$ref": "#/$defs/approval"},
+        "technical_qc": {"$ref": "#/$defs/approval"},
+        "reference_panel": {"$ref": "#/$defs/approval"},
+        "blinding": {"$ref": "#/$defs/approval"},
+        "ground_truth_review": {"$ref": "#/$defs/approval"},
+        "negative_control_review": {"$ref": "#/$defs/approval"},
+        "execution_authorization": {"$ref": "#/$defs/approval"}
+      }
+    }
+  },
+  "$defs": {
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["APPROVED", "NOT_APPLICABLE", "PENDING", "REJECTED"]},
+        "approval_id": {"type": "string", "pattern": "^APR-[A-Z0-9]{12}$"},
+        "reviewer_id": {"type": "string", "pattern": "^REV-[A-Z0-9]{8}$"},
+        "approved_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "signature_ed25519": {"type": "string"}
+      }
+    },
+    "readFile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "path", "bytes", "sha256", "integrity_status"],
+      "properties": {
+        "role": {"enum": ["R1", "R2"]},
+        "path": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"type": ["string", "null"]},
+        "integrity_status": {"enum": ["METADATA_ONLY", "VERIFIED", "NOT_VERIFIED"]}
+      }
+    }
+  }
+}

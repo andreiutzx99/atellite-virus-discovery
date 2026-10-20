@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 reference-panel approval manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "snapshot_id", "references", "target_exclusion_policy_id", "approval"],
+  "properties": {
+    "schema_version": {"const": "m21-reference-panel-manifest-v1"},
+    "snapshot_id": {"type": "string", "pattern": "^REF-[A-Z0-9]{10}$"},
+    "references": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["source", "accession_version", "path", "bytes", "sha256"],
+        "properties": {
+          "source": {"type": "string", "minLength": 1},
+          "accession_version": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "bytes": {"type": "integer", "minimum": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "target_exclusion_policy_id": {"type": "string", "pattern": "^POL-[A-Z0-9]{10}$"},
+    "approval": {"$ref": "m21_benchmark_manifest.schema.json#/$defs/approval"}
+  }
+}
