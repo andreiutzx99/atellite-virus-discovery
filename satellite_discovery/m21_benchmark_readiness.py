@@ -634,8 +634,10 @@ def validate_fastq(r1: str | Path, r2: str | Path | None = None,
     This is not a hard wall-clock deadline: an individual read/decompression/database
     operation may run past the configured runtime before control returns to the check.
     """
-    thresholds = thresholds or {}
-    limits = limits or {}
+    if thresholds is None:
+        thresholds = {}
+    if limits is None:
+        limits = {}
     allowed_thresholds = {"min_reads", "min_length", "max_length", "min_mean_quality"}
     allowed_limits = {"max_records", "max_read_length", "max_decompressed_bytes", "max_runtime_seconds"}
     issues: list[str] = []

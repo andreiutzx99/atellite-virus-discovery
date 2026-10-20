@@ -263,7 +263,15 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
             result = m21.validate_fastq(
                 self.analysis / "r1.fastq", thresholds={"unknown": 1}
             )
+            malformed_thresholds = m21.validate_fastq(
+                self.analysis / "r1.fastq", thresholds=[]
+            )
+            malformed_limits = m21.validate_fastq(
+                self.analysis / "r1.fastq", limits=[]
+            )
         self.assertEqual(result["outcome"], "INVALID_CONFIGURATION")
+        self.assertEqual(malformed_thresholds["outcome"], "INVALID_CONFIGURATION")
+        self.assertEqual(malformed_limits["outcome"], "INVALID_CONFIGURATION")
         open_file.assert_not_called()
 
     def test_truncated_gzip_stream_fails_closed(self):
