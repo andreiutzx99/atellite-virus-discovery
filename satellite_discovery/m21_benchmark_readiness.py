@@ -69,6 +69,8 @@ def validate_opaque_ids(ids: list[str]) -> list[str]:
 def write_sealed_truth_key(mapping: dict[str, str], key_path: str | Path,
                            analysis_root: str | Path) -> None:
     """Write a custodian-only mapping outside the analysis tree, mode 0600, no overwrite."""
+    if os.name == "nt":
+        raise OSError("Production truth-key creation is disabled on Windows; secure ACLs are not verified.")
     target = Path(key_path).absolute()
     root = Path(analysis_root).resolve()
     resolved_parent = target.parent.resolve(strict=True)
@@ -108,6 +110,7 @@ def _approval_payload(dataset_id: str, sample_id: str, gate: str, record: dict[s
         "approved_at": record.get("approved_at"),
         "expires_at": record.get("expires_at"),
         "evidence_sha256": record.get("evidence_sha256"),
+        "manifest_sha256": record.get("manifest_sha256"),
     }
     return json.dumps(signed, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
@@ -123,12 +126,13 @@ def _parse_time(value: Any) -> datetime | None:
 
 
 def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
-                    trusted_reviewers: dict[str, str], now: datetime) -> list[str]:
+                    trusted_reviewers: dict[str, str], now: datetime,
+                    manifest_sha256: str | None = None) -> list[str]:
     prefix = f"gate {gate}"
     if not isinstance(record, dict):
         return [f"{prefix}: missing approval record."]
     allowed = {"status", "approval_id", "reviewer_id", "approved_at", "expires_at",
-               "evidence_sha256", "signature_ed25519"}
+               "evidence_sha256", "manifest_sha256", "signature_ed25519"}
     issues = [f"{prefix}: unknown approval fields."] if set(record) - allowed else []
     status = record.get("status")
     if not isinstance(status, str) or status not in APPROVAL_STATUSES:
@@ -137,10 +141,13 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
         return issues + [f"{prefix}: approval is {status}."]
     for name, pattern in (
         ("approval_id", APPROVAL_ID_RE), ("reviewer_id", REVIEWER_ID_RE),
-        ("evidence_sha256", SHA256_RE), ("signature_ed25519", SIGNATURE_RE),
+        ("evidence_sha256", SHA256_RE), ("manifest_sha256", SHA256_RE),
+        ("signature_ed25519", SIGNATURE_RE),
     ):
         if not isinstance(record.get(name), str) or not pattern.fullmatch(record[name]):
             issues.append(f"{prefix}: missing or malformed {name}.")
+    if manifest_sha256 is not None and record.get("manifest_sha256") != manifest_sha256:
+        issues.append(f"{prefix}: approval is not bound to the current manifest content.")
     approved_at, expires_at = _parse_time(record.get("approved_at")), _parse_time(record.get("expires_at"))
     if not approved_at or not expires_at:
         issues.append(f"{prefix}: approval timestamps must be timezone-aware ISO-8601.")
@@ -150,6 +157,8 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     key_text = trusted_reviewers.get(reviewer) if isinstance(reviewer, str) else None
     if key_text is None:
         issues.append(f"{prefix}: reviewer is not in the external trust store.")
+    elif Ed25519PublicKey is None:
+        issues.append(f"{prefix}: cryptography dependency unavailable; approval verification cannot run.")
     elif not issues:
         try:
             key = Ed25519PublicKey.from_public_bytes(base64.b64decode(key_text, validate=True))
@@ -206,7 +215,8 @@ def scan_operator_artifacts(root: str | Path, forbidden_tokens: list[str] | None
 
 
 def validate_reference_panel(document: Any, trusted_reviewers: dict[str, str],
-                             now: datetime | None = None) -> list[str]:
+                             now: datetime | None = None,
+                             reference_root: str | Path | None = None) -> list[str]:
     now = now or datetime.now(timezone.utc)
     if not isinstance(document, dict):
         return ["Reference-panel manifest must be an object."]
@@ -225,10 +235,29 @@ def validate_reference_panel(document: Any, trusted_reviewers: dict[str, str],
         issues.append("Reference panel must list at least one provenance record.")
     else:
         for idx, ref in enumerate(refs):
-            if not isinstance(ref, dict) or set(ref) != {"source", "accession_version", "sha256"}:
+            if not isinstance(ref, dict) or set(ref) != {"source", "accession_version", "path", "bytes", "sha256"}:
                 issues.append(f"Reference record {idx} has missing or unknown provenance fields.")
-            elif not all(isinstance(ref[k], str) and ref[k] for k in ("source", "accession_version")) or not SHA256_RE.fullmatch(str(ref["sha256"])):
+            elif not all(isinstance(ref[k], str) and ref[k] for k in ("source", "accession_version", "path")) or not SHA256_RE.fullmatch(str(ref["sha256"])) or not isinstance(ref["bytes"], int) or isinstance(ref["bytes"], bool) or ref["bytes"] <= 0:
                 issues.append(f"Reference record {idx} has invalid provenance or digest.")
+            elif reference_root is None:
+                issues.append("Reference-byte integrity root is required; metadata approval alone is insufficient.")
+            else:
+                root = Path(reference_root).resolve()
+                path = root / ref["path"]
+                try:
+                    path.resolve(strict=True).relative_to(root)
+                    if path.is_symlink() or not path.is_file():
+                        raise ValueError("not a regular file")
+                    digest = hashlib.sha256()
+                    size = 0
+                    with path.open("rb") as stream:
+                        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                            size += len(chunk)
+                            digest.update(chunk)
+                    if size != ref["bytes"] or digest.hexdigest() != ref["sha256"]:
+                        issues.append(f"Reference-byte integrity mismatch for record {idx}.")
+                except (OSError, ValueError):
+                    issues.append(f"Reference bytes are missing or unsafe for record {idx}.")
     approval = document.get("approval")
     if isinstance(approval, dict):
         status = approval.get("status")
@@ -238,15 +267,30 @@ def validate_reference_panel(document: Any, trusted_reviewers: dict[str, str],
             issues.extend(_check_approval(
                 str(document.get("snapshot_id", "")), str(document.get("snapshot_id", "")),
                 "reference_panel", approval, trusted_reviewers, now,
+                _reference_panel_binding_digest(document),
             ))
     else:
         issues.append("Reference-panel independent approval record is missing.")
     return issues
 
 
+def _reference_panel_binding_digest(document: dict[str, Any]) -> str:
+    content = {key: value for key, value in document.items() if key != "approval"}
+    return hashlib.sha256(json.dumps(content, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _manifest_binding_digest(document: dict[str, Any]) -> str:
+    """Bind every non-approval field, including reads, provenance, truth review and reference panel."""
+    content = {key: value for key, value in document.items() if key != "gates"}
+    return hashlib.sha256(json.dumps(content, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
 def validate_manifest(document: Any, analysis_root: str | Path,
                       trusted_reviewers: dict[str, str] | None = None,
-                      now: datetime | None = None, verify_files: bool = True) -> dict[str, Any]:
+                      now: datetime | None = None, verify_files: bool = True,
+                      scan_root: str | Path | None = None,
+                      reference_manifest: Any = None,
+                      reference_root: str | Path | None = None) -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
     trusted_reviewers = trusted_reviewers or {}
     issues: list[str] = []
@@ -254,6 +298,7 @@ def validate_manifest(document: Any, analysis_root: str | Path,
         return {"decision": "BLOCKED", "issues": ["Manifest must be a JSON object."]}
     issues.extend(_scan_leak_text(json.dumps(document, sort_keys=True), "manifest"))
     top = {"schema_version", "dataset_id", "sample_id", "provenance", "read_input",
+           "reference_panel_sha256",
            "ground_truth_review", "gates"}
     if set(document) != top:
         issues.append("Manifest fields are missing or unknown.")
@@ -264,6 +309,15 @@ def validate_manifest(document: Any, analysis_root: str | Path,
         issues.append("Malformed dataset identifier.")
     if not isinstance(sample_id, str) or not SAMPLE_ID_RE.fullmatch(sample_id):
         issues.append("Malformed opaque sample identifier.")
+    if not isinstance(document.get("reference_panel_sha256"), str) or not SHA256_RE.fullmatch(document.get("reference_panel_sha256", "")):
+        issues.append("Missing or malformed reference-panel content digest.")
+    if reference_manifest is None or reference_root is None:
+        issues.append("Reference-panel metadata and independent byte-integrity evidence are required.")
+    else:
+        issues.extend(validate_reference_panel(reference_manifest, trusted_reviewers, now, reference_root))
+        if isinstance(reference_manifest, dict):
+            if _reference_panel_binding_digest(reference_manifest) != document.get("reference_panel_sha256"):
+                issues.append("Reference-panel content does not match the manifest-bound digest.")
 
     provenance = document.get("provenance")
     if not isinstance(provenance, dict) or set(provenance) != {"source_catalog", "custodian_record_ref", "accession_refs"}:
@@ -358,7 +412,8 @@ def validate_manifest(document: Any, analysis_root: str | Path,
         issues.append("Manifest must contain exactly the mandatory approval gates.")
     else:
         for gate in GATES:
-            issues.extend(_check_approval(dataset_id or "", sample_id or "", gate, gates[gate], trusted_reviewers, now))
+            issues.extend(_check_approval(dataset_id or "", sample_id or "", gate, gates[gate],
+                                          trusted_reviewers, now, _manifest_binding_digest(document)))
             if gate == "negative_control_review" and isinstance(gates[gate], dict) and gates[gate].get("status") == "NOT_APPLICABLE":
                 if isinstance(gt, dict) and gt.get("negative_control_assessment") != "NOT_CLAIMED":
                     issues.append("Negative-control review cannot be N/A when the manifest records a control assessment.")
@@ -366,6 +421,10 @@ def validate_manifest(document: Any, analysis_root: str | Path,
         if isinstance(gt, dict) and gt.get("full_length_reconstruction") == "REVIEWED" and gates.get("ground_truth_review", {}).get("status") != "APPROVED":
             issues.append("Full-length reconstruction evidence lacks an approved independent review.")
 
+    if scan_root is None:
+        issues.append("Required operator-artifact disclosure scan root was not supplied.")
+    else:
+        issues.extend(scan_operator_artifacts(scan_root))
     decision = "READY_FOR_SEPARATELY_AUTHORISED_BENCHMARK" if not issues else "BLOCKED"
     return {"schema_version": SCHEMA_VERSION, "decision": decision, "dataset_id": dataset_id,
             "sample_id": sample_id, "issues": sorted(set(issues))}
@@ -490,7 +549,9 @@ def main(argv: list[str] | None = None) -> int:
     validate.add_argument("--manifest", required=True)
     validate.add_argument("--trust-store")
     validate.add_argument("--analysis-root", required=True)
-    validate.add_argument("--scan-root")
+    validate.add_argument("--scan-root", required=True)
+    validate.add_argument("--reference-manifest", required=True)
+    validate.add_argument("--reference-root", required=True)
     validate.add_argument("--forbidden-token", action="append", default=[])
     validate.add_argument("--json-out")
     fastq = sub.add_parser("fastq-check", help="Check local FASTQ syntax and paired-read consistency.")
@@ -500,12 +561,18 @@ def main(argv: list[str] | None = None) -> int:
     ref = sub.add_parser("reference-check", help="Validate a reference-panel approval manifest.")
     ref.add_argument("--manifest", required=True)
     ref.add_argument("--trust-store")
+    ref.add_argument("--reference-root", required=True)
     args = parser.parse_args(argv)
     try:
         trust = _load_trust_store(getattr(args, "trust_store", None))
         if args.command == "validate":
             document = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-            result = validate_manifest(document, args.analysis_root, trust)
+            reference_manifest = None
+            if args.reference_manifest:
+                reference_manifest = json.loads(Path(args.reference_manifest).read_text(encoding="utf-8"))
+            result = validate_manifest(document, args.analysis_root, trust, scan_root=args.scan_root,
+                                        reference_manifest=reference_manifest,
+                                        reference_root=args.reference_root)
             if args.scan_root:
                 result["issues"].extend(scan_operator_artifacts(args.scan_root, args.forbidden_token))
                 result["issues"] = sorted(set(result["issues"]))
@@ -516,7 +583,7 @@ def main(argv: list[str] | None = None) -> int:
             result = validate_fastq(args.r1, args.r2, thresholds)
         else:
             document = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-            issues = validate_reference_panel(document, trust)
+            issues = validate_reference_panel(document, trust, reference_root=args.reference_root)
             result = {"decision": "APPROVED" if not issues else "BLOCKED", "issues": issues}
         print(human_report(result), end="")
         if getattr(args, "json_out", None):

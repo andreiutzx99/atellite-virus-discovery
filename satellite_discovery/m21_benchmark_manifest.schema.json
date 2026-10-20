@@ -4,7 +4,7 @@
   "title": "M21 blinded benchmark readiness manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "dataset_id", "sample_id", "provenance", "read_input", "ground_truth_review", "gates"],
+  "required": ["schema_version", "dataset_id", "sample_id", "provenance", "read_input", "reference_panel_sha256", "ground_truth_review", "gates"],
   "properties": {
     "schema_version": {"const": "m21-benchmark-manifest-v1"},
     "dataset_id": {"type": "string", "pattern": "^DS-[A-Z0-9]{10}$"},
@@ -27,6 +27,7 @@
         "files": {"type": "array", "items": {"$ref": "#/$defs/readFile"}}
       }
     },
+    "reference_panel_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "ground_truth_review": {
       "type": "object", "additionalProperties": false,
       "required": ["assayed_region_evidence", "full_length_reconstruction", "negative_control_assessment"],
@@ -63,6 +64,7 @@
         "approved_at": {"type": "string", "format": "date-time"},
         "expires_at": {"type": "string", "format": "date-time"},
         "evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "signature_ed25519": {"type": "string"}
       }
     },

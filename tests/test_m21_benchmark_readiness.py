@@ -9,8 +9,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+try:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+except ImportError:
+    serialization = Ed25519PrivateKey = None
 
 from satellite_discovery import m21_benchmark_readiness as m21
 
@@ -21,12 +24,19 @@ SAMPLE_ID = "BLD-0123456789ABCDEF01234567"
 REVIEWER_ID = "REV-TEST0001"
 
 
+@unittest.skipUnless(Ed25519PrivateKey is not None, "cryptography is unavailable")
 class M21BenchmarkReadinessTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.analysis = self.root / "analysis"
         self.analysis.mkdir()
+        self.operator = self.root / "operator"
+        self.operator.mkdir()
+        self.reference_root = self.root / "reference-bytes"
+        self.reference_root.mkdir()
+        self.reference_bytes = b">synthetic-reference\nACGTACGT\n"
+        (self.reference_root / "panel.fa").write_bytes(self.reference_bytes)
         self.private = Ed25519PrivateKey.generate()
         public = self.private.public_key().public_bytes(
             serialization.Encoding.Raw, serialization.PublicFormat.Raw
@@ -40,7 +50,7 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def approval(self, gate, status="APPROVED", expires="2027-01-01T00:00:00Z"):
+    def approval(self, gate, status="APPROVED", expires="2027-01-01T00:00:00Z", manifest_digest=None):
         record = {
             "status": status,
             "approval_id": "APR-TEST00000001",
@@ -48,14 +58,34 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
             "approved_at": "2026-10-01T00:00:00Z",
             "expires_at": expires,
             "evidence_sha256": hashlib.sha256((gate + "-evidence").encode()).hexdigest(),
+            "manifest_sha256": manifest_digest or "0" * 64,
         }
         record["signature_ed25519"] = base64.b64encode(
             self.private.sign(m21._approval_payload(DATASET_ID, SAMPLE_ID, gate, record))
         ).decode("ascii")
         return record
 
+    def reference_panel(self):
+        panel = {
+            "schema_version": m21.REFERENCE_SCHEMA_VERSION,
+            "snapshot_id": "REF-SYNTH00001",
+            "references": [{"source": "synthetic", "accession_version": "SYNTH.1",
+                            "path": "panel.fa", "bytes": len(self.reference_bytes),
+                            "sha256": hashlib.sha256(self.reference_bytes).hexdigest()}],
+            "target_exclusion_policy_id": "POL-SYNTH00001",
+        }
+        digest = m21._reference_panel_binding_digest(panel)
+        approval = self.approval("reference_panel", manifest_digest=digest)
+        approval["signature_ed25519"] = base64.b64encode(
+            self.private.sign(m21._approval_payload(
+                "REF-SYNTH00001", "REF-SYNTH00001", "reference_panel", approval
+            ))
+        ).decode("ascii")
+        panel["approval"] = approval
+        return panel
+
     def manifest(self):
-        return {
+        document = {
             "schema_version": m21.SCHEMA_VERSION,
             "dataset_id": DATASET_ID,
             "sample_id": SAMPLE_ID,
@@ -64,6 +94,7 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
                 "custodian_record_ref": "SRC-SYNTH00001",
                 "accession_refs": ["ACCREF-SYNTH00001"],
             },
+            "reference_panel_sha256": m21._reference_panel_binding_digest(self.reference_panel()),
             "read_input": {
                 "layout": "PAIRED",
                 "format": "FASTQ",
@@ -79,71 +110,97 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
                 "full_length_reconstruction": "NOT_ASSESSED",
                 "negative_control_assessment": "NOT_CLAIMED",
             },
-            "gates": {gate: self.approval(gate) for gate in m21.GATES},
         }
+        digest = m21._manifest_binding_digest(document)
+        document["gates"] = {gate: self.approval(gate, manifest_digest=digest) for gate in m21.GATES}
+        return document
+
+    def validate(self, document, **kwargs):
+        return m21.validate_manifest(
+            document, self.analysis, self.trust, NOW, scan_root=self.operator,
+            reference_manifest=self.reference_panel(), reference_root=self.reference_root, **kwargs
+        )
 
     def test_valid_signed_synthetic_manifest_can_reach_ready_state(self):
-        result = m21.validate_manifest(self.manifest(), self.analysis, self.trust, NOW)
+        result = self.validate(self.manifest())
         self.assertEqual(result["decision"], "READY_FOR_SEPARATELY_AUTHORISED_BENCHMARK")
         self.assertEqual(result["issues"], [])
+
+    def test_manifest_content_tampering_invalidates_every_gate_signature(self):
+        document = self.manifest()
+        document["provenance"]["source_catalog"] = "changed-synthetic-source"
+        result = self.validate(document)
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertTrue(any("not bound to the current manifest" in issue for issue in result["issues"]))
+
+    def test_missing_crypto_and_missing_disclosure_scan_fail_closed(self):
+        document = self.manifest()
+        with patch.object(m21, "Ed25519PublicKey", None):
+            result = self.validate(document)
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertTrue(any("cryptography dependency unavailable" in issue for issue in result["issues"]))
+        result = m21.validate_manifest(
+            self.manifest(), self.analysis, self.trust, NOW,
+            reference_manifest=self.reference_panel(), reference_root=self.reference_root,
+        )
+        self.assertTrue(any("disclosure scan root" in issue for issue in result["issues"]))
 
     def test_default_missing_gate_and_pending_approval_block(self):
         doc = self.manifest()
         del doc["gates"]["data_use"]
-        result = m21.validate_manifest(doc, self.analysis, self.trust, NOW)
+        result = self.validate(doc)
         self.assertEqual(result["decision"], "BLOCKED")
         self.assertTrue(any("mandatory approval gates" in item for item in result["issues"]))
         doc = self.manifest()
         doc["gates"]["data_use"] = {"status": "PENDING"}
-        self.assertEqual(m21.validate_manifest(doc, self.analysis, self.trust, NOW)["decision"], "BLOCKED")
+        self.assertEqual(self.validate(doc)["decision"], "BLOCKED")
 
     def test_expired_or_untrusted_approval_blocks(self):
         doc = self.manifest()
         doc["gates"]["data_use"] = self.approval("data_use", expires="2026-10-19T00:00:00Z")
-        result = m21.validate_manifest(doc, self.analysis, self.trust, NOW)
+        result = self.validate(doc)
         self.assertTrue(any("expired" in item for item in result["issues"]))
         doc["gates"]["data_use"] = self.approval("data_use")
-        result = m21.validate_manifest(doc, self.analysis, {}, NOW)
+        result = m21.validate_manifest(doc, self.analysis, {}, NOW, scan_root=self.operator,
+                                       reference_manifest=self.reference_panel(), reference_root=self.reference_root)
         self.assertTrue(any("external trust store" in item for item in result["issues"]))
 
     def test_metadata_only_and_bad_checksum_never_count_as_byte_verified(self):
         doc = self.manifest()
         doc["read_input"]["files"][0]["integrity_status"] = "METADATA_ONLY"
-        self.assertEqual(m21.validate_manifest(doc, self.analysis, self.trust, NOW)["decision"], "BLOCKED")
+        self.assertEqual(self.validate(doc)["decision"], "BLOCKED")
         doc = self.manifest()
         doc["read_input"]["files"][0]["sha256"] = "0" * 64
-        self.assertTrue(any("checksum mismatch" in x for x in m21.validate_manifest(doc, self.analysis, self.trust, NOW)["issues"]))
+        self.assertTrue(any("checksum mismatch" in x for x in self.validate(doc)["issues"]))
 
     def test_unapproved_negative_control_assessment_stays_blocked(self):
         doc = self.manifest()
         doc["ground_truth_review"]["negative_control_assessment"] = "REVIEWED"
         doc["gates"]["negative_control_review"] = {"status": "PENDING"}
-        result = m21.validate_manifest(doc, self.analysis, self.trust, NOW)
+        result = self.validate(doc)
         self.assertEqual(result["decision"], "BLOCKED")
         self.assertTrue(any("negative_control_review" in issue for issue in result["issues"]))
 
     def test_negative_control_not_applicable_still_requires_signed_evidence(self):
         doc = self.manifest()
         doc["gates"]["negative_control_review"] = {"status": "NOT_APPLICABLE"}
-        result = m21.validate_manifest(doc, self.analysis, self.trust, NOW)
+        result = self.validate(doc)
         self.assertEqual(result["decision"], "BLOCKED")
         self.assertTrue(any("approval_id" in issue for issue in result["issues"]))
 
     def test_accession_leakage_in_manifest_is_blocked(self):
         doc = self.manifest()
         doc["provenance"]["source_catalog"] = "SRA SRR123456"
-        self.assertTrue(any("accession-like" in issue for issue in m21.validate_manifest(
-            doc, self.analysis, self.trust, NOW
-        )["issues"]))
+        self.assertTrue(any("accession-like" in issue for issue in self.validate(doc)["issues"]))
 
     def test_format_mismatch_and_malformed_manifest_types_fail_closed(self):
         doc = self.manifest()
         doc["read_input"]["files"][0]["path"] = "r1.fq.gz"
-        result = m21.validate_manifest(doc, self.analysis, self.trust, NOW)
+        result = self.validate(doc)
         self.assertTrue(any("extension does not match" in issue for issue in result["issues"]))
         doc = self.manifest()
         doc["read_input"]["layout"] = []
-        result = m21.validate_manifest(doc, self.analysis, self.trust, NOW)
+        result = self.validate(doc)
         self.assertEqual(result["decision"], "BLOCKED")
 
     def test_malformed_identifiers_and_duplicate_opaque_ids(self):
@@ -151,7 +208,7 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
         self.assertTrue(m21.validate_opaque_ids([SAMPLE_ID, SAMPLE_ID]))
         doc = self.manifest()
         doc["sample_id"] = "Px15"
-        self.assertTrue(any("opaque sample" in x for x in m21.validate_manifest(doc, self.analysis, self.trust, NOW)["issues"]))
+        self.assertTrue(any("opaque sample" in x for x in self.validate(doc)["issues"]))
 
     def test_paired_fastq_stats_and_pair_mismatch(self):
         result = m21.validate_fastq(self.analysis / "r1.fastq", self.analysis / "r2.fastq")
@@ -184,34 +241,17 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
 
     def test_reference_panel_requires_provenance_and_signed_independent_approval(self):
-        approval = {
-            "status": "APPROVED",
-            "approval_id": "APR-TEST00000001",
-            "reviewer_id": REVIEWER_ID,
-            "approved_at": "2026-10-01T00:00:00Z",
-            "expires_at": "2027-01-01T00:00:00Z",
-            "evidence_sha256": hashlib.sha256(b"reference-panel-evidence").hexdigest(),
-        }
-        approval["signature_ed25519"] = base64.b64encode(
-            self.private.sign(m21._approval_payload(
-                "REF-SYNTH00001", "REF-SYNTH00001", "reference_panel", approval
-            ))
-        ).decode("ascii")
-        panel = {
-            "schema_version": m21.REFERENCE_SCHEMA_VERSION,
-            "snapshot_id": "REF-SYNTH00001",
-            "references": [{"source": "synthetic", "accession_version": "SYNTH.1",
-                            "sha256": "a" * 64}],
-            "target_exclusion_policy_id": "POL-SYNTH00001",
-            "approval": approval,
-        }
-        self.assertEqual(m21.validate_reference_panel(panel, self.trust, NOW), [])
+        panel = self.reference_panel()
+        self.assertEqual(m21.validate_reference_panel(panel, self.trust, NOW, self.reference_root), [])
+        (self.reference_root / "panel.fa").write_bytes(b">altered\nTTTT\n")
+        self.assertTrue(any("integrity mismatch" in issue for issue in
+                            m21.validate_reference_panel(panel, self.trust, NOW, self.reference_root)))
         panel["approval"] = {"status": "PENDING"}
-        self.assertTrue(m21.validate_reference_panel(panel, self.trust, NOW))
+        self.assertTrue(m21.validate_reference_panel(panel, self.trust, NOW, self.reference_root))
 
     def test_disclosure_scan_rejects_identifiers_labels_private_keys(self):
         root = self.root / "operator"
-        root.mkdir()
+        root.mkdir(exist_ok=True)
         (root / "settings.json").write_text(
             json.dumps({"truth_label": "positive", "private_key": "-----BEGIN PRIVATE KEY-----"}),
             encoding="utf-8",
@@ -237,13 +277,16 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
     def test_readiness_command_has_no_network_or_stage_side_effects(self):
         manifest_path = self.analysis / "manifest.json"
         manifest_path.write_text(json.dumps(self.manifest()), encoding="utf-8")
+        (self.analysis / "reference.json").write_text(json.dumps(self.reference_panel()), encoding="utf-8")
         trust_path = self.analysis / "trust.json"
         trust_path.write_text(json.dumps(self.trust), encoding="utf-8")
         with patch("socket.create_connection", side_effect=AssertionError("network attempted")) as network:
             with patch("subprocess.Popen", side_effect=AssertionError("stage launched")) as process:
                 code = m21.main([
                     "validate", "--manifest", str(manifest_path), "--analysis-root", str(self.analysis),
-                    "--trust-store", str(trust_path),
+                "--trust-store", str(trust_path), "--scan-root", str(self.operator),
+                "--reference-manifest", str(self.analysis / "reference.json"),
+                "--reference-root", str(self.reference_root),
                 ])
         self.assertEqual(code, 0)
         network.assert_not_called()
@@ -256,10 +299,13 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
         path.write_text(json.dumps(doc), encoding="utf-8")
         trust = self.analysis / "trust.json"
         trust.write_text(json.dumps(self.trust), encoding="utf-8")
+        (self.analysis / "reference.json").write_text(json.dumps(self.reference_panel()), encoding="utf-8")
         with patch("sys.stdout"):
             code = m21.main([
                 "validate", "--manifest", str(path), "--analysis-root", str(self.analysis),
-                "--trust-store", str(trust),
+                "--trust-store", str(trust), "--scan-root", str(self.operator),
+                "--reference-manifest", str(self.analysis / "reference.json"),
+                "--reference-root", str(self.reference_root),
             ])
         self.assertNotEqual(code, 0)
 
