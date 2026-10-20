@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 control qualification record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "control_id", "control_class", "evidence_strength", "helper_status", "sequence_completeness", "study_group", "sensitivity_status", "specificity_status", "evaluation_status", "denominator_inclusion", "candidate_level_fp_reviewed", "sample_level_fp_reviewed"],
+  "properties": {
+    "schema_version": {"const": "m21-control-qualification-v1"},
+    "control_id": {"type": "string", "pattern": "^CTL-[A-Z0-9]{10}$"},
+    "control_class": {"enum": ["POSITIVE", "SCREEN_NEGATIVE", "HELPER_COMPARATOR", "OTHER"]},
+    "evidence_strength": {"enum": ["HIGH", "MODERATE", "LIMITED", "PENDING"]},
+    "helper_status": {"enum": ["POSITIVE", "NEGATIVE", "UNKNOWN", "NOT_APPLICABLE"]},
+    "sequence_completeness": {"enum": ["TERMINAL_VERIFIED", "NEAR_COMPLETE", "NOT_ASSESSED"]},
+    "study_group": {"enum": ["WITHIN_STUDY", "INDEPENDENT"]},
+    "sensitivity_status": {"enum": ["ADEQUATE", "LIMITED", "UNKNOWN", "NOT_APPLICABLE"]},
+    "specificity_status": {"enum": ["ADEQUATE", "LIMITED", "UNKNOWN", "NOT_ASSESSED"]},
+    "evaluation_status": {"enum": ["EVALUABLE", "UNEVALUABLE", "PENDING"]},
+    "denominator_inclusion": {"enum": ["INCLUDE", "EXCLUDE"]},
+    "candidate_level_fp_reviewed": {"type": "boolean"},
+    "sample_level_fp_reviewed": {"type": "boolean"}
+  }
+}

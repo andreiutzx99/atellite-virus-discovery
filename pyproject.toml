@@ -33,6 +33,8 @@ satellite_discovery = [
     "stage_cache_identity_compatibility.txt",
     "m21_benchmark_manifest.schema.json",
     "m21_reference_panel_manifest.schema.json",
+    "m21_reviewer_trust_store.schema.json",
+    "m21_control_qualification.schema.json",
 ]
 
 [project.optional-dependencies]

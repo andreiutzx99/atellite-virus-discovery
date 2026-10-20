@@ -11,7 +11,10 @@ import os
 import re
 import secrets
 import stat
+import sqlite3
 import sys
+import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -31,6 +34,7 @@ OPAQUE_REF_RE = re.compile(r"(?:SRC|ACCREF)-[A-Z0-9]{10}\Z")
 SHA256_RE = re.compile(r"[a-f0-9]{64}\Z")
 APPROVAL_ID_RE = re.compile(r"APR-[A-Z0-9]{12}\Z")
 REVIEWER_ID_RE = re.compile(r"REV-[A-Z0-9]{8}\Z")
+KEY_ID_RE = re.compile(r"KEY-[A-Z0-9]{10}\Z")
 SIGNATURE_RE = re.compile(r"[A-Za-z0-9+/]{86}==?\Z")
 GATES = (
     "metadata_verification", "file_byte_verification", "data_use",
@@ -44,8 +48,10 @@ LEAK_KEYS = re.compile(
     re.IGNORECASE,
 )
 ACCESSION_RE = re.compile(r"\b(?:SRR|SRX|SAMN|PV)\d{5,}\b", re.IGNORECASE)
+SAMPLE_LABEL_RE = re.compile(r"\b(?:Px15|PxBG2|Px31)\b", re.IGNORECASE)
+BIO_PATH_LEAK_RE = re.compile(r"(?:px15|pxbg2|px31|truth[-_ ]?key|unblind(?:ed)?|positive[-_ ]?control|negative[-_ ]?control)", re.IGNORECASE)
 PRIVATE_KEY_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")
-TEXT_SUFFIXES = {".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".txt", ".md", ".csv"}
+TEXT_SUFFIXES = {".json", ".jsonl", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".txt", ".md", ".csv", ".tsv", ".xml"}
 
 
 def generate_opaque_sample_id() -> str:
@@ -67,16 +73,20 @@ def validate_opaque_ids(ids: list[str]) -> list[str]:
 
 
 def write_sealed_truth_key(mapping: dict[str, str], key_path: str | Path,
-                           analysis_root: str | Path) -> None:
-    """Write a custodian-only mapping outside the analysis tree, mode 0600, no overwrite."""
+                           analysis_root: str | Path,
+                           operator_root: str | Path | None = None) -> None:
+    """Write a custodian-only mapping outside analysis/operator trees, mode 0600, no overwrite."""
     if os.name == "nt":
         raise OSError("Production truth-key creation is disabled on Windows; secure ACLs are not verified.")
     target = Path(key_path).absolute()
     root = Path(analysis_root).resolve()
+    operator_workspace = Path(operator_root or analysis_root).resolve()
     resolved_parent = target.parent.resolve(strict=True)
     resolved_target = resolved_parent / target.name
     if resolved_target == root or root in resolved_target.parents:
         raise ValueError("Truth key must be stored outside the analysis workspace.")
+    if resolved_target == operator_workspace or operator_workspace in resolved_target.parents:
+        raise ValueError("Truth key must be stored outside the operator workspace.")
     if target.exists() or target.is_symlink():
         raise FileExistsError("Truth-key destination already exists.")
     if not isinstance(mapping, dict) or not mapping or not all(
@@ -111,6 +121,7 @@ def _approval_payload(dataset_id: str, sample_id: str, gate: str, record: dict[s
         "expires_at": record.get("expires_at"),
         "evidence_sha256": record.get("evidence_sha256"),
         "manifest_sha256": record.get("manifest_sha256"),
+        "key_id": record.get("key_id"),
     }
     return json.dumps(signed, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
@@ -132,7 +143,7 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     if not isinstance(record, dict):
         return [f"{prefix}: missing approval record."]
     allowed = {"status", "approval_id", "reviewer_id", "approved_at", "expires_at",
-               "evidence_sha256", "manifest_sha256", "signature_ed25519"}
+               "evidence_sha256", "manifest_sha256", "key_id", "signature_ed25519"}
     issues = [f"{prefix}: unknown approval fields."] if set(record) - allowed else []
     status = record.get("status")
     if not isinstance(status, str) or status not in APPROVAL_STATUSES:
@@ -142,6 +153,7 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     for name, pattern in (
         ("approval_id", APPROVAL_ID_RE), ("reviewer_id", REVIEWER_ID_RE),
         ("evidence_sha256", SHA256_RE), ("manifest_sha256", SHA256_RE),
+        ("key_id", KEY_ID_RE),
         ("signature_ed25519", SIGNATURE_RE),
     ):
         if not isinstance(record.get(name), str) or not pattern.fullmatch(record[name]):
@@ -154,14 +166,30 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     elif approved_at > now or expires_at <= now or expires_at <= approved_at:
         issues.append(f"{prefix}: approval is future-dated, expired, or has an invalid expiry.")
     reviewer = record.get("reviewer_id")
-    key_text = trusted_reviewers.get(reviewer) if isinstance(reviewer, str) else None
-    if key_text is None:
+    reviewer_record = trusted_reviewers.get(reviewer) if isinstance(reviewer, str) else None
+    if not isinstance(reviewer_record, dict):
         issues.append(f"{prefix}: reviewer is not in the external trust store.")
+    elif record.get("key_id") != reviewer_record.get("key_id"):
+        issues.append(f"{prefix}: approval uses a stale or rotated reviewer key.")
+    elif reviewer_record.get("revoked") is not False:
+        issues.append(f"{prefix}: reviewer key is revoked or has no explicit active status.")
+    elif reviewer_record.get("role") != gate or gate not in reviewer_record.get("scopes", []):
+        issues.append(f"{prefix}: reviewer role or permitted scope does not authorize this gate.")
+    elif approved_at and (
+        approved_at < _parse_time(reviewer_record["valid_from"])
+        or approved_at >= _parse_time(reviewer_record["valid_until"])
+    ):
+        issues.append(f"{prefix}: approval was signed outside the reviewer key validity period.")
+    elif not (_parse_time(reviewer_record.get("valid_from")) and _parse_time(reviewer_record.get("valid_until"))
+              and _parse_time(reviewer_record["valid_from"]) <= now < _parse_time(reviewer_record["valid_until"])):
+        issues.append(f"{prefix}: reviewer key is outside its validity period.")
     elif Ed25519PublicKey is None:
         issues.append(f"{prefix}: cryptography dependency unavailable; approval verification cannot run.")
     elif not issues:
         try:
-            key = Ed25519PublicKey.from_public_bytes(base64.b64decode(key_text, validate=True))
+            key = Ed25519PublicKey.from_public_bytes(
+                base64.b64decode(reviewer_record["public_key_ed25519"], validate=True)
+            )
             signature = base64.b64decode(record["signature_ed25519"], validate=True)
             key.verify(signature, _approval_payload(dataset_id, sample_id, gate, record))
         except (ValueError, InvalidSignature, TypeError):
@@ -169,15 +197,41 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     return issues
 
 
-def _load_trust_store(path: str | Path | None) -> dict[str, str]:
+def _load_trust_store(path: str | Path | None) -> dict[str, dict[str, Any]]:
     if path is None:
         return {}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or any(
-        not REVIEWER_ID_RE.fullmatch(str(k)) or not isinstance(v, str) for k, v in data.items()
-    ):
+    if not isinstance(data, dict) or set(data) != {"schema_version", "reviewers"} or data.get("schema_version") != "m21-reviewer-trust-store-v1" or not isinstance(data.get("reviewers"), list):
         raise ValueError("Malformed reviewer trust store.")
-    return data
+    reviewers = {}
+    seen_keys = set()
+    for item in data["reviewers"]:
+        required = {"reviewer_id", "key_id", "public_key_ed25519", "role", "scopes",
+                    "valid_from", "valid_until", "revoked"}
+        if not isinstance(item, dict) or set(item) != required:
+            raise ValueError("Malformed reviewer trust-store record.")
+        if (not isinstance(item["reviewer_id"], str) or not REVIEWER_ID_RE.fullmatch(item["reviewer_id"])
+                or not isinstance(item["key_id"], str) or not KEY_ID_RE.fullmatch(item["key_id"])
+                or not isinstance(item["public_key_ed25519"], str)
+                or not isinstance(item["role"], str) or not isinstance(item["scopes"], list)
+                or any(scope not in GATES for scope in item["scopes"])
+                or not isinstance(item["revoked"], bool)
+                or not _parse_time(item["valid_from"]) or not _parse_time(item["valid_until"])
+                or item["reviewer_id"] in reviewers):
+            raise ValueError("Invalid or duplicate reviewer trust-store record.")
+        try:
+            raw = base64.b64decode(item["public_key_ed25519"], validate=True)
+        except ValueError as exc:
+            raise ValueError("Malformed reviewer public key.") from exc
+        if len(raw) != 32:
+            raise ValueError("Reviewer Ed25519 public keys must be 32 bytes.")
+        fingerprint = hashlib.sha256(raw).hexdigest()
+        if item["key_id"] in seen_keys or fingerprint in seen_keys:
+            raise ValueError("Reviewer key IDs and public keys must be unique across independent roles.")
+        seen_keys.add(item["key_id"])
+        seen_keys.add(fingerprint)
+        reviewers[item["reviewer_id"]] = item
+    return reviewers
 
 
 def _scan_leak_text(text: str, location: str) -> list[str]:
@@ -188,6 +242,8 @@ def _scan_leak_text(text: str, location: str) -> list[str]:
         issues.append(f"Disallowed truth/identity field detected in {location}.")
     if ACCESSION_RE.search(text):
         issues.append(f"Biological accession-like identifier detected in {location}.")
+    if SAMPLE_LABEL_RE.search(text):
+        issues.append(f"Biological sample label detected in {location}.")
     return issues
 
 
@@ -195,11 +251,13 @@ def scan_operator_artifacts(root: str | Path, forbidden_tokens: list[str] | None
     root = Path(root)
     issues: list[str] = []
     tokens = [x.casefold() for x in (forbidden_tokens or []) if x]
-    if not root.is_dir():
+    if root.is_symlink() or not root.is_dir():
         return ["Operator artifact directory is missing."]
     for path in sorted(root.rglob("*")):
         rel = path.relative_to(root).as_posix()
         issues.extend(_scan_leak_text(rel, rel))
+        if BIO_PATH_LEAK_RE.search(rel):
+            issues.append(f"Meaningful biological or truth-bearing label detected in path {rel}.")
         if path.is_symlink():
             issues.append(f"Symlink in operator artifact tree: {rel}.")
         elif path.is_file() and path.suffix.lower() in TEXT_SUFFIXES:
@@ -212,6 +270,25 @@ def scan_operator_artifacts(root: str | Path, forbidden_tokens: list[str] | None
             if any(token in text.casefold() for token in tokens):
                 issues.append(f"Configured disclosure token detected in {rel}.")
     return sorted(set(issues))
+
+
+def operator_inventory_digest(root: str | Path) -> str:
+    """Hash sorted paths and file bytes without loading artifacts into memory."""
+    root = Path(root)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("Operator artifact directory is missing.")
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        relative = path.relative_to(root).as_posix().encode("utf-8")
+        digest.update(len(relative).to_bytes(8, "big"))
+        digest.update(relative)
+        if path.is_symlink():
+            digest.update(b"SYMLINK")
+        elif path.is_file():
+            with path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+    return digest.hexdigest()
 
 
 def validate_reference_panel(document: Any, trusted_reviewers: dict[str, str],
@@ -311,10 +388,12 @@ def validate_manifest(document: Any, analysis_root: str | Path,
         issues.append("Malformed opaque sample identifier.")
     if not isinstance(document.get("reference_panel_sha256"), str) or not SHA256_RE.fullmatch(document.get("reference_panel_sha256", "")):
         issues.append("Missing or malformed reference-panel content digest.")
+    reference_issues: list[str] = []
     if reference_manifest is None or reference_root is None:
         issues.append("Reference-panel metadata and independent byte-integrity evidence are required.")
     else:
-        issues.extend(validate_reference_panel(reference_manifest, trusted_reviewers, now, reference_root))
+        reference_issues = validate_reference_panel(reference_manifest, trusted_reviewers, now, reference_root)
+        issues.extend(reference_issues)
         if isinstance(reference_manifest, dict):
             if _reference_panel_binding_digest(reference_manifest) != document.get("reference_panel_sha256"):
                 issues.append("Reference-panel content does not match the manifest-bound digest.")
@@ -357,6 +436,8 @@ def validate_manifest(document: Any, analysis_root: str | Path,
             path_valid = isinstance(item["path"], str) and not Path(item["path"]).is_absolute() and ".." not in Path(item["path"]).parts
             if not path_valid:
                 issues.append("Read-file path must be relative and traversal-free.")
+            elif BIO_PATH_LEAK_RE.search(item["path"]):
+                issues.append("Read-file path contains a meaningful biological or truth-bearing label.")
             bytes_valid = isinstance(item["bytes"], int) and not isinstance(item["bytes"], bool) and item["bytes"] >= 0
             if not bytes_valid:
                 issues.append("Invalid expected read-file byte count.")
@@ -411,7 +492,14 @@ def validate_manifest(document: Any, analysis_root: str | Path,
     if not isinstance(gates, dict) or set(gates) != set(GATES):
         issues.append("Manifest must contain exactly the mandatory approval gates.")
     else:
+        approval_ids, reviewer_ids = [], []
         for gate in GATES:
+            record = gates[gate]
+            if isinstance(record, dict):
+                if record.get("approval_id"):
+                    approval_ids.append(record["approval_id"])
+                if record.get("reviewer_id"):
+                    reviewer_ids.append(record["reviewer_id"])
             issues.extend(_check_approval(dataset_id or "", sample_id or "", gate, gates[gate],
                                           trusted_reviewers, now, _manifest_binding_digest(document)))
             if gate == "negative_control_review" and isinstance(gates[gate], dict) and gates[gate].get("status") == "NOT_APPLICABLE":
@@ -420,43 +508,109 @@ def validate_manifest(document: Any, analysis_root: str | Path,
         # A positive/reconstruction claim cannot be inferred from a software-ready state.
         if isinstance(gt, dict) and gt.get("full_length_reconstruction") == "REVIEWED" and gates.get("ground_truth_review", {}).get("status") != "APPROVED":
             issues.append("Full-length reconstruction evidence lacks an approved independent review.")
+        if len(approval_ids) != len(set(approval_ids)):
+            issues.append("Approval identifier is reused across gates.")
+        if len(reviewer_ids) != len(set(reviewer_ids)):
+            issues.append("Independent approval roles must use distinct reviewers.")
+        panel_approval = reference_manifest.get("approval") if isinstance(reference_manifest, dict) else None
+        if isinstance(panel_approval, dict) and panel_approval.get("approval_id") in approval_ids:
+            issues.append("Approval identifier is reused between the reference snapshot and dataset gates.")
 
+    blinding_pass = False
     if scan_root is None:
         issues.append("Required operator-artifact disclosure scan root was not supplied.")
     else:
-        issues.extend(scan_operator_artifacts(scan_root))
-    decision = "READY_FOR_SEPARATELY_AUTHORISED_BENCHMARK" if not issues else "BLOCKED"
-    return {"schema_version": SCHEMA_VERSION, "decision": decision, "dataset_id": dataset_id,
-            "sample_id": sample_id, "issues": sorted(set(issues))}
+        scan_issues = scan_operator_artifacts(scan_root)
+        issues.extend(scan_issues)
+        try:
+            inventory_digest = operator_inventory_digest(scan_root)
+            blinding_approval = gates.get("blinding") if isinstance(gates, dict) else None
+            if isinstance(blinding_approval, dict) and blinding_approval.get("evidence_sha256") != inventory_digest:
+                issues.append("Blinding approval does not bind the current operator-artifact inventory.")
+            blinding_pass = not scan_issues and isinstance(blinding_approval, dict) and blinding_approval.get("evidence_sha256") == inventory_digest
+        except (OSError, ValueError):
+            issues.append("Operator-artifact inventory could not be independently verified.")
+    decision = "PREPARATION_COMPLETE_AWAITING_APPROVAL" if not issues else "BLOCKED"
+    audit = []
+    if isinstance(gates, dict):
+        for gate in GATES:
+            record = gates.get(gate)
+            if isinstance(record, dict):
+                audit.append({"gate": gate, **{key: record.get(key) for key in (
+                    "approval_id", "reviewer_id", "key_id", "evidence_sha256", "manifest_sha256"
+                )}})
+    audit_digest = hashlib.sha256(json.dumps(audit, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    ref_ok = isinstance(reference_manifest, dict) and reference_root is not None and not reference_issues
+    return {
+        "schema_version": SCHEMA_VERSION, "decision": decision,
+        "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+        "dataset_id": dataset_id, "sample_id": sample_id,
+        "readiness_categories": {
+            "software_validation": "PASS" if not issues else "FAIL",
+            "dataset_qualification": "PENDING_INDEPENDENT_REVIEW",
+            "reference_integrity": "PASS" if ref_ok else "FAIL_OR_PENDING",
+            "scientific_ground_truth_adequacy": "PENDING_INDEPENDENT_REVIEW",
+            "data_use_permissions": "SIGNED_APPROVAL_REQUIRED",
+            "blinding": "PASS" if blinding_pass else "FAIL",
+            "independent_approvals": "PASS" if not issues else "FAIL",
+            "biological_execution_authorisation": "NOT_GRANTED",
+        },
+        "audit_trail": audit, "audit_trail_sha256": audit_digest,
+        "verification_timestamp": now.isoformat(), "issues": sorted(set(issues)),
+    }
 
 
-def _read_fastq(path: Path, max_records: int) -> tuple[list[tuple[str, str, str]], list[str]]:
-    opener = gzip.open if path.suffix.lower() == ".gz" else open
-    records, issues = [], []
-    try:
-        with opener(path, "rt", encoding="ascii", newline=None) as handle:
-            while True:
-                header = handle.readline()
-                if not header:
-                    break
-                seq, plus, quality = handle.readline(), handle.readline(), handle.readline()
-                if not seq or not plus or not quality:
-                    issues.append("Truncated FASTQ record.")
-                    break
-                header, seq, plus, quality = (x.rstrip("\r\n") for x in (header, seq, plus, quality))
-                if not header.startswith("@") or not header[1:].strip() or not seq or not plus.startswith("+") or len(seq) != len(quality):
-                    issues.append("Malformed FASTQ record or sequence/quality length mismatch.")
-                    break
-                if any(ord(q) < 33 or ord(q) > 126 for q in quality):
-                    issues.append("FASTQ quality character is outside the supported Phred+33 ASCII range.")
-                    break
-                records.append((header[1:], seq, quality))
-                if len(records) > max_records:
-                    issues.append("FASTQ record safety limit exceeded.")
-                    break
-    except (OSError, UnicodeError, EOFError) as exc:
-        issues.append(f"FASTQ read failed: {type(exc).__name__}.")
-    return records, issues
+def validate_control_qualification(document: Any) -> list[str]:
+    """Apply denominator and evidence-strength rules without inferring biological truth."""
+    if not isinstance(document, dict):
+        return ["Control qualification must be an object."]
+    required = {"schema_version", "control_id", "control_class", "evidence_strength",
+                "helper_status", "sequence_completeness", "study_group", "sensitivity_status",
+                "specificity_status", "evaluation_status", "denominator_inclusion",
+                "candidate_level_fp_reviewed", "sample_level_fp_reviewed"}
+    issues = [f"Missing control qualification field: {key}." for key in sorted(required - set(document))]
+    if set(document) - required:
+        issues.append("Unknown control qualification field.")
+    if document.get("schema_version") != "m21-control-qualification-v1":
+        issues.append("Unsupported control qualification schema.")
+    if not re.fullmatch(r"CTL-[A-Z0-9]{10}", str(document.get("control_id", ""))):
+        issues.append("Malformed opaque control identifier.")
+    allowed = {
+        "control_class": {"POSITIVE", "SCREEN_NEGATIVE", "HELPER_COMPARATOR", "OTHER"},
+        "evidence_strength": {"HIGH", "MODERATE", "LIMITED", "PENDING"},
+        "helper_status": {"POSITIVE", "NEGATIVE", "UNKNOWN", "NOT_APPLICABLE"},
+        "sequence_completeness": {"TERMINAL_VERIFIED", "NEAR_COMPLETE", "NOT_ASSESSED"},
+        "sensitivity_status": {"ADEQUATE", "LIMITED", "UNKNOWN", "NOT_APPLICABLE"},
+        "specificity_status": {"ADEQUATE", "LIMITED", "UNKNOWN", "NOT_ASSESSED"},
+        "evaluation_status": {"EVALUABLE", "UNEVALUABLE", "PENDING"},
+        "denominator_inclusion": {"INCLUDE", "EXCLUDE"},
+    }
+    for key, choices in allowed.items():
+        if document.get(key) not in choices:
+            issues.append(f"Invalid control qualification value for {key}.")
+    if document.get("control_class") == "SCREEN_NEGATIVE" and (
+        document.get("sensitivity_status") != "ADEQUATE"
+        or document.get("evidence_strength") in {"LIMITED", "PENDING"}
+    ):
+        if document.get("evaluation_status") != "UNEVALUABLE" or document.get("denominator_inclusion") != "EXCLUDE":
+            issues.append("Sensitivity-limited screen negatives must be unevaluable and excluded from denominators.")
+    if document.get("evaluation_status") != "EVALUABLE" and document.get("denominator_inclusion") != "EXCLUDE":
+        issues.append("Unevaluable or pending controls must be excluded from performance denominators.")
+    if document.get("sequence_completeness") != "TERMINAL_VERIFIED" and document.get("control_class") == "POSITIVE":
+        if document.get("evidence_strength") == "HIGH" and document.get("evaluation_status") == "EVALUABLE":
+            issues.append("Near-complete or unassessed sequence ends cannot support a terminally verified claim.")
+    if document.get("study_group") == "INDEPENDENT" and document.get("helper_status") == "UNKNOWN":
+        issues.append("Independent-study helper status must be explicit or the control remains pending.")
+    if document.get("study_group") not in {"WITHIN_STUDY", "INDEPENDENT"}:
+        issues.append("Study group must distinguish within-study from independent-study validation.")
+    if document.get("control_class") == "POSITIVE" and document.get("evaluation_status") == "EVALUABLE":
+        if document.get("evidence_strength") not in {"HIGH", "MODERATE"}:
+            issues.append("Performance-eligible positive controls require reviewed evidence.")
+    if document.get("control_class") == "HELPER_COMPARATOR" and document.get("helper_status") not in {"POSITIVE", "NEGATIVE"}:
+        issues.append("Helper comparison requires an explicit helper-positive or helper-negative status.")
+    if not isinstance(document.get("candidate_level_fp_reviewed"), bool) or not isinstance(document.get("sample_level_fp_reviewed"), bool):
+        issues.append("False-positive review must distinguish candidate-level and sample-level assessment.")
+    return sorted(set(issues))
 
 
 def _pair_id(header: str) -> tuple[str, str | None]:
@@ -472,62 +626,139 @@ def _pair_id(header: str) -> tuple[str, str | None]:
 
 def validate_fastq(r1: str | Path, r2: str | Path | None = None,
                    thresholds: dict[str, float] | None = None,
-                   max_records: int = 100_000) -> dict[str, Any]:
-    """Inspect local FASTQ only; thresholds are optional and never inferred."""
+                   max_records: int = 100_000_000,
+                   limits: dict[str, float] | None = None) -> dict[str, Any]:
+    """Stream complete FASTQ validation; exact duplicate detection is disk-backed SQLite."""
     thresholds = thresholds or {}
+    limits = limits or {}
     allowed_thresholds = {"min_reads", "min_length", "max_length", "min_mean_quality"}
+    allowed_limits = {"max_records", "max_read_length", "max_decompressed_bytes", "max_runtime_seconds"}
     issues = [f"Unknown QC threshold: {x}." for x in set(thresholds) - allowed_thresholds]
-    first, errors = _read_fastq(Path(r1), max_records)
-    issues.extend(errors)
-    second = None
-    if r2 is not None:
-        second, errors = _read_fastq(Path(r2), max_records)
-        issues.extend(errors)
-        if len(first) != len(second):
-            issues.append("Paired FASTQ files have different record counts.")
-        ids1, ids2 = [_pair_id(r[0]) for r in first], [_pair_id(r[0]) for r in second]
-        if any(x[0] == "" for x in ids1 + ids2) or [x[0] for x in ids1] != [x[0] for x in ids2]:
-            issues.append("Paired FASTQ identifiers are missing or inconsistent.")
-        if any(x[1] == "2" for x in ids1) or any(x[1] == "1" for x in ids2):
-            issues.append("Paired FASTQ mate suffixes are reversed.")
-    for label, records in (("R1", first), ("R2", second or [])):
-        seen = set()
-        for header, _, _ in records:
-            normalized, _mate = _pair_id(header)
-            if normalized in seen:
-                issues.append(f"Duplicate read identifier in {label}.")
-                break
-            seen.add(normalized)
-    lengths = [len(record[1]) for record in first + (second or [])]
-    length_histogram: dict[str, int] = {}
-    for length in lengths:
-        key = str(length)
-        length_histogram[key] = length_histogram.get(key, 0) + 1
-    qualities = [ord(q) - 33 for record in first + (second or []) for q in record[2]]
-    histogram: dict[str, int] = {}
-    for quality in qualities:
-        label = str(quality)
-        histogram[label] = histogram.get(label, 0) + 1
-    stats = {
-        "r1_records": len(first), "r2_records": len(second) if second is not None else None,
-        "read_pairs": len(first) if second is not None and len(first) == len(second) else None,
-        "min_read_length": min(lengths) if lengths else None,
-        "max_read_length": max(lengths) if lengths else None,
-        "read_length_histogram": dict(sorted(length_histogram.items(), key=lambda pair: int(pair[0]))),
-        "mean_phred33_quality": round(sum(qualities) / len(qualities), 4) if qualities else None,
-        "min_phred33_quality": min(qualities) if qualities else None,
-        "max_phred33_quality": max(qualities) if qualities else None,
-        "phred33_histogram": dict(sorted(histogram.items(), key=lambda pair: int(pair[0]))),
-    }
-    if "min_reads" in thresholds and len(first) < thresholds["min_reads"]:
+    issues.extend(f"Unknown validation limit: {x}." for x in set(limits) - allowed_limits)
+    record_limit = int(limits.get("max_records", max_records))
+    read_limit = int(limits.get("max_read_length", 1_000_000))
+    byte_limit = int(limits.get("max_decompressed_bytes", 100_000_000_000))
+    runtime_limit = float(limits.get("max_runtime_seconds", 3600))
+    if min(record_limit, read_limit, byte_limit) <= 0 or runtime_limit <= 0:
+        issues.append("Validation limits must be positive.")
+    started = time.monotonic()
+    counters = {"R1": 0, "R2": 0}
+    bytes_read = {"R1": 0, "R2": 0}
+    lengths: dict[str, int] = {}
+    qualities: dict[str, int] = {}
+    quality_sum = quality_count = 0
+    min_quality = max_quality = None
+    min_length = max_length = None
+    complete = True
+
+    def records(path: Path, label: str, db: sqlite3.Connection):
+        nonlocal min_length, max_length, min_quality, max_quality
+        nonlocal quality_sum, quality_count
+        opener = gzip.open if path.suffix.lower() == ".gz" else open
+        try:
+            with opener(path, "rt", encoding="ascii", newline="") as handle:
+                while True:
+                    if time.monotonic() - started > runtime_limit:
+                        raise TimeoutError("FASTQ validation runtime limit exceeded.")
+                    header = handle.readline(min(byte_limit + 1, 1_000_002))
+                    if not header:
+                        return
+                    seq = handle.readline(min(read_limit + 2, byte_limit + 1))
+                    plus = handle.readline(min(byte_limit + 1, 1_000_002))
+                    quality = handle.readline(min(read_limit + 2, byte_limit + 1))
+                    lines = (header, seq, plus, quality)
+                    if any(len(line) > bound - 1 and not line.endswith(("\n", "\r")) for line, bound in (
+                        (header, min(byte_limit + 1, 1_000_002)),
+                        (seq, min(read_limit + 2, byte_limit + 1)),
+                        (plus, min(byte_limit + 1, 1_000_002)),
+                        (quality, min(read_limit + 2, byte_limit + 1)),
+                    )):
+                        raise ValueError("FASTQ line exceeds configured bounded-read limit.")
+                    if any(line == "" for line in lines[1:]):
+                        raise ValueError("Truncated FASTQ record.")
+                    bytes_read[label] += sum(len(line.encode("ascii")) for line in lines)
+                    if bytes_read[label] > byte_limit:
+                        raise ValueError("FASTQ decompressed-byte limit exceeded.")
+                    header, seq, plus, quality = (x.rstrip("\r\n") for x in lines)
+                    if not header.startswith("@") or not header[1:].strip() or not seq or not plus.startswith("+") or len(seq) != len(quality):
+                        raise ValueError("Malformed FASTQ record or sequence/quality length mismatch.")
+                    if len(seq) > read_limit:
+                        raise ValueError("FASTQ maximum read length exceeded.")
+                    if any(ord(q) < 33 or ord(q) > 126 for q in quality):
+                        raise ValueError("FASTQ quality character is outside the supported Phred+33 ASCII range.")
+                    counters[label] += 1
+                    if counters[label] > record_limit:
+                        raise ValueError("FASTQ record limit exceeded; validation is incomplete.")
+                    normalized, mate = _pair_id(header[1:])
+                    try:
+                        db.execute("INSERT INTO seen VALUES (?, ?)", (label, normalized))
+                    except sqlite3.IntegrityError:
+                        raise ValueError(f"Duplicate read identifier in {label} (exact disk-backed detection).")
+                    length = len(seq)
+                    lengths[str(length)] = lengths.get(str(length), 0) + 1
+                    min_length = length if min_length is None else min(min_length, length)
+                    max_length = length if max_length is None else max(max_length, length)
+                    for char in quality:
+                        q = ord(char) - 33
+                        qualities[str(q)] = qualities.get(str(q), 0) + 1
+                        quality_sum += q
+                        quality_count += 1
+                        min_quality = q if min_quality is None else min(min_quality, q)
+                        max_quality = q if max_quality is None else max(max_quality, q)
+                    yield normalized, mate
+        except (OSError, UnicodeError, EOFError, gzip.BadGzipFile, TimeoutError, ValueError) as exc:
+            raise ValueError(f"{label}: {type(exc).__name__}: {exc}") from exc
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="m21-fastq-") as tmp:
+            db = sqlite3.connect(Path(tmp) / "seen.sqlite")
+            try:
+                db.execute("CREATE TABLE seen (file TEXT NOT NULL, identifier TEXT NOT NULL, PRIMARY KEY(file, identifier))")
+                left = records(Path(r1), "R1", db)
+                right = records(Path(r2), "R2", db) if r2 is not None else None
+                if right is None:
+                    for _record in left:
+                        pass
+                else:
+                    sentinel = object()
+                    for pair in iter(lambda: (next(left, sentinel), next(right, sentinel)), (sentinel, sentinel)):
+                        a, b = pair
+                        if a is sentinel or b is sentinel:
+                            issues.append("Paired FASTQ files have different record counts.")
+                            complete = False
+                            break
+                        if a[0] != b[0] or a[1] == "2" or b[1] == "1":
+                            issues.append("Paired FASTQ identifiers or mate suffixes are inconsistent.")
+                            complete = False
+                            break
+            finally:
+                db.close()
+    except (ValueError, sqlite3.Error) as exc:
+        issues.append(str(exc))
+        complete = False
+    r1_count, r2_count = counters["R1"], counters["R2"] if r2 is not None else None
+    if "min_reads" in thresholds and r1_count < thresholds["min_reads"]:
         issues.append("Read count is below the configured minimum.")
-    if lengths and "min_length" in thresholds and min(lengths) < thresholds["min_length"]:
+    if min_length is not None and "min_length" in thresholds and min_length < thresholds["min_length"]:
         issues.append("Read length is below the configured minimum.")
-    if lengths and "max_length" in thresholds and max(lengths) > thresholds["max_length"]:
+    if max_length is not None and "max_length" in thresholds and max_length > thresholds["max_length"]:
         issues.append("Read length exceeds the configured maximum.")
-    if qualities and "min_mean_quality" in thresholds and stats["mean_phred33_quality"] < thresholds["min_mean_quality"]:
+    mean_quality = round(quality_sum / quality_count, 4) if quality_count else None
+    if mean_quality is not None and "min_mean_quality" in thresholds and mean_quality < thresholds["min_mean_quality"]:
         issues.append("Mean quality is below the configured minimum.")
-    return {"status": "PASS" if not issues else "FAIL", "statistics": stats, "issues": sorted(set(issues))}
+    stats = {
+        "r1_records": r1_count, "r2_records": r2_count,
+        "read_pairs": r1_count if r2 is not None and r1_count == r2_count else None,
+        "min_read_length": min_length, "max_read_length": max_length,
+        "read_length_histogram": dict(sorted(lengths.items(), key=lambda item: int(item[0]))),
+        "mean_phred33_quality": mean_quality, "min_phred33_quality": min_quality,
+        "max_phred33_quality": max_quality,
+        "phred33_histogram": dict(sorted(qualities.items(), key=lambda item: int(item[0]))),
+        "decompressed_bytes": bytes_read, "duplicate_detection": "EXACT_DISK_BACKED_SQLITE",
+    }
+    return {"status": "PASS" if complete and not issues else "FAIL",
+            "validation_mode": "COMPLETE" if complete else "INCOMPLETE",
+            "complete": complete, "statistics": stats, "issues": sorted(set(issues))}
 
 
 def human_report(result: dict[str, Any]) -> str:
@@ -558,6 +789,8 @@ def main(argv: list[str] | None = None) -> int:
     fastq.add_argument("--r1", required=True)
     fastq.add_argument("--r2")
     fastq.add_argument("--thresholds-json")
+    fastq.add_argument("--limits-json")
+    fastq.add_argument("--json-out")
     ref = sub.add_parser("reference-check", help="Validate a reference-panel approval manifest.")
     ref.add_argument("--manifest", required=True)
     ref.add_argument("--trust-store")
@@ -578,9 +811,12 @@ def main(argv: list[str] | None = None) -> int:
                 result["issues"] = sorted(set(result["issues"]))
                 if result["issues"]:
                     result["decision"] = "BLOCKED"
+                    if result.get("readiness_categories"):
+                        result["readiness_categories"]["blinding"] = "FAIL"
         elif args.command == "fastq-check":
             thresholds = json.loads(Path(args.thresholds_json).read_text()) if args.thresholds_json else {}
-            result = validate_fastq(args.r1, args.r2, thresholds)
+            limits = json.loads(Path(args.limits_json).read_text()) if args.limits_json else {}
+            result = validate_fastq(args.r1, args.r2, thresholds, limits=limits)
         else:
             document = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
             issues = validate_reference_panel(document, trust, reference_root=args.reference_root)
@@ -588,7 +824,7 @@ def main(argv: list[str] | None = None) -> int:
         print(human_report(result), end="")
         if getattr(args, "json_out", None):
             Path(args.json_out).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        return 0 if result.get("decision") in {"READY_FOR_SEPARATELY_AUTHORISED_BENCHMARK", "APPROVED"} or result.get("status") == "PASS" else 2
+        return 0 if result.get("decision") in {"PREPARATION_COMPLETE_AWAITING_APPROVAL", "APPROVED"} or result.get("status") == "PASS" else 2
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Readiness checker error: {exc}", file=sys.stderr)
         return 2

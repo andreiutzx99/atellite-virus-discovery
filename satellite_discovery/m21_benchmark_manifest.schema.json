@@ -56,11 +56,12 @@
   "$defs": {
     "approval": {
       "type": "object", "additionalProperties": false,
-      "required": ["status"],
+      "required": ["status", "approval_id", "reviewer_id", "key_id", "approved_at", "expires_at", "evidence_sha256", "manifest_sha256", "signature_ed25519"],
       "properties": {
         "status": {"enum": ["APPROVED", "NOT_APPLICABLE", "PENDING", "REJECTED"]},
         "approval_id": {"type": "string", "pattern": "^APR-[A-Z0-9]{12}$"},
         "reviewer_id": {"type": "string", "pattern": "^REV-[A-Z0-9]{8}$"},
+        "key_id": {"type": "string", "pattern": "^KEY-[A-Z0-9]{10}$"},
         "approved_at": {"type": "string", "format": "date-time"},
         "expires_at": {"type": "string", "format": "date-time"},
         "evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
