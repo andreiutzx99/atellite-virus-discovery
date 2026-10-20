@@ -226,6 +226,45 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
                                                    "max_runtime_seconds": 30})
         self.assertFalse(limited["complete"])
         self.assertEqual(limited["validation_mode"], "INCOMPLETE")
+        self.assertEqual(limited["outcome"], "INCOMPLETE")
+
+    def test_fastq_outcomes_distinguish_configuration_incomplete_and_quality(self):
+        passing = m21.validate_fastq(self.analysis / "r1.fastq")
+        self.assertEqual(passing["outcome"], "COMPLETE_QUALITY_THRESHOLDS_PASSED")
+        self.assertEqual(passing["status"], "PASS")
+        self.assertTrue(passing["complete"])
+
+        quality_failed = m21.validate_fastq(
+            self.analysis / "r1.fastq", thresholds={"min_reads": 3}
+        )
+        self.assertEqual(quality_failed["outcome"], "COMPLETE_QUALITY_THRESHOLDS_FAILED")
+        self.assertEqual(quality_failed["status"], "FAIL")
+        self.assertTrue(quality_failed["complete"])
+        self.assertTrue(any("below the configured minimum" in issue
+                            for issue in quality_failed["issues"]))
+
+        truncated = self.analysis / "outcome-truncated.fastq"
+        truncated.write_text("@synthetic\nACGT\n+\n", encoding="ascii")
+        incomplete = m21.validate_fastq(truncated)
+        self.assertEqual(incomplete["outcome"], "INCOMPLETE")
+        self.assertEqual(incomplete["status"], "FAIL")
+        self.assertFalse(incomplete["complete"])
+
+        invalid = m21.validate_fastq(
+            self.analysis / "r1.fastq", limits={"max_records": 0}
+        )
+        self.assertEqual(invalid["outcome"], "INVALID_CONFIGURATION")
+        self.assertEqual(invalid["status"], "FAIL")
+        self.assertFalse(invalid["complete"])
+        self.assertTrue(any("positive integer" in issue for issue in invalid["issues"]))
+
+    def test_fastq_invalid_configuration_does_not_open_input(self):
+        with patch("builtins.open", side_effect=AssertionError("FASTQ input opened")) as open_file:
+            result = m21.validate_fastq(
+                self.analysis / "r1.fastq", thresholds={"unknown": 1}
+            )
+        self.assertEqual(result["outcome"], "INVALID_CONFIGURATION")
+        open_file.assert_not_called()
 
     def test_truncated_gzip_stream_fails_closed(self):
         path = self.analysis / "broken.fastq.gz"

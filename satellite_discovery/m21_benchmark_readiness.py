@@ -7,6 +7,7 @@ import base64
 import gzip
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -628,19 +629,80 @@ def validate_fastq(r1: str | Path, r2: str | Path | None = None,
                    thresholds: dict[str, float] | None = None,
                    max_records: int = 100_000_000,
                    limits: dict[str, float] | None = None) -> dict[str, Any]:
-    """Stream complete FASTQ validation; exact duplicate detection is disk-backed SQLite."""
+    """Stream FASTQ validation; runtime is checked cooperatively between records.
+
+    This is not a hard wall-clock deadline: an individual read/decompression/database
+    operation may run past the configured runtime before control returns to the check.
+    """
     thresholds = thresholds or {}
     limits = limits or {}
     allowed_thresholds = {"min_reads", "min_length", "max_length", "min_mean_quality"}
     allowed_limits = {"max_records", "max_read_length", "max_decompressed_bytes", "max_runtime_seconds"}
-    issues = [f"Unknown QC threshold: {x}." for x in set(thresholds) - allowed_thresholds]
+    issues: list[str] = []
+    if not isinstance(thresholds, dict):
+        issues.append("QC thresholds must be an object.")
+        thresholds = {}
+    if not isinstance(limits, dict):
+        issues.append("Validation limits must be an object.")
+        limits = {}
+    issues.extend(f"Unknown QC threshold: {x}." for x in set(thresholds) - allowed_thresholds)
     issues.extend(f"Unknown validation limit: {x}." for x in set(limits) - allowed_limits)
-    record_limit = int(limits.get("max_records", max_records))
-    read_limit = int(limits.get("max_read_length", 1_000_000))
-    byte_limit = int(limits.get("max_decompressed_bytes", 100_000_000_000))
-    runtime_limit = float(limits.get("max_runtime_seconds", 3600))
-    if min(record_limit, read_limit, byte_limit) <= 0 or runtime_limit <= 0:
-        issues.append("Validation limits must be positive.")
+
+    def valid_number(value: Any, *, integer: bool = False) -> bool:
+        return (
+            isinstance(value, (int, float)) and not isinstance(value, bool)
+            and math.isfinite(value) and (not integer or isinstance(value, int))
+        )
+
+    configured_limits = {
+        "max_records": limits.get("max_records", max_records),
+        "max_read_length": limits.get("max_read_length", 1_000_000),
+        "max_decompressed_bytes": limits.get("max_decompressed_bytes", 100_000_000_000),
+        "max_runtime_seconds": limits.get("max_runtime_seconds", 3600),
+    }
+    for name in ("max_records", "max_read_length", "max_decompressed_bytes"):
+        value = configured_limits[name]
+        if not valid_number(value, integer=True) or value <= 0:
+            issues.append(f"Validation limit {name} must be a positive integer.")
+    runtime_value = configured_limits["max_runtime_seconds"]
+    if not valid_number(runtime_value) or runtime_value <= 0:
+        issues.append("Validation limit max_runtime_seconds must be a positive finite number.")
+    for name, value in thresholds.items():
+        if name not in allowed_thresholds:
+            continue
+        if not valid_number(value):
+            issues.append(f"QC threshold {name} must be a finite number.")
+        elif name in {"min_reads", "min_length", "max_length"} and (
+            value < (0 if name == "min_reads" else 1) or not float(value).is_integer()
+        ):
+            issues.append(f"QC threshold {name} must be a valid non-negative/positive integer.")
+        elif name == "min_mean_quality" and not 0 <= value <= 93:
+            issues.append("QC threshold min_mean_quality must be between 0 and 93.")
+    if (
+        valid_number(thresholds.get("min_length"))
+        and valid_number(thresholds.get("max_length"))
+        and thresholds["min_length"] > thresholds["max_length"]
+    ):
+        issues.append("QC threshold min_length cannot exceed max_length.")
+    if issues:
+        return {
+            "status": "FAIL", "outcome": "INVALID_CONFIGURATION",
+            "validation_mode": "INVALID_CONFIGURATION", "complete": False,
+            "statistics": {
+                "r1_records": 0, "r2_records": 0 if r2 is not None else None,
+                "read_pairs": None, "min_read_length": None, "max_read_length": None,
+                "read_length_histogram": {}, "mean_phred33_quality": None,
+                "min_phred33_quality": None, "max_phred33_quality": None,
+                "phred33_histogram": {}, "decompressed_bytes": {"R1": 0, "R2": 0},
+                "duplicate_detection": "EXACT_DISK_BACKED_SQLITE",
+            },
+            "issues": sorted(set(issues)),
+        }
+
+    record_limit = configured_limits["max_records"]
+    read_limit = configured_limits["max_read_length"]
+    byte_limit = configured_limits["max_decompressed_bytes"]
+    runtime_limit = float(runtime_value)
     started = time.monotonic()
     counters = {"R1": 0, "R2": 0}
     bytes_read = {"R1": 0, "R2": 0}
@@ -756,7 +818,13 @@ def validate_fastq(r1: str | Path, r2: str | Path | None = None,
         "phred33_histogram": dict(sorted(qualities.items(), key=lambda item: int(item[0]))),
         "decompressed_bytes": bytes_read, "duplicate_detection": "EXACT_DISK_BACKED_SQLITE",
     }
-    return {"status": "PASS" if complete and not issues else "FAIL",
+    outcome = (
+        "INCOMPLETE" if not complete else
+        "COMPLETE_QUALITY_THRESHOLDS_FAILED" if issues else
+        "COMPLETE_QUALITY_THRESHOLDS_PASSED"
+    )
+    return {"status": "PASS" if outcome == "COMPLETE_QUALITY_THRESHOLDS_PASSED" else "FAIL",
+            "outcome": outcome,
             "validation_mode": "COMPLETE" if complete else "INCOMPLETE",
             "complete": complete, "statistics": stats, "issues": sorted(set(issues))}
 
