@@ -41,8 +41,6 @@
 - Report sample-level uncertainty (e.g. exact binomial intervals) and count-rate uncertainty, grouping technical duplicates and related samples by biological source. Unevaluable cases are counted by reason and excluded from all metric denominators.
 - One Phlox study with two positives and one target-specific screen-negative plant is a feasibility case only, not a broad sensitivity/specificity estimate; leave-study-out/independent-study validation remains required.
 
-## Evidence status vocabulary
-
 ## Primary sources
 
 1. Motsar et al. 2025, *Plants* 14:1619: https://pmc.ncbi.nlm.nih.gov/articles/PMC12157320/ ; DOI https://doi.org/10.3390/plants14111619 ; SRA project search https://www.ncbi.nlm.nih.gov/sra/?term=PRJNA1244124 ; supplementary Tables S1–S2 https://pmc.ncbi.nlm.nih.gov/articles/instance/12157320/bin/plants-14-01619-s001.zip .
