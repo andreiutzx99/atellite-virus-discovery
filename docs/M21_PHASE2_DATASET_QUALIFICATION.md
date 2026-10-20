@@ -1,7 +1,7 @@
 # M21 Phase 2 — dataset qualification
 
-**Decision:** `BLOCKED_FOR_BENCHMARK_EXECUTION`  
-**Verification snapshot:** 2026-10-20  
+**Decision:** `BLOCKED_FOR_BENCHMARK_EXECUTION`
+**Verification snapshot:** 2026-10-20
 **Scope:** metadata and publication review only. No biological FASTQ/FASTA payloads were downloaded, no biological reads were inspected or analyzed, and no M4–M15 workflow was run.
 
 ## Purpose and method
