@@ -267,6 +267,11 @@ class M21BenchmarkReadinessTests(unittest.TestCase):
         outside = self.root / "custodian"
         outside.mkdir()
         target = outside / "sealed-key.json"
+        if os.name == "nt":
+            with self.assertRaisesRegex(OSError, "disabled on Windows"):
+                m21.write_sealed_truth_key({"synthetic-case": SAMPLE_ID}, target, self.analysis)
+            self.assertFalse(target.exists())
+            return
         m21.write_sealed_truth_key({"synthetic-case": SAMPLE_ID}, target, self.analysis)
         self.assertEqual(os.stat(target).st_mode & 0o777, 0o600)
         with self.assertRaises(FileExistsError):
