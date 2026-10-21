@@ -10,7 +10,7 @@
     "candidate_duplicates": {"const": "deduplicate candidate_id within a sample"},
     "sample_positive": {"const": "positive if at least one truth candidate is detected"},
     "sample_negative_false_positive": {"const": "one FP per biological replicate_group with any candidate"},
-    "replicate_aggregation": {"const": "group by replicate_group; any positive member detection is detected"},
+    "replicate_aggregation": {"const": "group by study_id, control_id, and replicate_group; any positive member detection is detected"},
     "truth_item_matching": {"const": "one-to-one exact candidate_id within sample"}
   }
 }

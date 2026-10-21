@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -75,50 +76,70 @@ def _fasta(path: Path, max_sequence_length: int, max_total_bases: int) -> list[t
     return records
 
 
-def _best_local_alignment(query: str, reference: str, max_cells: int) -> dict[str, float | int]:
-    """Smith-Waterman local alignment with bounded cells and explicit identity/coverage."""
-    rows, cols = len(query) + 1, len(reference) + 1
-    if rows * cols > max_cells:
-        raise OverflowError("Alignment cell limit exceeded.")
-    scores = [[0] * cols for _ in range(rows)]
-    trace = [bytearray(cols) for _ in range(rows)]
-    best_score = best_i = best_j = 0
-    for i in range(1, rows):
-        qi = query[i - 1]
-        row = scores[i]
-        prev = scores[i - 1]
-        for j in range(1, cols):
-            diag = prev[j - 1] + (2 if qi == reference[j - 1] else -1)
-            up = prev[j] - 2
-            left = row[j - 1] - 2
-            score = max(0, diag, up, left)
-            row[j] = score
-            trace[i][j] = 0 if score == 0 else 1 if score == diag else 2 if score == up else 3
-            if score > best_score:
-                best_score, best_i, best_j = score, i, j
-    i, j = best_i, best_j
-    aligned_query = matches = aligned_columns = 0
-    while i and j and scores[i][j] > 0:
-        direction = trace[i][j]
-        if direction == 1:
-            aligned_query += 1
-            aligned_columns += 1
-            matches += query[i - 1] == reference[j - 1]
-            i -= 1
-            j -= 1
-        elif direction == 2:
-            aligned_query += 1
-            aligned_columns += 1
-            i -= 1
-        elif direction == 3:
-            aligned_columns += 1
-            j -= 1
-        else:
-            break
-    identity = matches / max(1, aligned_columns)
-    coverage = aligned_query / len(query)
-    return {"score": best_score, "identity": identity, "query_coverage": coverage,
-            "aligned_query_bases": aligned_query}
+def _find_qualifying_alignment(
+    query: str,
+    reference: str,
+    min_query_coverage: float,
+    min_identity: float,
+    budget: dict[str, int],
+) -> dict[str, float | int] | None:
+    """Exhaustively test query substrings against reference substrings within a shared cell budget.
+
+    For each query substring meeting coverage, a semiglobal DP maximizes
+    matches/columns against the approved identity threshold. This tests for
+    existence directly rather than trusting a single highest-scoring local hit.
+    """
+    coverage_fraction = Fraction(str(min_query_coverage))
+    identity_fraction = Fraction(str(min_identity))
+    min_bases = (coverage_fraction.numerator * len(query) + coverage_fraction.denominator - 1) // coverage_fraction.denominator
+    penalty = identity_fraction.numerator
+    match_score = identity_fraction.denominator - penalty
+    ref_len = len(reference)
+
+    for start in range(len(query)):
+        if budget["used"] + ref_len + 1 > budget["limit"]:
+            raise OverflowError("Complete alignment search exceeded its cell budget.")
+        budget["used"] += ref_len + 1
+        previous_score = [0] * (ref_len + 1)  # free reference prefix
+        previous_matches = [0] * (ref_len + 1)
+        previous_columns = [0] * (ref_len + 1)
+        for query_end in range(start + 1, len(query) + 1):
+            if budget["used"] + ref_len + 1 > budget["limit"]:
+                raise OverflowError("Complete alignment search exceeded its cell budget.")
+            budget["used"] += ref_len + 1
+            current_score = [0] * (ref_len + 1)
+            current_matches = [0] * (ref_len + 1)
+            current_columns = [0] * (ref_len + 1)
+            current_score[0] = -penalty * (query_end - start)
+            current_columns[0] = query_end - start
+            base = query[query_end - 1]
+            for j in range(1, ref_len + 1):
+                is_match = base == reference[j - 1]
+                match = int(is_match)
+                candidates = (
+                    (previous_score[j - 1] + (match_score if is_match else -penalty),
+                     previous_matches[j - 1] + match, previous_columns[j - 1] + 1),
+                    (previous_score[j] - penalty, previous_matches[j], previous_columns[j] + 1),
+                    (current_score[j - 1] - penalty, current_matches[j - 1], current_columns[j - 1] + 1),
+                )
+                score, matches, columns = max(candidates, key=lambda item: item[0])
+                current_score[j] = score
+                current_matches[j] = matches
+                current_columns[j] = columns
+            query_bases = query_end - start
+            if query_bases >= min_bases:
+                best_end = max(range(1, ref_len + 1), key=current_score.__getitem__)
+                if current_score[best_end] >= 0:
+                    columns = current_columns[best_end]
+                    return {
+                        "identity": current_matches[best_end] / max(columns, 1),
+                        "query_coverage": query_bases / len(query),
+                        "aligned_query_bases": query_bases,
+                    }
+            previous_score, previous_matches, previous_columns = (
+                current_score, current_matches, current_columns
+            )
+    return None
 
 
 def exclusion_policy_digest(policy: dict[str, Any]) -> str:
@@ -205,22 +226,29 @@ def validate_reference_exclusions(
         if len(records) > policy["max_references"]:
             raise OverflowError("Reference count limit exceeded.")
         results = []
+        alignment_budget = {"used": 0, "limit": policy["max_alignment_cells"]}
         for ref_id, reference in records:
             matches = []
             for excluded_item in excluded:
                 query = excluded_item["sequence"].upper()
-                forward = _best_local_alignment(query, reference, policy["max_alignment_cells"])
-                reverse = _best_local_alignment(_reverse_complement(query), reference,
-                                                policy["max_alignment_cells"])
-                best = max((forward, reverse), key=lambda value: (value["query_coverage"], value["identity"], value["score"]))
-                if (best["query_coverage"] >= policy["min_query_coverage"]
-                        and best["identity"] >= policy["min_identity"]):
+                found = _find_qualifying_alignment(
+                    query, reference, policy["min_query_coverage"], policy["min_identity"],
+                    alignment_budget,
+                )
+                orientation = "FORWARD"
+                if found is None:
+                    found = _find_qualifying_alignment(
+                        _reverse_complement(query), reference, policy["min_query_coverage"],
+                        policy["min_identity"], alignment_budget,
+                    )
+                    orientation = "REVERSE_COMPLEMENT"
+                if found is not None:
                     matches.append({
                         "sequence_id": excluded_item["sequence_id"],
-                        "orientation": "REVERSE_COMPLEMENT" if best is reverse else "FORWARD",
-                        "query_coverage": round(float(best["query_coverage"]), 6),
-                        "identity": round(float(best["identity"]), 6),
-                        "aligned_query_bases": best["aligned_query_bases"],
+                        "orientation": orientation,
+                        "query_coverage": round(float(found["query_coverage"]), 6),
+                        "identity": round(float(found["identity"]), 6),
+                        "aligned_query_bases": found["aligned_query_bases"],
                     })
             results.append({"reference_id": ref_id, "decision": "REJECT" if matches else "ACCEPT",
                             "reason": "excluded-sequence threshold met" if matches else "no exclusion threshold met",

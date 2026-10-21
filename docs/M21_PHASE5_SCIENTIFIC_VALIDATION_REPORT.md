@@ -6,7 +6,7 @@
 
 ## Implemented
 
-- Local FASTA exclusion validation with exact, reverse-complement and bounded local-alignment matching; explicit coverage/identity thresholds; policy and byte-digest binding; per-reference decisions; and fail-closed incomplete states.
+- Local FASTA exclusion validation with exact, reverse-complement and exhaustive-within-budget substring alignment search; explicit coverage/identity thresholds; policy and byte-digest binding; per-reference decisions; and fail-closed incomplete states.
 - A separate scoring-eligibility record. Pending and unevaluable controls are excluded, controls require independent review, and technical replicates aggregate by biological group.
 - A separate deterministic scoring module for sample confusion counts, candidate precision/recall, false candidate burden, read/read-pair denominators, and reasoned `NOT_ESTIMABLE` values.
 - A blinded analysis/truth handoff bound by digests and dual-reviewer synthetic unblinding authorization.
@@ -14,7 +14,7 @@
 
 ## Interpretation and limitations
 
-These tests validate software behavior, not biological relatedness or discovery performance. Synthetic sequence fixtures are not evidence about real targets. Smith–Waterman scoring uses a documented simple scoring scheme; thresholds require independent scientific approval before any real panel use. Authorization fields in this synthetic interface do not provide cryptographic signatures or custody enforcement. Small fixture sizes do not support inferential confidence intervals. No real sample classification is changed, and no biological execution is authorized.
+These tests validate software behavior, not biological relatedness or discovery performance. Synthetic sequence fixtures are not evidence about real targets. Alignment thresholds require independent scientific approval before any real panel use. SHA-256 digests establish integrity and binding only; synthetic reviewer IDs and unblinding authorization do not authenticate reviewers, constitute production cryptographic approvals, or enforce custody. Small fixture sizes do not support inferential confidence intervals. No real sample classification is changed, and no biological execution is authorized.
 
 ## Phase 6 recommendation
 

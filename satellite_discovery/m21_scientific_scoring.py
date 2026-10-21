@@ -51,13 +51,14 @@ def validate_qualification(record: Any) -> list[str]:
     ids = record.get("sample_ids")
     if not isinstance(ids, list) or not ids or any(not isinstance(x, str) or not OPAQUE_SAMPLE.fullmatch(x) for x in ids) or len(set(ids)) != len(ids):
         issues.append("Qualification requires unique opaque sample identifiers.")
-    if record.get("control_class") not in {"POSITIVE", "NEGATIVE", "HELPER_POSITIVE", "HELPER_NEGATIVE"}:
+    control_class = record.get("control_class")
+    if not isinstance(control_class, str) or control_class not in {"POSITIVE", "NEGATIVE", "HELPER_POSITIVE", "HELPER_NEGATIVE"}:
         issues.append("Invalid scoring control class.")
-    if record.get("evaluation_status") not in {"EVALUABLE", "UNEVALUABLE", "PENDING"}:
+    if not isinstance(record.get("evaluation_status"), str) or record["evaluation_status"] not in {"EVALUABLE", "UNEVALUABLE", "PENDING"}:
         issues.append("Invalid evaluation status.")
-    if record.get("evidence_strength") not in {"HIGH", "MODERATE", "LIMITED", "PENDING"}:
+    if not isinstance(record.get("evidence_strength"), str) or record["evidence_strength"] not in {"HIGH", "MODERATE", "LIMITED", "PENDING"}:
         issues.append("Invalid independent evidence strength.")
-    if record.get("sensitivity_status") not in {"ADEQUATE", "LIMITED", "UNKNOWN", "NOT_APPLICABLE"}:
+    if not isinstance(record.get("sensitivity_status"), str) or record["sensitivity_status"] not in {"ADEQUATE", "LIMITED", "UNKNOWN", "NOT_APPLICABLE"}:
         issues.append("Invalid sensitivity status.")
     if not isinstance(record.get("independently_reviewed"), bool):
         issues.append("Independent-review state must be explicit.")
@@ -74,7 +75,9 @@ def validate_qualification(record: Any) -> list[str]:
         issues.append("Eligibility and exclusion reason are inconsistent.")
     if eligible and (record.get("evaluation_status") != "EVALUABLE" or record.get("independently_reviewed") is not True):
         issues.append("Only independently reviewed, evaluable controls may be eligible.")
-    if eligible and (len(reviewers) < 2 or evidence_digest is None):
+    if eligible and isinstance(control_class, str) and control_class in {"HELPER_POSITIVE", "HELPER_NEGATIVE"}:
+        issues.append("Helper comparators are not included in primary benchmark metrics.")
+    if eligible and (not isinstance(reviewers, list) or len(reviewers) < 2 or evidence_digest is None):
         issues.append("Eligible controls require independent evidence and two distinct reviewers.")
     if eligible and record.get("control_class") == "POSITIVE" and record.get("evidence_strength") not in {"HIGH", "MODERATE"}:
         issues.append("Eligible positive controls require adequate independent evidence.")
@@ -107,7 +110,7 @@ def score_synthetic_bundle(
         "candidate_duplicates": "deduplicate candidate_id within a sample",
         "sample_positive": "positive if at least one truth candidate is detected",
         "sample_negative_false_positive": "one FP per biological replicate_group with any candidate",
-        "replicate_aggregation": "group by replicate_group; any positive member detection is detected",
+        "replicate_aggregation": "group by study_id, control_id, and replicate_group; any positive member detection is detected",
         "truth_item_matching": "one-to-one exact candidate_id within sample",
     }
     policy_sha = canonical_sha256(policy)
@@ -161,6 +164,7 @@ def score_synthetic_bundle(
         qualifications = []
     qualification_by_sample: dict[str, dict[str, Any]] = {}
     excluded_controls = []
+    group_ownership: dict[str, tuple[str, str]] = {}
     for record in qualifications:
         issues.extend(validate_qualification(record))
         if not isinstance(record, dict):
@@ -168,6 +172,12 @@ def score_synthetic_bundle(
         if not record.get("scoring_eligibility"):
             excluded_controls.append({"control_id": record.get("control_id"),
                                       "reason": record.get("exclusion_reason") or record.get("evaluation_status")})
+        elif isinstance(record.get("replicate_group"), str):
+            group = record["replicate_group"]
+            owner = (record.get("control_id"), record.get("study_id"))
+            if group in group_ownership and group_ownership[group] != owner:
+                issues.append("A biological replicate group spans multiple controls or studies.")
+            group_ownership[group] = owner
         for sample_id in record.get("sample_ids", []):
             if sample_id in qualification_by_sample:
                 issues.append("A sample is assigned to more than one control record.")
@@ -182,6 +192,7 @@ def score_synthetic_bundle(
                 or not isinstance(row.get("sample_id"), str) or not OPAQUE_SAMPLE.fullmatch(row["sample_id"])
                 or not isinstance(row.get("candidates"), list)
                 or not isinstance(row.get("read_count"), int) or isinstance(row.get("read_count"), bool) or row["read_count"] < 0
+                or not isinstance(row.get("read_unit"), str)
                 or row.get("read_unit") not in {"READS", "READ_PAIRS"}):
             issues.append("Malformed blinded analysis sample.")
             continue
@@ -197,6 +208,7 @@ def score_synthetic_bundle(
     truth_by_id = {}
     for row in truth_rows:
         if (not isinstance(row, dict) or set(row) != {"sample_id", "label", "truth_candidate_ids"}
+                or not isinstance(row.get("label"), str)
                 or row.get("label") not in {"POSITIVE", "NEGATIVE"}
                 or not isinstance(row.get("sample_id"), str) or not OPAQUE_SAMPLE.fullmatch(row["sample_id"])
                 or not isinstance(row.get("truth_candidate_ids"), list)
@@ -212,16 +224,29 @@ def score_synthetic_bundle(
         issues.append("Truth bundle must cover exactly the eligible analysis samples; excluded samples stay blinded.")
     if set(analysis_by_id) - set(qualification_by_sample):
         issues.append("Every analysis sample requires a control qualification or explicit exclusion record.")
+    for sample_id in set(truth_by_id) & set(qualification_by_sample):
+        control_class = qualification_by_sample[sample_id]["control_class"]
+        truth_label = truth_by_id[sample_id]["label"]
+        expected_label = {
+            "POSITIVE": "POSITIVE",
+            "NEGATIVE": "NEGATIVE",
+            "HELPER_POSITIVE": "POSITIVE",
+            "HELPER_NEGATIVE": "NEGATIVE",
+        }.get(control_class) if isinstance(control_class, str) else None
+        if expected_label != truth_label:
+            issues.append("Eligible control class conflicts with its synthetic truth label.")
     if issues:
         return {"status": "FAIL", "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
                 "issues": sorted(set(issues)), "scoring_policy_sha256": policy_sha}
 
-    groups: dict[str, list[tuple[str, str, bool, set[str], set[str]]]] = defaultdict(list)
-    negative_group_reads: dict[str, int] = {}
+    groups: dict[tuple[str, str, str], list[tuple[str, str, bool, set[str], set[str]]]] = defaultdict(list)
+    negative_group_reads: dict[tuple[str, str, str], int] = {}
     negative_read_units: set[str] = set()
     for sample_id, truth in truth_by_id.items():
         row = analysis_by_id[sample_id]
         qualification = qualification_by_sample[sample_id]
+        group_key = (qualification["study_id"], qualification["control_id"],
+                     qualification["replicate_group"])
         calls = row["candidate_ids"]
         expected = set(truth["truth_candidate_ids"])
         if truth["label"] == "POSITIVE" and not expected:
@@ -232,10 +257,10 @@ def score_synthetic_bundle(
             issues.append("Duplicate candidate truth item in one sample.")
         if truth["label"] == "NEGATIVE":
             negative_read_units.add(row["read_unit"])
-            group_id = qualification["replicate_group"]
+            group_id = group_key
             negative_group_reads[group_id] = negative_group_reads.get(group_id, 0) + row["read_count"]
         matched = calls & expected
-        groups[qualification["replicate_group"]].append(
+        groups[group_key].append(
             (truth["label"], sample_id, bool(matched), calls, expected)
         )
     tp = fp = tn = fn = 0
@@ -334,7 +359,7 @@ def scoring_policy_digest() -> str:
         "candidate_duplicates": "deduplicate candidate_id within a sample",
         "sample_positive": "positive if at least one truth candidate is detected",
         "sample_negative_false_positive": "one FP per biological replicate_group with any candidate",
-        "replicate_aggregation": "group by replicate_group; any positive member detection is detected",
+        "replicate_aggregation": "group by study_id, control_id, and replicate_group; any positive member detection is detected",
         "truth_item_matching": "one-to-one exact candidate_id within sample",
     })
 
