@@ -182,6 +182,8 @@ class M21Phase5ScoringTests(unittest.TestCase):
         self.assertEqual(result["candidate_level"]["false_candidate_burden_per_evaluable_negative_sample"]["value"], 1.0)
         self.assertEqual(result["candidate_level"]["false_candidate_burden_per_million_reads_or_pairs"]["value"], 2_000_000 / 400)
         self.assertEqual(result["candidate_level"]["false_candidate_burden_per_million_reads_or_pairs"]["read_unit"], "READS")
+        self.assertEqual(result["reference_exclusion_verification"]["references_checked"], 1)
+        self.assertEqual(len(result["qualification_sha256s"]), 4)
         self.assertEqual(len(result["excluded_controls"]), 1)
         self.assertIn("NOT BIOLOGICAL PERFORMANCE EVIDENCE", scoring.human_scoring_report(result))
 

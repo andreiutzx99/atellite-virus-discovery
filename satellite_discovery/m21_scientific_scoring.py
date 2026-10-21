@@ -232,9 +232,8 @@ def score_synthetic_bundle(
             issues.append("Duplicate candidate truth item in one sample.")
         if truth["label"] == "NEGATIVE":
             negative_read_units.add(row["read_unit"])
-            negative_group_reads[qualification["replicate_group"]] = max(
-                negative_group_reads.get(qualification["replicate_group"], 0), row["read_count"]
-            )
+            group_id = qualification["replicate_group"]
+            negative_group_reads[group_id] = negative_group_reads.get(group_id, 0) + row["read_count"]
         matched = calls & expected
         groups[qualification["replicate_group"]].append(
             (truth["label"], sample_id, bool(matched), calls, expected)
@@ -306,6 +305,18 @@ def score_synthetic_bundle(
             },
         },
         "excluded_controls": excluded_controls,
+        "reference_exclusion_verification": {
+            "status": reference_exclusion_result["status"],
+            "evidence_sha256": expected_reference_evidence_sha256,
+            "references_checked": len(exclusion_results),
+            "references_accepted": len(exclusion_results),
+            "references_rejected": 0,
+        },
+        "qualification_sha256s": sorted(
+            {record["qualification_sha256"] for record in qualifications
+             if record.get("scoring_eligibility") is True}
+        ),
+        "unblinding_authorization_sha256": canonical_sha256(auth),
         "independent_studies_represented": len({qualification_by_sample[sample_id]["study_id"] for sample_id in truth_by_id}),
         "analysis_sha256": analysis["analysis_sha256"], "truth_bundle_sha256": truth_digest,
         "reference_exclusion_evidence_sha256": expected_reference_evidence_sha256,
