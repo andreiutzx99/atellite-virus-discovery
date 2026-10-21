@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 6 tamper-evident audit event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "timestamp", "artifact_digests", "identity", "previous_event_sha256", "verification_result", "event_sha256"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "artifact_digests": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{64}$"}},
+    "identity": {"type": ["string", "null"]},
+    "previous_event_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "verification_result": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]},
+    "event_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

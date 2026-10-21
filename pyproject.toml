@@ -39,6 +39,11 @@ satellite_discovery = [
     "m21_phase5_control_eligibility.schema.json",
     "m21_phase5_truth_bundle.schema.json",
     "m21_phase5_scoring_policy.schema.json",
+    "m21_phase6_signed_qualification.schema.json",
+    "m21_phase6_scientific_review.schema.json",
+    "m21_phase6_unblinding_context.schema.json",
+    "m21_phase6_audit_event.schema.json",
+    "m21_phase6_governance_readiness.schema.json",
 ]
 
 [project.optional-dependencies]
