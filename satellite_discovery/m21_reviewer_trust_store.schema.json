@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 reviewer public-key trust store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reviewers"],
+  "properties": {
+    "schema_version": {"const": "m21-reviewer-trust-store-v1"},
+    "reviewers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reviewer_id", "key_id", "public_key_ed25519", "role", "scopes", "valid_from", "valid_until", "revoked"],
+        "properties": {
+          "reviewer_id": {"type": "string", "pattern": "^REV-[A-Z0-9]{8}$"},
+          "key_id": {"type": "string", "pattern": "^KEY-[A-Z0-9]{10}$"},
+          "public_key_ed25519": {"type": "string", "contentEncoding": "base64"},
+          "role": {"type": "string"},
+          "scopes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+          "valid_from": {"type": "string", "format": "date-time"},
+          "valid_until": {"type": "string", "format": "date-time"},
+          "revoked": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}
