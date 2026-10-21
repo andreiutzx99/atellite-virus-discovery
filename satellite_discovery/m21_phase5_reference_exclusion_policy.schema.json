@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 5 synthetic reference exclusion policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_id", "min_query_coverage", "min_identity", "max_sequence_length", "max_total_bases", "max_panel_bytes", "max_references", "max_alignment_cells", "excluded_sequences"],
+  "properties": {
+    "schema_version": {"const": "m21-reference-exclusion-policy-v1"},
+    "policy_id": {"type": "string", "pattern": "^EXCL-[A-Z0-9]{10}$"},
+    "min_query_coverage": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+    "min_identity": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+    "max_sequence_length": {"type": "integer", "minimum": 1},
+    "max_total_bases": {"type": "integer", "minimum": 1},
+    "max_panel_bytes": {"type": "integer", "minimum": 1},
+    "max_references": {"type": "integer", "minimum": 1},
+    "max_alignment_cells": {"type": "integer", "minimum": 1},
+    "excluded_sequences": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["sequence_id", "sequence", "sha256"],
+        "properties": {
+          "sequence_id": {"type": "string", "pattern": "^SYNTH-[A-Z0-9]{8}$"},
+          "sequence": {"type": "string", "pattern": "^[ACGTNacgtn]+$"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    }
+  }
+}

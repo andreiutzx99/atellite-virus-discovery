@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 5 deterministic scoring policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "candidate_match", "candidate_duplicates", "sample_positive", "sample_negative_false_positive", "replicate_aggregation", "truth_item_matching"],
+  "properties": {
+    "version": {"const": "m21-synthetic-scoring-v1"},
+    "candidate_match": {"const": "exact opaque candidate_id"},
+    "candidate_duplicates": {"const": "deduplicate candidate_id within a sample"},
+    "sample_positive": {"const": "positive if at least one truth candidate is detected"},
+    "sample_negative_false_positive": {"const": "one FP per biological replicate_group with any candidate"},
+    "replicate_aggregation": {"const": "group by replicate_group; any positive member detection is detected"},
+    "truth_item_matching": {"const": "one-to-one exact candidate_id within sample"}
+  }
+}
