@@ -29,6 +29,10 @@ Phase 4 strengthens software/governance readiness only. It does not retrieve bio
 
 Px31 remains `NEGATIVE_CONTROL_SUITABILITY_PENDING`. Do not infer absence from its target-specific screen-negative. See [control qualification rules](M21_PHASE4_CONTROL_QUALIFICATION.md).
 
+## Phase 5 synthetic scoring additions
+
+The separate Phase 5 modules provide synthetic reference-exclusion validation and deterministic scoring. See [reference exclusion](M21_PHASE5_REFERENCE_EXCLUSION.md), [control eligibility](M21_PHASE5_CONTROL_SCORING_ELIGIBILITY.md), [blinded handoff](M21_PHASE5_BLINDED_EVALUATION.md), and [scoring definitions](M21_PHASE5_SYNTHETIC_SCORING.md). These checks do not change the overall state or Phase 4/M1–M20 contracts.
+
 ## Limitations and custody
 
 The SQLite identifier table is temporary and can require substantial disk space. Runtime, record, decompressed-byte and read-length limits are operator-configured safety limits, not biological QC thresholds; the runtime limit is cooperative and does not guarantee a hard wall-clock cutoff. Trust-store revocation/rotation is enforced against the supplied current store, but cross-run replay prevention still requires custodians to preserve and reconcile the tamper-evident audit digests in an external append-only custody system. No real reviewer credentials, approvals, mappings, FASTQ or reference sequences are included.

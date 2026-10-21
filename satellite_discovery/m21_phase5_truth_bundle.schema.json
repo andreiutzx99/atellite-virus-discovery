@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 5 synthetic truth bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["analysis_sha256", "truth_records"],
+  "properties": {
+    "analysis_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "truth_records": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["sample_id", "label", "truth_candidate_ids"],
+        "properties": {
+          "sample_id": {"type": "string", "pattern": "^BLD-[A-F0-9]{24}$"},
+          "label": {"enum": ["POSITIVE", "NEGATIVE"]},
+          "truth_candidate_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

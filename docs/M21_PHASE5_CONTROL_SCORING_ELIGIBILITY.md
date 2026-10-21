@@ -1,0 +1,7 @@
+# M21 Phase 5 — control scoring eligibility
+
+Phase 4 control qualification remains unchanged. Phase 5 consumes a separate, digest-bound eligibility record that names opaque sample IDs, control class, evaluation state, independent review state, study ID, replicate group, and an explicit exclusion reason when not eligible. Every eligible `POSITIVE` must have a `POSITIVE` truth label and every eligible `NEGATIVE` must have a `NEGATIVE` truth label; mismatches fail before metrics are calculated.
+
+Only `EVALUABLE`, independently reviewed records may be marked eligible. `PENDING` and `UNEVALUABLE` controls stay out of truth and performance denominators. A target-specific negative with unknown sensitivity cannot qualify itself. `HELPER_POSITIVE` and `HELPER_NEGATIVE` comparators are explicitly excluded from the primary benchmark metrics and cannot be marked eligible. Px31 remains `NEGATIVE_CONTROL_SUITABILITY_PENDING`.
+
+Every eligibility record has a canonical SHA-256 digest. The scorer rejects digest changes, conflicting sample assignment, group IDs shared by different controls or studies, and technical replicates with inconsistent labels or candidate truth. Scoring groups use the composite `(study_id, control_id, replicate_group)` key; all samples assigned to a group therefore belong to one qualified biological control in one study. Technical replicates are aggregated instead of counted as independent samples.
