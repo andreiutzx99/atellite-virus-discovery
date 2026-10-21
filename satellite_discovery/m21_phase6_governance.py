@@ -20,6 +20,7 @@ from . import m21_scientific_scoring as scoring
 PHASE6_SCOPES = {
     "control_qualification", "reference_exclusion_policy",
     "scientific_review", "unblinding", "custody_checkpoint",
+    "governance_transition",
 }
 STATES = (
     "PREPARED", "QUALIFIED", "REFERENCE_APPROVED",
@@ -79,6 +80,11 @@ def _approval_set(
             "binding_sha256": binding_digest, "evidence_sha256": evidence_digest}
 
 
+def _approval_set_digest(approvals: list[dict[str, Any]]) -> str:
+    """Hash the exact authenticated approvals independent of input list order."""
+    return digest(sorted(approvals, key=lambda item: item["approval_id"]))
+
+
 def _phase5_record(content: dict[str, Any], reviewer_ids: list[str]) -> dict[str, Any]:
     source = content["phase4_qualification"]
     control_class = content["control_class"]
@@ -111,8 +117,8 @@ def verify_signed_control_qualification(
         return {"status": "FAIL", "issues": ["Qualification content has missing or unknown fields."]}
     issues = readiness.validate_control_qualification(content["phase4_qualification"])
     q4 = content["phase4_qualification"]
-    if issues:
-        return {"status": "FAIL", "issues": issues}
+    if not isinstance(q4, dict):
+        return {"status": "FAIL", "issues": sorted(set(issues + ["Phase 4 qualification must be an object."]))}
     if (content["control_id"] != q4.get("control_id")
             or not isinstance(content["sample_ids"], list) or not content["sample_ids"]
             or not all(isinstance(x, str) and scoring.OPAQUE_SAMPLE.fullmatch(x) for x in content["sample_ids"])
@@ -136,6 +142,11 @@ def verify_signed_control_qualification(
         issues.append("Scoring eligibility conflicts with signed Phase 4 denominator qualification.")
     if content["evaluation_status"] != q4.get("evaluation_status"):
         issues.append("Evaluation status conflicts with signed Phase 4 qualification.")
+    eligible = content["scoring_eligibility"] is True
+    if eligible and q4.get("control_class") == "POSITIVE" and q4.get("evidence_strength") not in {"HIGH", "MODERATE"}:
+        issues.append("Eligible positive controls require independently reviewed HIGH or MODERATE evidence.")
+    if eligible and q4.get("control_class") == "SCREEN_NEGATIVE" and q4.get("sensitivity_status") != "ADEQUATE":
+        issues.append("Eligible negative controls require ADEQUATE screening sensitivity.")
     evidence_sha = hashlib.sha256(evidence_bytes).hexdigest() if isinstance(evidence_bytes, bytes) else ""
     if content.get("evidence_sha256") != evidence_sha:
         issues.append("Qualification evidence bytes do not match the declared digest.")
@@ -257,15 +268,23 @@ def verify_reference_governance(
     return {"status": "PASS", "policy_sha256": policy_sha, "reference_sha256": ref_sha,
             "reference_manifest_sha256": panel_sha, "evidence_sha256": exclusion_result["evidence_sha256"],
             "binding_sha256": binding, "approval_ids": ids, "reviewer_ids": sorted(set(reviewers)),
-            "scientific_review_sha256": scientific_binding}
+            "scientific_review_sha256": scientific_binding,
+            "reference_policy_approval_set_sha256": _approval_set_digest(policy_approvals),
+            "scientific_review_approval_set_sha256": _approval_set_digest(scientific_approvals)}
 
 
 def unblinding_context(analysis_sha256: str, truth_bundle_sha256: str,
-                       scoring_policy_sha256: str, reference_evidence_sha256: str,
+                       scoring_policy_sha256: str, reference_governance: dict[str, Any],
                        qualification_sha256s: list[str]) -> dict[str, Any]:
     return {"analysis_sha256": analysis_sha256, "truth_bundle_sha256": truth_bundle_sha256,
             "scoring_policy_sha256": scoring_policy_sha256,
-            "reference_evidence_sha256": reference_evidence_sha256,
+            "reference_evidence_sha256": reference_governance["evidence_sha256"],
+            "reference_panel_manifest_sha256": reference_governance["reference_manifest_sha256"],
+            "reference_exclusion_policy_sha256": reference_governance["policy_sha256"],
+            "recomputed_exclusion_evidence_sha256": reference_governance["evidence_sha256"],
+            "signed_scientific_review_sha256": reference_governance["scientific_review_sha256"],
+            "scientific_review_approval_set_sha256": reference_governance["scientific_review_approval_set_sha256"],
+            "reference_policy_approval_set_sha256": reference_governance["reference_policy_approval_set_sha256"],
             "qualification_sha256s": sorted(qualification_sha256s)}
 
 
@@ -328,7 +347,7 @@ def evaluate_synthetic_bundle(
     qualification_hashes = sorted(item["qualification_sha256"] for item in verified_controls)
     context = unblinding_context(
         analysis["analysis_sha256"], expected_truth_bundle_sha256, expected_policy,
-        reference_governance["evidence_sha256"], qualification_hashes,
+        reference_governance, qualification_hashes,
     )
     auth = verify_unblinding_authorization(context, unblinding_approvals, trusted_reviewers, now)
     if auth["status"] != "PASS":
@@ -449,7 +468,95 @@ def verify_audit_chain(events: Any, checkpoint: Any = None,
             "custody_limitation": "A local hash chain cannot prevent whole-log deletion, rollback, or replacement without an independently retained anchor."}
 
 
+TRANSITION_EVIDENCE_CATEGORIES = {
+    "QUALIFIED": "CONTROL_QUALIFICATION",
+    "REFERENCE_APPROVED": "REFERENCE_GOVERNANCE",
+    "BLINDED_ANALYSIS_VERIFIED": "BLINDED_ANALYSIS",
+    "UNBLINDING_AUTHORISED": "UNBLINDING_AUTHORIZATION",
+    "SYNTHETIC_SCORING_COMPLETE": "SYNTHETIC_SCORING",
+}
+TRANSITION_RECEIPT_FIELDS = {
+    "current_state", "requested_state", "evidence_category",
+    "verified_artifact_digests", "verification_result",
+    "previous_transition_sha256",
+}
+
+
+def verify_governance_transitions(
+    receipts: Any, trusted_reviewers: dict[str, dict[str, Any]],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Verify a complete signed receipt chain from PREPARED; never trust caller PASS."""
+    now = now or datetime.now(timezone.utc)
+    if not isinstance(receipts, list):
+        return {"status": "FAIL", "state": "PREPARED", "issues": ["Transition receipts must be an array."]}
+    state = "PREPARED"
+    previous_digest = None
+    approval_ids: set[str] = set()
+    transitions = []
+    issues: list[str] = []
+    for envelope in receipts:
+        if (not isinstance(envelope, dict) or set(envelope) != {"receipt", "approvals"}
+                or not isinstance(envelope.get("receipt"), dict)
+                or set(envelope["receipt"]) != TRANSITION_RECEIPT_FIELDS):
+            issues.append("Transition receipt envelope is malformed.")
+            break
+        receipt = envelope["receipt"]
+        requested = receipt["requested_state"]
+        expected_category = (
+            TRANSITION_EVIDENCE_CATEGORIES.get(requested)
+            if isinstance(requested, str) else None
+        )
+        artifacts = receipt["verified_artifact_digests"]
+        if (receipt["current_state"] != state or requested not in STATES
+                or STATES.index(requested) != STATES.index(state) + 1):
+            issues.append("Transition receipt is replayed, reordered, or skips a required stage.")
+        if not expected_category or receipt["evidence_category"] != expected_category:
+            issues.append("Evidence category cannot authorize the requested state.")
+        if receipt["verification_result"] != "PASS":
+            issues.append("Transition evidence receipt is not passing.")
+        if (not isinstance(artifacts, dict) or not artifacts
+                or any(not isinstance(key, str) or not key
+                       or not isinstance(value, str) or not SHA_RE.fullmatch(value)
+                       for key, value in artifacts.items())):
+            issues.append("Transition receipt must bind verified SHA-256 artifact digests.")
+        if receipt["previous_transition_sha256"] != previous_digest:
+            issues.append("Transition receipt does not extend the verified previous transition.")
+        if issues:
+            break
+        binding = digest(receipt)
+        authenticated = _approval_set(
+            dataset_id="DS-SYNTH00001", sample_id=AGGREGATE_SAMPLE,
+            scope="governance_transition", binding_digest=binding,
+            evidence_digest=digest(artifacts), approvals=envelope["approvals"],
+            trusted_reviewers=trusted_reviewers, now=now,
+        )
+        if authenticated["status"] != "PASS":
+            issues.extend(authenticated["issues"])
+            break
+        if approval_ids.intersection(authenticated["approval_ids"]):
+            issues.append("Transition approval was replayed in the receipt chain.")
+            break
+        approval_ids.update(authenticated["approval_ids"])
+        transition_digest = digest({
+            "receipt": receipt,
+            "approval_set_sha256": _approval_set_digest(envelope["approvals"]),
+        })
+        transitions.append(transition_digest)
+        state = requested
+        previous_digest = transition_digest
+    return {
+        "status": "FAIL" if issues else "PASS",
+        "state": state,
+        "issues": sorted(set(issues)),
+        "transition_count": len(transitions),
+        "transition_sha256": previous_digest,
+        "biological_execution_authorized": False,
+    }
+
+
 def advance_governance_state(current: str, requested: str, evidence_state: str) -> dict[str, Any]:
+    """Non-authoritative sequence helper; use verify_governance_transitions for authorization."""
     if current not in STATES or requested not in STATES:
         return {"status": "FAIL", "state": current, "issues": ["Unknown governance state."]}
     index = STATES.index(current)
@@ -457,8 +564,9 @@ def advance_governance_state(current: str, requested: str, evidence_state: str) 
         return {"status": "FAIL", "state": current, "issues": ["Governance transition skips or reverses a required stage."]}
     if evidence_state != "PASS":
         return {"status": "FAIL", "state": current, "issues": ["Required evidence for the next state is not passing."]}
-    return {"status": "PASS", "state": requested,
-            "issues": [], "biological_execution_authorized": False}
+    return {"status": "NON_AUTHORITATIVE", "state": requested,
+            "issues": ["A plain PASS string is not an authenticated evidence receipt."],
+            "biological_execution_authorized": False}
 
 
 def append_audit_event(events: list[dict[str, Any]], event_id: str, event_type: str,

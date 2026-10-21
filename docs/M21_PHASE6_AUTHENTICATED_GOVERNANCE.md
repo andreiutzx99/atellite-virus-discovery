@@ -10,8 +10,12 @@ deterministic scoring policy. It does not authorize a biological benchmark.
    qualification/evidence digests, two distinct reviewers, role/scope, key
    identity, validity, revocation, and approval-ID uniqueness. It derives the
    Phase 5 reviewer and eligibility fields instead of trusting caller-supplied
-   `independently_reviewed` metadata. Pending and unevaluable controls remain
-   excluded.
+   `independently_reviewed` metadata. Eligible positives require independently
+   reviewed HIGH or MODERATE evidence; eligible screen negatives require
+   ADEQUATE sensitivity. Conflicting Phase 4 and Phase 5 classifications fail
+   before normalized scoring records are constructed. Phase 5 validation
+   remains an additional defensive check. Pending and unevaluable controls
+   remain excluded.
 2. `verify_reference_governance` independently checks reference bytes and the
    signed panel snapshot, recomputes the exact exclusion-policy digest, checks
    the actual exclusion result, binds policy and panel evidence, and verifies
@@ -24,7 +28,12 @@ deterministic scoring policy. It does not authorize a biological benchmark.
    signed control qualifications, verifies the blinded analysis digest, and
    derives the scoring-policy digest. It verifies two independent unblinding
    signatures bound to those exact digests before it opens the truth-bundle
-   path. The truth bytes must then match the approved digest and analysis.
+   path. The context also binds the panel-manifest digest, exclusion-policy
+   digest, recomputed exclusion-evidence digest, signed scientific-review
+   digest, and exact authenticated approval-set digests for both scientific
+   review and reference policy. Replacing an approval set changes the context;
+   expired or modified approvals fail verification. The truth bytes must then
+   match the approved digest and analysis.
 4. Only after these checks does the entry point call the existing Phase 5
    scorer. Existing Phase 5 definitions, denominator rules, and truth/control
    consistency checks remain authoritative.
@@ -53,9 +62,14 @@ Permitted stages are:
 
 `PREPARED → QUALIFIED → REFERENCE_APPROVED → BLINDED_ANALYSIS_VERIFIED → UNBLINDING_AUTHORISED → SYNTHETIC_SCORING_COMPLETE`
 
-Transitions cannot skip or reverse a stage and require passing evidence. The
-state machine has no biological-execution state. Regardless of synthetic
-results, the reported overall state remains
+`verify_governance_transitions` validates a complete chain of signed receipts.
+Each receipt binds its current and requested states, target-specific evidence
+category, verified artifact digests, passing verification result, and previous
+transition digest; two trusted transition reviewers authenticate it. Receipts
+cannot be replayed or reordered. The older `advance_governance_state` function
+is a non-authoritative sequence helper only; a plain `PASS` argument never
+authorizes progress. The state machine has no biological-execution state.
+Regardless of synthetic results, the reported overall state remains
 `BLOCKED_FOR_BENCHMARK_EXECUTION`.
 
 ## Readiness categories
@@ -69,7 +83,8 @@ qualification or biological authorization.
 The initial readiness report is
 [M21 Phase 6 governance readiness](M21_PHASE6_GOVERNANCE_READINESS.md).
 Schemas for signed qualifications, scientific review, unblinding context,
-audit events, and readiness reports ship with the Python package.
+authenticated transition receipts, audit events, and readiness reports ship
+with the Python package.
 
 ## Scope and limitations
 

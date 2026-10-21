@@ -42,6 +42,7 @@ satellite_discovery = [
     "m21_phase6_signed_qualification.schema.json",
     "m21_phase6_scientific_review.schema.json",
     "m21_phase6_unblinding_context.schema.json",
+    "m21_phase6_transition_receipt.schema.json",
     "m21_phase6_audit_event.schema.json",
     "m21_phase6_governance_readiness.schema.json",
 ]

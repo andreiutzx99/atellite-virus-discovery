@@ -102,6 +102,40 @@ class M21Phase6GovernanceTests(unittest.TestCase):
                      for i in range(2)]
         return {"content": content, "approvals": approvals}, evidence
 
+    def resign_control(self, document):
+        content = document["content"]
+        binding = gov.digest(content)
+        evidence_sha = content["evidence_sha256"]
+        document["approvals"] = [
+            self.approval("control_qualification", binding, evidence_sha, i)
+            for i in range(2)
+        ]
+
+    def test_phase6_rejects_ineligible_scientific_evidence_and_class_conflicts(self):
+        positive, evidence = self.control()
+        positive["content"]["phase4_qualification"]["evidence_strength"] = "LIMITED"
+        self.resign_control(positive)
+        result = gov.verify_signed_control_qualification(positive, evidence, self.trust, NOW)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("HIGH or MODERATE" in issue for issue in result["issues"]))
+
+        negative, evidence = self.control()
+        negative["content"]["phase4_qualification"].update(
+            control_class="SCREEN_NEGATIVE", sensitivity_status="UNKNOWN"
+        )
+        negative["content"]["control_class"] = "NEGATIVE"
+        self.resign_control(negative)
+        result = gov.verify_signed_control_qualification(negative, evidence, self.trust, NOW)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("ADEQUATE screening sensitivity" in issue for issue in result["issues"]))
+
+        conflicting, evidence = self.control()
+        conflicting["content"]["control_class"] = "NEGATIVE"
+        self.resign_control(conflicting)
+        result = gov.verify_signed_control_qualification(conflicting, evidence, self.trust, NOW)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any("conflicts with the signed Phase 4" in issue for issue in result["issues"]))
+
     def test_signed_control_qualification_derives_review_and_pending_stays_excluded(self):
         document, evidence = self.control()
         result = gov.verify_signed_control_qualification(document, evidence, self.trust, NOW)
@@ -283,15 +317,33 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         truth_path.write_bytes(truth_bytes)
         return analysis, truth, analysis_path, truth_path, hashlib.sha256(truth_bytes).hexdigest()
 
-    def signed_unblinding(self, analysis, truth_digest, reference_digest, qualifications, *, policy_sha=None):
+    def signed_unblinding(self, analysis, truth_digest, reference_governance, qualifications, *, policy_sha=None):
         policy_sha = policy_sha or scoring.scoring_policy_digest()
         context = gov.unblinding_context(
-            analysis["analysis_sha256"], truth_digest, policy_sha, reference_digest,
+            analysis["analysis_sha256"], truth_digest, policy_sha, reference_governance,
             [item["qualification_sha256"] for item in qualifications],
         )
         binding = gov.digest(context)
         return [self.approval("unblinding", binding, truth_digest, i, sample=gov.AGGREGATE_SAMPLE)
                 for i in range(2)]
+
+    def signed_transition_receipt(self, current, requested, category, artifacts, previous):
+        receipt = {
+            "current_state": current,
+            "requested_state": requested,
+            "evidence_category": category,
+            "verified_artifact_digests": artifacts,
+            "verification_result": "PASS",
+            "previous_transition_sha256": previous,
+        }
+        binding = gov.digest(receipt)
+        evidence = gov.digest(artifacts)
+        approvals = [
+            self.approval("governance_transition", binding, evidence, i,
+                          sample=gov.AGGREGATE_SAMPLE)
+            for i in range(2)
+        ]
+        return {"receipt": receipt, "approvals": approvals}
 
     def test_unblinding_entry_point_authenticates_before_truth_and_scores_synthetic_only(self):
         analysis, truth, ap, tp, truth_digest = self.analysis_truth()
@@ -299,7 +351,7 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         verified = gov.verify_signed_control_qualification(qual, evidence, self.trust, NOW)
         qualifications = [verified["scoring_qualification"]]
         reference, reference_verified = self.reference_input()
-        approvals = self.signed_unblinding(analysis, truth_digest, reference_verified["evidence_sha256"], qualifications)
+        approvals = self.signed_unblinding(analysis, truth_digest, reference_verified, qualifications)
         result = gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], reference, approvals,
                                                self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)
         self.assertEqual(result["status"], "PASS")
@@ -321,16 +373,16 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         qual, evidence = self.control()
         record = gov.verify_signed_control_qualification(qual, evidence, self.trust, NOW)["scoring_qualification"]
         reference, ref = self.reference_input()
-        valid = self.signed_unblinding(analysis, truth_digest, ref["evidence_sha256"], [record])
+        valid = self.signed_unblinding(analysis, truth_digest, ref, [record])
         single = gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], reference, valid[:1],
                                                self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)
         self.assertEqual(single["status"], "FAIL")
-        stale_policy = self.signed_unblinding(analysis, truth_digest, ref["evidence_sha256"], [record], policy_sha="0" * 64)
+        stale_policy = self.signed_unblinding(analysis, truth_digest, ref, [record], policy_sha="0" * 64)
         self.assertEqual(gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], reference, stale_policy,
                                                        self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)["status"], "FAIL")
         expired = [self.approval("unblinding", gov.digest(gov.unblinding_context(
             analysis["analysis_sha256"], truth_digest, scoring.scoring_policy_digest(),
-            ref["evidence_sha256"], [record["qualification_sha256"]],
+            ref, [record["qualification_sha256"]],
         )), truth_digest, 0, expires="2026-10-20T00:00:00Z", sample=gov.AGGREGATE_SAMPLE), valid[1]]
         self.assertEqual(gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], reference, expired,
                                                        self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)["status"], "FAIL")
@@ -345,6 +397,62 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         ap.write_text(json.dumps(analysis))
         self.assertEqual(gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], reference, valid,
                                                        self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)["status"], "FAIL")
+
+    def test_unblinding_binds_exact_scientific_and_reference_approval_sets(self):
+        analysis, _, ap, tp, truth_digest = self.analysis_truth()
+        qual, evidence = self.control()
+        record = gov.verify_signed_control_qualification(qual, evidence, self.trust, NOW)["scoring_qualification"]
+        reference, verified = self.reference_input()
+        authorization = self.signed_unblinding(analysis, truth_digest, verified, [record])
+
+        mutated = copy.deepcopy(reference)
+        mutated["scientific_approvals"][0]["expires_at"] = "2026-12-01T00:00:00Z"
+        result = gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], mutated, authorization,
+                                               self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)
+        self.assertEqual(result["status"], "FAIL")
+
+        replacement = copy.deepcopy(reference)
+        review = replacement["scientific_review"]
+        binding = gov.digest(review)
+        replacement["scientific_approvals"] = [
+            self.approval(
+                "scientific_review", binding, review["reviewer_evidence_sha256"], i,
+                dataset=replacement["reference_manifest"]["snapshot_id"],
+                sample=replacement["reference_manifest"]["snapshot_id"],
+            )
+            for i in range(2)
+        ]
+        result = gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], replacement, authorization,
+                                               self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)
+        self.assertEqual(result["status"], "FAIL")
+
+        replacement = copy.deepcopy(reference)
+        replacement["policy_approvals"] = [
+            self.approval(
+                "reference_exclusion_policy", verified["binding_sha256"],
+                verified["policy_sha256"], i,
+                dataset=replacement["reference_manifest"]["snapshot_id"],
+                sample=replacement["reference_manifest"]["snapshot_id"],
+            )
+            for i in range(2)
+        ]
+        result = gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], replacement, authorization,
+                                               self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)
+        self.assertEqual(result["status"], "FAIL")
+
+        expired = copy.deepcopy(reference)
+        expired["scientific_approvals"] = [
+            self.approval(
+                "scientific_review", binding, review["reviewer_evidence_sha256"], i,
+                expires="2026-10-20T00:00:00Z",
+                dataset=expired["reference_manifest"]["snapshot_id"],
+                sample=expired["reference_manifest"]["snapshot_id"],
+            )
+            for i in range(2)
+        ]
+        result = gov.evaluate_synthetic_bundle(ap, tp, [(qual, evidence)], expired, authorization,
+                                               self.trust, expected_truth_bundle_sha256=truth_digest, now=NOW)
+        self.assertEqual(result["status"], "FAIL")
 
     def test_audit_chain_detects_alteration_removal_reordering_and_duplicate_ids(self):
         one = gov.make_audit_event("EVT-1", "QUALIFIED", "2026-10-21T10:00:00Z",
@@ -380,12 +488,32 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         self.assertEqual(gov.verify_audit_chain([event], stale, self.trust, NOW)["status"], "FAIL")
         self.assertEqual(gov.advance_governance_state("PREPARED", "REFERENCE_APPROVED", "PASS")["status"], "FAIL")
         self.assertEqual(gov.advance_governance_state("PREPARED", "QUALIFIED", "PENDING")["status"], "FAIL")
-        state = "PREPARED"
-        for next_state in gov.STATES[1:]:
-            outcome = gov.advance_governance_state(state, next_state, "PASS")
-            self.assertEqual(outcome["status"], "PASS")
-            self.assertFalse(outcome["biological_execution_authorized"])
-            state = outcome["state"]
+        self.assertEqual(gov.advance_governance_state("PREPARED", "QUALIFIED", "PASS")["status"],
+                         "NON_AUTHORITATIVE")
+
+        chain = []
+        verified = gov.verify_governance_transitions(chain, self.trust, NOW)
+        for current, requested in zip(gov.STATES, gov.STATES[1:]):
+            category = gov.TRANSITION_EVIDENCE_CATEGORIES[requested]
+            chain.append(self.signed_transition_receipt(
+                current, requested, category, {"stage_evidence": gov.digest(requested)},
+                verified["transition_sha256"],
+            ))
+            verified = gov.verify_governance_transitions(chain, self.trust, NOW)
+            self.assertEqual(verified["status"], "PASS", verified["issues"])
+            self.assertFalse(verified["biological_execution_authorized"])
+        self.assertEqual(verified["state"], "SYNTHETIC_SCORING_COMPLETE")
+
+        wrong_category = self.signed_transition_receipt(
+            "PREPARED", "QUALIFIED", "REFERENCE_GOVERNANCE",
+            {"qualification": "a" * 64}, None,
+        )
+        self.assertEqual(gov.verify_governance_transitions([wrong_category], self.trust, NOW)["status"], "FAIL")
+        altered = copy.deepcopy(chain)
+        altered[0]["receipt"]["verified_artifact_digests"]["stage_evidence"] = "f" * 64
+        self.assertEqual(gov.verify_governance_transitions(altered, self.trust, NOW)["status"], "FAIL")
+        self.assertEqual(gov.verify_governance_transitions([chain[1], chain[0]], self.trust, NOW)["status"], "FAIL")
+        self.assertEqual(gov.verify_governance_transitions([chain[0], chain[0]], self.trust, NOW)["status"], "FAIL")
         blocked = gov.governance_readiness({}, result)
         self.assertEqual(blocked["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
         self.assertFalse(blocked["biological_execution_authorized"])
