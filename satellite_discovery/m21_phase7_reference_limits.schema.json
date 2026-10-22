@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 7 aggregate reference-panel limits",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["max_artifacts", "max_total_bytes", "max_total_bases", "max_references", "max_alignment_cells"],
+  "properties": {
+    "max_artifacts": {"type": "integer", "minimum": 1, "maximum": 100},
+    "max_total_bytes": {"type": "integer", "minimum": 1},
+    "max_total_bases": {"type": "integer", "minimum": 1},
+    "max_references": {"type": "integer", "minimum": 1},
+    "max_alignment_cells": {"type": "integer", "minimum": 1}
+  }
+}

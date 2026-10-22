@@ -45,6 +45,9 @@ satellite_discovery = [
     "m21_phase6_transition_receipt.schema.json",
     "m21_phase6_audit_event.schema.json",
     "m21_phase6_governance_readiness.schema.json",
+    "m21_phase7_custody_checkpoint.schema.json",
+    "m21_phase7_reference_limits.schema.json",
+    "m21_phase7_readiness.schema.json",
 ]
 
 [project.optional-dependencies]

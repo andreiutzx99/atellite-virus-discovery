@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 7 deterministic readiness report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reference_snapshot_id", "reference_artifacts_verified", "aggregate_limits", "per_artifact_status", "aggregate_exclusion_status", "scientific_approval_status", "audit_chain_status", "independent_custody_anchor_status", "last_verified_checkpoint", "governance_transition_status", "evidence_mismatches", "limitations", "overall_state", "biological_execution_authorized", "decision", "human_readable"],
+  "properties": {
+    "schema_version": {"const": "m21-phase7-readiness-v1"},
+    "reference_snapshot_id": {"type": ["string", "null"]},
+    "reference_artifacts_verified": {"type": "integer", "minimum": 0},
+    "aggregate_limits": {"type": ["object", "null"]},
+    "per_artifact_status": {"type": "array", "items": {"type": "object", "required": ["path", "status"], "properties": {"path": {"type": "string"}, "status": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]}}}},
+    "aggregate_exclusion_status": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]},
+    "scientific_approval_status": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]},
+    "audit_chain_status": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]},
+    "independent_custody_anchor_status": {"enum": ["UNANCHORED", "INDEPENDENTLY_ANCHORED"]},
+    "last_verified_checkpoint": {"type": ["object", "null"]},
+    "governance_transition_status": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]},
+    "evidence_mismatches": {"type": "array", "items": {"type": "string"}},
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "overall_state": {"const": "BLOCKED_FOR_BENCHMARK_EXECUTION"},
+    "biological_execution_authorized": {"const": false},
+    "decision": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]},
+    "human_readable": {"type": "string"}
+  }
+}

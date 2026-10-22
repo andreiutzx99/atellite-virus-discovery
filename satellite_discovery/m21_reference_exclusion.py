@@ -152,6 +152,7 @@ def validate_reference_exclusions(
     *,
     expected_policy_sha256: str | None,
     expected_reference_sha256: str | None,
+    alignment_budget: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Validate an approved exclusion policy against local synthetic FASTA bytes.
 
@@ -226,7 +227,15 @@ def validate_reference_exclusions(
         if len(records) > policy["max_references"]:
             raise OverflowError("Reference count limit exceeded.")
         results = []
-        alignment_budget = {"used": 0, "limit": policy["max_alignment_cells"]}
+        if alignment_budget is None:
+            alignment_budget = {"used": 0, "limit": policy["max_alignment_cells"]}
+        elif (set(alignment_budget) != {"used", "limit"}
+              or not all(isinstance(alignment_budget[k], int) and alignment_budget[k] >= 0
+                         for k in ("used", "limit"))
+              or alignment_budget["used"] > alignment_budget["limit"]):
+            return {"status": "INCOMPLETE", "policy_sha256": policy_sha,
+                    "reference_sha256": panel_sha, "results": [],
+                    "issues": ["Aggregate alignment budget is invalid or exhausted."]}
         for ref_id, reference in records:
             matches = []
             for excluded_item in excluded:
