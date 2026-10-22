@@ -53,3 +53,4 @@ satellite_discovery = [
 [project.optional-dependencies]
 alignment = ["pysam==0.24.1"]
 plots = ["matplotlib>=3.8,<4"]
+phase7-schema-validation = ["jsonschema>=4.23,<5"]

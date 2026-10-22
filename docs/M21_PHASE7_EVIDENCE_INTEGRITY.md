@@ -27,23 +27,25 @@ record. Approval identity is not evidence of scientific appropriateness.
 `verify_independent_custody` accepts a local audit chain and checkpoint history
 separately from an out-of-band retained checkpoint history. It verifies
 Ed25519 approval scope, trust-store identity, sequence, time ordering,
-previous-checkpoint links, event count, and chain head. It detects rollback,
-replacement, missing history, and reordering. With no retained checkpoint it
+previous-checkpoint links, event count, and the matching local event digest.
+The local event chain may contain a valid uncheckpointed suffix after the last
+retained checkpoint. Required local checkpoint history must match the retained
+prefix; missing, replaced, reordered, stale, expired, or revoked records fail.
+With no retained checkpoint it
 reports `UNANCHORED`; a locally stored signature alone never means independent
 retention. The caller must establish the out-of-band source and custody
-process; this package provides no external service.
+process. The verifier cannot prove where supplied retained bytes came from, and
+this package provides no external retention service.
 
 ## Artifact-backed transitions
 
 `verify_artifact_backed_transitions` requires a full signed state sequence,
 typed required artifacts, safe paths inside a declared root, matching
-receipt-bound digests, parseable structured artifacts, and trusted
-application-supplied stage verifiers. The verifier callbacks are code and must
-reopen inputs and rerun the relevant Phase 4–6 semantic checks. Embedded
-`PASS` strings are not used as semantic evidence. This draft API does not yet
-ship a canonical application adapter set; until those adapters are wired into
-the production caller, artifact-backed governance readiness remains
-`PENDING`.
+receipt-bound digests, parseable structured artifacts, and resource caps.
+Caller-provided callbacks are not executed or treated as authoritative. The
+canonical built-in Phase 4–6 semantic adapter registry is not yet shipped, so
+artifact-backed governance readiness is `INCOMPLETE` even when signed bytes
+match.
 
 ## Filesystem assumptions and residual risks
 

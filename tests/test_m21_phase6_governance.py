@@ -611,6 +611,83 @@ class M21Phase6GovernanceTests(unittest.TestCase):
             chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
         )["status"], "FAIL")
 
+    def test_phase7_custody_allows_valid_suffix_and_rejects_missing_local_history(self):
+        chain_id = "CHAIN-SYNTH-02"
+        trust_identity = gov.digest(self.trust)
+        first = gov.make_audit_event(
+            "EVT-A", "QUALIFIED", "2026-10-21T10:00:00Z",
+            {"qualification": "a" * 64}, None, "PASS", None,
+        )
+        content = {
+            "dataset_id": DS, "chain_id": chain_id, "event_count": 1,
+            "event_sha256": first["event_sha256"], "sequence": 1,
+            "created_at": "2026-10-21T11:00:00Z",
+            "previous_checkpoint_sha256": None, "trust_store_identity": trust_identity,
+        }
+        checkpoint = {**content, "approval": self.approval(
+            "custody_checkpoint", gov.digest(content), first["event_sha256"], 0,
+            dataset=DS, sample=chain_id,
+        )}
+        suffix = gov.make_audit_event(
+            "EVT-B", "REFERENCE_APPROVED", "2026-10-21T12:00:00Z",
+            {"reference": "b" * 64}, None, "PASS", first["event_sha256"],
+        )
+        accepted = phase7.verify_independent_custody(
+            [first, suffix], [checkpoint], [checkpoint], self.trust,
+            dataset_id=DS, chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(accepted["status"], "PASS", accepted["issues"])
+        self.assertEqual(accepted["last_verified_checkpoint"]["event_count"], 1)
+        second_content = {
+            "dataset_id": DS, "chain_id": chain_id, "event_count": 2,
+            "event_sha256": suffix["event_sha256"], "sequence": 2,
+            "created_at": "2026-10-21T13:00:00Z",
+            "previous_checkpoint_sha256": gov.digest({
+                **content, "approval_set_sha256": gov._approval_set_digest([checkpoint["approval"]])
+            }),
+            "trust_store_identity": trust_identity,
+        }
+        second_checkpoint = {**second_content, "approval": self.approval(
+            "custody_checkpoint", gov.digest(second_content), suffix["event_sha256"], 1,
+            dataset=DS, sample=chain_id,
+        )}
+        rotated = phase7.verify_independent_custody(
+            [first, suffix], [checkpoint, second_checkpoint],
+            [checkpoint, second_checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(rotated["status"], "PASS", rotated["issues"])
+        self.assertEqual(rotated["checkpoint_count"], 2)
+        reordered = phase7.verify_independent_custody(
+            [first, suffix], [second_checkpoint, checkpoint],
+            [second_checkpoint, checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(reordered["status"], "FAIL")
+        revoked = copy.deepcopy(self.trust)
+        revoked[checkpoint["approval"]["reviewer_id"]]["revoked"] = True
+        revoked_result = phase7.verify_independent_custody(
+            [first, suffix], [checkpoint, second_checkpoint],
+            [checkpoint, second_checkpoint], revoked, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=gov.digest(revoked), now=NOW,
+        )
+        self.assertEqual(revoked_result["status"], "FAIL")
+        missing_local = phase7.verify_independent_custody(
+            [first], [], [checkpoint], self.trust, dataset_id=DS, chain_id=chain_id,
+            trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(missing_local["status"], "FAIL")
+        policy_allows_missing = phase7.verify_independent_custody(
+            [first], [], [checkpoint], self.trust, dataset_id=DS, chain_id=chain_id,
+            trust_store_identity=trust_identity, require_local_checkpoints=False, now=NOW,
+        )
+        self.assertEqual(policy_allows_missing["status"], "PASS", policy_allows_missing["issues"])
+        fabricated = dict(checkpoint, event_sha256="f" * 64)
+        self.assertEqual(phase7.verify_independent_custody(
+            [first], [fabricated], [fabricated], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )["status"], "FAIL")
+
     def test_phase7_panel_scientific_review_authenticates_inventory_and_limits(self):
         policy, manifest, root, _, _, _, _, _ = self.reference_approval_bundle()
         limits = {"max_artifacts": 1, "max_total_bytes": 10000,
@@ -678,14 +755,17 @@ class M21Phase6GovernanceTests(unittest.TestCase):
             ))
             verified = gov.verify_governance_transitions(receipts, self.trust, NOW)
             paths[requested] = stage_paths
+        called = []
         stage_verifiers = {
-            category: (lambda _paths, _receipt, _now: {"status": "PASS"})
+            category: (lambda *_args: called.append("untrusted PASS") or {"status": "PASS"})
             for category in gov.TRANSITION_EVIDENCE_CATEGORIES.values()
         }
         result = phase7.verify_artifact_backed_transitions(
             receipts, paths, root, self.trust, stage_verifiers, NOW,
         )
-        self.assertEqual(result["status"], "PASS", result["issues"])
+        self.assertEqual(result["status"], "INCOMPLETE", result["issues"])
+        self.assertFalse(called, "Untrusted custom callbacks must not run as authoritative verifiers.")
+        self.assertFalse(result["custom_callbacks_authoritative"])
         self.assertEqual(len(result["verified_stages"]), 5)
         (root / paths["QUALIFIED"]["control_qualification"]).write_text("{}")
         changed = phase7.verify_artifact_backed_transitions(
@@ -698,6 +778,26 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         self.assertEqual(report["decision"], "INCOMPLETE")
         self.assertEqual(report["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
         self.assertFalse(report["biological_execution_authorized"])
+        apparently_qualifying = phase7.phase7_readiness_report(
+            {"status": "PASS"}, {"status": "PASS"},
+            {"status": "PASS", "anchor_status": "INDEPENDENTLY_ANCHORED"},
+            {"status": "PASS"},
+        )
+        self.assertEqual(apparently_qualifying["decision"], "INCOMPLETE")
+        self.assertEqual(apparently_qualifying["canonical_stage_adapters_status"], "INCOMPLETE")
+        self.assertEqual(apparently_qualifying["adversarial_matrix_status"], "INCOMPLETE")
+        no_anchor = phase7.phase7_readiness_report(
+            {"status": "PASS"}, {"status": "PASS"},
+            {"status": "PASS", "anchor_status": "UNANCHORED"},
+            {"status": "PASS"},
+        )
+        self.assertEqual(no_anchor["decision"], "INCOMPLETE")
+        missing_matrix = phase7.phase7_readiness_report(
+            {"status": "PASS"}, {"status": "PASS"},
+            {"status": "PASS", "anchor_status": "INDEPENDENTLY_ANCHORED"},
+            {"status": "PASS"},
+        )
+        self.assertEqual(missing_matrix["decision"], "INCOMPLETE")
         self.assertEqual(
             report["human_readable"],
             phase7.phase7_readiness_report(None, None, None, None)["human_readable"],
