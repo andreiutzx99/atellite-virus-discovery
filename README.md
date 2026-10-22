@@ -93,6 +93,7 @@ do not validate this software's output or technical defaults. See
 | M14 — Descriptive candidate/helper observations | Validates caller-supplied observation frames and reports descriptive co-detection and completeness/status summaries. | Descriptive only; no statistical association, causality, or helper/replication dependence. |
 | M15 — Cross-stage evidence dossier | Validates typed producer references through the shared `producer-execution-ref-v1` verifier; preserves raw producer statuses, explicit evidence states, missingness, and provenance-verified dependencies in a deterministic dossier and result bundle, validated with synthetic/offline fixtures only; no biological datasets or external biological analysis were used. | Uses supported M5–M10 and M12–M14 artifacts; M11 is outside the frozen contract. Descriptive only: no ranking, scoring, weighting, tiers, classification, confirmation, or rejection. Integrity under the documented trust model is not signer authentication or biological truth. |
 | M16 — Synthetic benchmarking and leakage/custody harness | Validates generated synthetic fixtures, split/group leakage rules, blinding/custody transitions, and deterministic software-outcome accounting for frozen target outputs. | Synthetic software evaluation only. No empirical holdout evaluation, biological validation, biological-performance claim, functional discovery, or biological interpretation. |
+| M21 Phase 6 — Authenticated synthetic benchmark governance | Verifies signed control qualification, exact reference-exclusion and scientific-review evidence, blinded-analysis integrity, two-reviewer unblinding, synthetic scoring, audit chains, and fail-closed governance states. | Software and synthetic-fixture validation only. Overall state remains `BLOCKED_FOR_BENCHMARK_EXECUTION`; no biological execution is authorized. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
@@ -110,6 +111,9 @@ See the [M12 contract freeze](docs/M12_CONTRACT_FREEZE.md) and
 scopes and limitations. See the
 [M15 contract freeze](docs/M15_CONTRACT_FREEZE.md) for accepted artifacts,
 provenance requirements, dossier semantics, and limitations.
+See the [M21 Phase 6 governance design](docs/M21_PHASE6_AUTHENTICATED_GOVERNANCE.md)
+and its [readiness report](docs/M21_PHASE6_GOVERNANCE_READINESS.md) for
+approval, custody, and scientific-evidence boundaries.
 
 ## Pipeline architecture
 

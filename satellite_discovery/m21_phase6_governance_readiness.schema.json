@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 6 governance-readiness report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["categories", "software_correctness", "evidence_integrity", "reviewer_authentication", "scientific_appropriateness", "dataset_qualification", "biological_benchmark_authorization", "overall_state", "biological_execution_authorized"],
+  "properties": {
+    "categories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cryptographic_approval_verification", "control_qualification", "reference_exclusion_integrity", "scientific_review_evidence", "blinding_integrity", "unblinding_authorization", "audit_chain_verification", "synthetic_scoring_eligibility", "audit_anchor"],
+      "properties": {
+        "cryptographic_approval_verification": {"$ref": "#/$defs/state"},
+        "control_qualification": {"$ref": "#/$defs/state"},
+        "reference_exclusion_integrity": {"$ref": "#/$defs/state"},
+        "scientific_review_evidence": {"$ref": "#/$defs/state"},
+        "blinding_integrity": {"$ref": "#/$defs/state"},
+        "unblinding_authorization": {"$ref": "#/$defs/state"},
+        "audit_chain_verification": {"$ref": "#/$defs/state"},
+        "synthetic_scoring_eligibility": {"$ref": "#/$defs/state"},
+        "audit_anchor": {"enum": ["VERIFIED", "UNANCHORED", "PENDING", "FAIL"]}
+      }
+    },
+    "software_correctness": {"$ref": "#/$defs/state"},
+    "evidence_integrity": {"$ref": "#/$defs/state"},
+    "reviewer_authentication": {"$ref": "#/$defs/state"},
+    "scientific_appropriateness": {"$ref": "#/$defs/state"},
+    "dataset_qualification": {"$ref": "#/$defs/state"},
+    "biological_benchmark_authorization": {"const": "BLOCKED"},
+    "overall_state": {"const": "BLOCKED_FOR_BENCHMARK_EXECUTION"},
+    "biological_execution_authorized": {"const": false}
+  },
+  "$defs": {"state": {"enum": ["PASS", "FAIL", "INCOMPLETE", "PENDING"]}}
+}

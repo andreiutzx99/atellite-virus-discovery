@@ -198,13 +198,15 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     return issues
 
 
-def _load_trust_store(path: str | Path | None) -> dict[str, dict[str, Any]]:
+def _load_trust_store(path: str | Path | None,
+                      extra_scopes: set[str] | None = None) -> dict[str, dict[str, Any]]:
     if path is None:
         return {}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict) or set(data) != {"schema_version", "reviewers"} or data.get("schema_version") != "m21-reviewer-trust-store-v1" or not isinstance(data.get("reviewers"), list):
         raise ValueError("Malformed reviewer trust store.")
     reviewers = {}
+    allowed_scopes = set(GATES) | set(extra_scopes or ())
     seen_keys = set()
     for item in data["reviewers"]:
         required = {"reviewer_id", "key_id", "public_key_ed25519", "role", "scopes",
@@ -215,7 +217,7 @@ def _load_trust_store(path: str | Path | None) -> dict[str, dict[str, Any]]:
                 or not isinstance(item["key_id"], str) or not KEY_ID_RE.fullmatch(item["key_id"])
                 or not isinstance(item["public_key_ed25519"], str)
                 or not isinstance(item["role"], str) or not isinstance(item["scopes"], list)
-                or any(scope not in GATES for scope in item["scopes"])
+                or any(not isinstance(scope, str) or scope not in allowed_scopes for scope in item["scopes"])
                 or not isinstance(item["revoked"], bool)
                 or not _parse_time(item["valid_from"]) or not _parse_time(item["valid_until"])
                 or item["reviewer_id"] in reviewers):

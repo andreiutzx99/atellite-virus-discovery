@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 6 exact unblinding authorization context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "analysis_sha256",
+    "truth_bundle_sha256",
+    "scoring_policy_sha256",
+    "reference_evidence_sha256",
+    "reference_panel_manifest_sha256",
+    "reference_exclusion_policy_sha256",
+    "recomputed_exclusion_evidence_sha256",
+    "signed_scientific_review_sha256",
+    "scientific_review_approval_set_sha256",
+    "reference_policy_approval_set_sha256",
+    "qualification_sha256s"
+  ],
+  "properties": {
+    "analysis_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "truth_bundle_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "scoring_policy_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "reference_evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "reference_panel_manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "reference_exclusion_policy_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "recomputed_exclusion_evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signed_scientific_review_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "scientific_review_approval_set_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "reference_policy_approval_set_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "qualification_sha256s": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+  }
+}
