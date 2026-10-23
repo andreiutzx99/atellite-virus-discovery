@@ -94,6 +94,7 @@ do not validate this software's output or technical defaults. See
 | M15 — Cross-stage evidence dossier | Validates typed producer references through the shared `producer-execution-ref-v1` verifier; preserves raw producer statuses, explicit evidence states, missingness, and provenance-verified dependencies in a deterministic dossier and result bundle, validated with synthetic/offline fixtures only; no biological datasets or external biological analysis were used. | Uses supported M5–M10 and M12–M14 artifacts; M11 is outside the frozen contract. Descriptive only: no ranking, scoring, weighting, tiers, classification, confirmation, or rejection. Integrity under the documented trust model is not signer authentication or biological truth. |
 | M16 — Synthetic benchmarking and leakage/custody harness | Validates generated synthetic fixtures, split/group leakage rules, blinding/custody transitions, and deterministic software-outcome accounting for frozen target outputs. | Synthetic software evaluation only. No empirical holdout evaluation, biological validation, biological-performance claim, functional discovery, or biological interpretation. |
 | M21 Phase 6 — Authenticated synthetic benchmark governance | Verifies signed control qualification, exact reference-exclusion and scientific-review evidence, blinded-analysis integrity, two-reviewer unblinding, synthetic scoring, audit chains, and fail-closed governance states. | Software and synthetic-fixture validation only. Overall state remains `BLOCKED_FOR_BENCHMARK_EXECUTION`; no biological execution is authorized. |
+| M21 Phase 7 — Multi-artifact evidence integrity (draft) | Adds aggregate multi-FASTA exclusion verification, exact panel approval binding, retained checkpoint comparison, and artifact digest revalidation for signed transition chains. | Synthetic infrastructure only. Independent retention is an out-of-band caller responsibility; trusted stage-verifier adapters and remaining adversarial coverage are pending. |
 
 Detailed retrospective documents: [M1](docs/M1_FOUNDATION.md),
 [M2](docs/M2_REFERENCE_ACQUISITION.md), [M3](docs/M3_ASSEMBLY.md),
@@ -114,6 +115,9 @@ provenance requirements, dossier semantics, and limitations.
 See the [M21 Phase 6 governance design](docs/M21_PHASE6_AUTHENTICATED_GOVERNANCE.md)
 and its [readiness report](docs/M21_PHASE6_GOVERNANCE_READINESS.md) for
 approval, custody, and scientific-evidence boundaries.
+Phase 7's current design and readiness status are documented in
+[M21 Phase 7 evidence integrity](docs/M21_PHASE7_EVIDENCE_INTEGRITY.md) and
+[its readiness report](docs/M21_PHASE7_READINESS_REPORT.md).
 
 ## Pipeline architecture
 

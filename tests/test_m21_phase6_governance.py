@@ -16,6 +16,7 @@ except ImportError:
 
 from satellite_discovery import m21_benchmark_readiness as readiness
 from satellite_discovery import m21_phase6_governance as gov
+from satellite_discovery import m21_phase7_evidence as phase7
 from satellite_discovery import m21_reference_exclusion as exclusion
 from satellite_discovery import m21_scientific_scoring as scoring
 
@@ -517,6 +518,574 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         blocked = gov.governance_readiness({}, result)
         self.assertEqual(blocked["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
         self.assertFalse(blocked["biological_execution_authorized"])
+
+    def test_phase7_multi_artifact_panel_is_complete_aggregate_and_snapshot_bound(self):
+        policy, manifest, root, _, _, _, _, _ = self.reference_approval_bundle()
+        second_bytes = b">SYNTHREF-00000002\nGGGGGGGG\n"
+        (root / "panel2.fa").write_bytes(second_bytes)
+        base = {key: value for key, value in manifest.items() if key != "approval"}
+        base["references"] = [*base["references"], {
+            "source": "synthetic", "accession_version": "SYNTH.2", "path": "panel2.fa",
+            "bytes": len(second_bytes), "sha256": hashlib.sha256(second_bytes).hexdigest(),
+        }]
+        binding = readiness._reference_panel_binding_digest(base)
+        base["approval"] = self.approval(
+            "reference_panel", binding, hashlib.sha256(b"panel-review").hexdigest(),
+            dataset=base["snapshot_id"], sample=base["snapshot_id"],
+        )
+        limits = {"max_artifacts": 2, "max_total_bytes": 10000,
+                  "max_total_bases": 1000, "max_references": 10,
+                  "max_alignment_cells": 10000}
+        result = phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, limits, NOW,
+        )
+        self.assertEqual(result["status"], "PASS", result["issues"])
+        self.assertEqual(result["artifact_count"], 2)
+        self.assertEqual(result["reference_count"], 2)
+        self.assertEqual(result["overall_exclusion_status"], "PASS")
+
+        (root / "unapproved.fa").write_text(">SYNTHREF-00000003\nCCCCCCCC\n")
+        self.assertEqual(phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, limits, NOW,
+        )["status"], "FAIL")
+        (root / "unapproved.fa").unlink()
+        (root / "panel2.fa").write_bytes(b">SYNTHREF-00000001\nGGGGGGGG\n")
+        rejected = phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, limits, NOW,
+        )
+        self.assertEqual(rejected["status"], "FAIL")
+        self.assertTrue(any("Conflicting reference identifiers" in x for x in rejected["issues"]))
+        (root / "panel2.fa").write_bytes(second_bytes)
+        (root / "panel2.fa").unlink()
+        self.assertEqual(phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, limits, NOW,
+        )["status"], "FAIL")
+        (root / "panel2.fa").write_bytes(b">SYNTHREF-00000002\nTTTTTTTT\n")
+        self.assertEqual(phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, limits, NOW,
+        )["status"], "FAIL")
+        (root / "panel2.fa").write_bytes(second_bytes)
+        constrained = {**limits, "max_total_bytes": 1}
+        self.assertEqual(phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, constrained, NOW,
+        )["status"], "FAIL")
+        constrained = {**limits, "max_alignment_cells": 1}
+        self.assertEqual(phase7.verify_multi_artifact_reference_panel(
+            base, policy, root, self.trust, constrained, NOW,
+        )["status"], "FAIL")
+
+    def test_phase7_independent_checkpoint_detects_rollback_and_replacement(self):
+        chain_id = "CHAIN-SYNTH-01"
+        trust_identity = gov.digest(self.trust)
+        event = gov.make_audit_event("EVT-1", "QUALIFIED", "2026-10-21T10:00:00Z",
+                                     {"qualification": "a" * 64}, None, "PASS", None)
+        content = {
+            "dataset_id": DS, "chain_id": chain_id, "event_count": 1,
+            "event_sha256": event["event_sha256"], "sequence": 1,
+            "created_at": "2026-10-21T11:00:00Z",
+            "previous_checkpoint_sha256": None, "trust_store_identity": trust_identity,
+        }
+        approval = self.approval(
+            "custody_checkpoint", gov.digest(content), event["event_sha256"], 0,
+            dataset=DS, sample=chain_id,
+        )
+        checkpoint = {**content, "approval": approval}
+        valid = phase7.verify_independent_custody(
+            [event], [checkpoint], [checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(valid["status"], "PASS", valid["issues"])
+        self.assertEqual(valid["anchor_status"], "INDEPENDENTLY_ANCHORED")
+        self.assertEqual(phase7.verify_independent_custody(
+            [event], [checkpoint], [], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )["anchor_status"], "UNANCHORED")
+        self.assertEqual(phase7.verify_independent_custody(
+            [], [checkpoint], [checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )["status"], "FAIL")
+        replacement = gov.make_audit_event("EVT-X", "QUALIFIED", "2026-10-21T10:00:00Z",
+                                           {"qualification": "b" * 64}, None, "PASS", None)
+        self.assertEqual(phase7.verify_independent_custody(
+            [replacement], [checkpoint], [checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )["status"], "FAIL")
+
+    def test_phase7_custody_allows_valid_suffix_and_rejects_missing_local_history(self):
+        chain_id = "CHAIN-SYNTH-02"
+        trust_identity = gov.digest(self.trust)
+        first = gov.make_audit_event(
+            "EVT-A", "QUALIFIED", "2026-10-21T10:00:00Z",
+            {"qualification": "a" * 64}, None, "PASS", None,
+        )
+        content = {
+            "dataset_id": DS, "chain_id": chain_id, "event_count": 1,
+            "event_sha256": first["event_sha256"], "sequence": 1,
+            "created_at": "2026-10-21T11:00:00Z",
+            "previous_checkpoint_sha256": None, "trust_store_identity": trust_identity,
+        }
+        checkpoint = {**content, "approval": self.approval(
+            "custody_checkpoint", gov.digest(content), first["event_sha256"], 0,
+            dataset=DS, sample=chain_id,
+        )}
+        suffix = gov.make_audit_event(
+            "EVT-B", "REFERENCE_APPROVED", "2026-10-21T12:00:00Z",
+            {"reference": "b" * 64}, None, "PASS", first["event_sha256"],
+        )
+        accepted = phase7.verify_independent_custody(
+            [first, suffix], [checkpoint], [checkpoint], self.trust,
+            dataset_id=DS, chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(accepted["status"], "PASS", accepted["issues"])
+        self.assertEqual(accepted["last_verified_checkpoint"]["event_count"], 1)
+        second_content = {
+            "dataset_id": DS, "chain_id": chain_id, "event_count": 2,
+            "event_sha256": suffix["event_sha256"], "sequence": 2,
+            "created_at": "2026-10-21T13:00:00Z",
+            "previous_checkpoint_sha256": gov.digest({
+                **content, "approval_set_sha256": gov._approval_set_digest([checkpoint["approval"]])
+            }),
+            "trust_store_identity": trust_identity,
+        }
+        second_checkpoint = {**second_content, "approval": self.approval(
+            "custody_checkpoint", gov.digest(second_content), suffix["event_sha256"], 1,
+            dataset=DS, sample=chain_id,
+        )}
+        rotated = phase7.verify_independent_custody(
+            [first, suffix], [checkpoint, second_checkpoint],
+            [checkpoint, second_checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(rotated["status"], "PASS", rotated["issues"])
+        self.assertEqual(rotated["checkpoint_count"], 2)
+        reordered = phase7.verify_independent_custody(
+            [first, suffix], [second_checkpoint, checkpoint],
+            [second_checkpoint, checkpoint], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(reordered["status"], "FAIL")
+        revoked = copy.deepcopy(self.trust)
+        revoked[checkpoint["approval"]["reviewer_id"]]["revoked"] = True
+        revoked_result = phase7.verify_independent_custody(
+            [first, suffix], [checkpoint, second_checkpoint],
+            [checkpoint, second_checkpoint], revoked, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=gov.digest(revoked), now=NOW,
+        )
+        self.assertEqual(revoked_result["status"], "FAIL")
+        missing_local = phase7.verify_independent_custody(
+            [first], [], [checkpoint], self.trust, dataset_id=DS, chain_id=chain_id,
+            trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(missing_local["status"], "FAIL")
+        policy_allows_missing = phase7.verify_independent_custody(
+            [first], [], [checkpoint], self.trust, dataset_id=DS, chain_id=chain_id,
+            trust_store_identity=trust_identity, require_local_checkpoints=False, now=NOW,
+        )
+        self.assertEqual(policy_allows_missing["status"], "PASS", policy_allows_missing["issues"])
+        fabricated = dict(checkpoint, event_sha256="f" * 64)
+        self.assertEqual(phase7.verify_independent_custody(
+            [first], [fabricated], [fabricated], self.trust, dataset_id=DS,
+            chain_id=chain_id, trust_store_identity=trust_identity, now=NOW,
+        )["status"], "FAIL")
+
+    def test_phase7_panel_scientific_review_authenticates_inventory_and_limits(self):
+        policy, manifest, root, _, _, _, _, _ = self.reference_approval_bundle()
+        limits = {"max_artifacts": 1, "max_total_bytes": 10000,
+                  "max_total_bases": 1000, "max_references": 10,
+                  "max_alignment_cells": 10000}
+        panel = phase7.verify_multi_artifact_reference_panel(
+            manifest, policy, root, self.trust, limits, NOW,
+        )
+        self.assertEqual(panel["status"], "PASS", panel["issues"])
+        evidence = b"synthetic full-panel review"
+        review = {
+            "snapshot_id": manifest["snapshot_id"],
+            "reference_inventory_sha256": panel["artifact_inventory_sha256"],
+            "exclusion_policy_sha256": exclusion.exclusion_policy_digest(policy),
+            "aggregate_exclusion_evidence_sha256": panel["aggregate_exclusion_evidence_sha256"],
+            "reviewer_evidence_sha256": hashlib.sha256(evidence).hexdigest(),
+            "decision": "APPROVED", "expires_at": "2027-01-01T00:00:00Z",
+            "limitations": ["Synthetic fixtures only."],
+        }
+        binding = gov.digest({
+            "snapshot_id": manifest["snapshot_id"],
+            "reference_inventory_sha256": review["reference_inventory_sha256"],
+            "exclusion_policy_sha256": review["exclusion_policy_sha256"],
+            "aggregate_exclusion_evidence_sha256": review["aggregate_exclusion_evidence_sha256"],
+        })
+        policy_approvals = [self.approval(
+            "reference_exclusion_policy", binding, review["exclusion_policy_sha256"], i,
+            dataset=manifest["snapshot_id"], sample=manifest["snapshot_id"],
+        ) for i in range(2)]
+        review_sha = gov.digest(review)
+        science_approvals = [self.approval(
+            "scientific_review", review_sha, review["reviewer_evidence_sha256"], i,
+            dataset=manifest["snapshot_id"], sample=manifest["snapshot_id"],
+        ) for i in range(2)]
+        result = phase7.verify_multi_artifact_scientific_approval(
+            manifest, policy, root, limits, review, evidence, policy_approvals,
+            science_approvals, self.trust, NOW,
+        )
+        self.assertEqual(result["status"], "PASS", result["issues"])
+        altered = dict(review, reference_inventory_sha256="0" * 64)
+        self.assertEqual(phase7.verify_multi_artifact_scientific_approval(
+            manifest, policy, root, limits, altered, evidence, policy_approvals,
+            science_approvals, self.trust, NOW,
+        )["status"], "FAIL")
+
+    def test_phase7_transition_receipts_reopen_each_stage_artifact(self):
+        root = self.root / "stage-artifacts"
+        root.mkdir()
+        receipts, paths = [], {}
+        verified = gov.verify_governance_transitions([], self.trust, NOW)
+        for current, requested in zip(gov.STATES, gov.STATES[1:]):
+            artifacts, stage_paths = {}, {}
+            for artifact_type in sorted(phase7.REQUIRED_TRANSITION_ARTIFACTS[requested]):
+                content = (b"synthetic evidence bytes" if artifact_type == "qualification_evidence"
+                           else json.dumps({"synthetic": True}).encode())
+                rel = f"{requested}/{artifact_type}.dat"
+                destination = root / rel
+                destination.parent.mkdir(exist_ok=True)
+                destination.write_bytes(content)
+                artifacts[artifact_type] = hashlib.sha256(content).hexdigest()
+                stage_paths[artifact_type] = rel
+            receipts.append(self.signed_transition_receipt(
+                current, requested, gov.TRANSITION_EVIDENCE_CATEGORIES[requested],
+                artifacts, verified["transition_sha256"],
+            ))
+            verified = gov.verify_governance_transitions(receipts, self.trust, NOW)
+            paths[requested] = stage_paths
+        called = []
+        stage_verifiers = {
+            category: (lambda *_args: called.append("untrusted PASS") or {"status": "PASS"})
+            for category in gov.TRANSITION_EVIDENCE_CATEGORIES.values()
+        }
+        result = phase7.verify_artifact_backed_transitions(
+            receipts, paths, root, self.trust, stage_verifiers, NOW,
+        )
+        self.assertEqual(result["status"], "FAIL", result["issues"])
+        self.assertFalse(called, "Untrusted custom callbacks must not run as authoritative verifiers.")
+        self.assertFalse(result["custom_callbacks_authoritative"])
+        self.assertEqual(len(result["verified_stages"]), 5)
+        self.assertEqual(result["semantic_adapter_status"], "FAIL")
+        self.assertTrue(result["issues"])
+        (root / paths["QUALIFIED"]["control_qualification"]).write_text("{}")
+        changed = phase7.verify_artifact_backed_transitions(
+            receipts, paths, root, self.trust, stage_verifiers, NOW,
+        )
+        self.assertEqual(changed["status"], "FAIL")
+
+    def phase7_complete_synthetic_transition(self):
+        root = self.root / "phase7-complete"
+        root.mkdir()
+        panel_root = root / "refs"
+        panel_root.mkdir()
+        policy, manifest, source_root, _, _, _, _, _ = self.reference_approval_bundle()
+        (panel_root / "panel.fa").write_bytes((source_root / "panel.fa").read_bytes())
+        limits = {
+            "max_artifacts": 1, "max_total_bytes": 10000, "max_total_bases": 1000,
+            "max_references": 1, "max_alignment_cells": 10000,
+        }
+        panel = phase7.verify_multi_artifact_reference_panel(
+            manifest, policy, panel_root, self.trust, limits, NOW,
+        )
+        self.assertEqual(panel["status"], "PASS", panel["issues"])
+        self._phase7_panel_result = panel
+        review_bytes = b"synthetic panel-wide scientific review"
+        review = {
+            "snapshot_id": manifest["snapshot_id"],
+            "reference_inventory_sha256": panel["artifact_inventory_sha256"],
+            "exclusion_policy_sha256": exclusion.exclusion_policy_digest(policy),
+            "aggregate_exclusion_evidence_sha256": panel["aggregate_exclusion_evidence_sha256"],
+            "reviewer_evidence_sha256": hashlib.sha256(review_bytes).hexdigest(),
+            "decision": "APPROVED", "expires_at": "2027-01-01T00:00:00Z",
+            "limitations": ["Synthetic reference fixtures only."],
+        }
+        policy_binding = gov.digest({
+            "snapshot_id": manifest["snapshot_id"],
+            "reference_inventory_sha256": panel["artifact_inventory_sha256"],
+            "exclusion_policy_sha256": exclusion.exclusion_policy_digest(policy),
+            "aggregate_exclusion_evidence_sha256": panel["aggregate_exclusion_evidence_sha256"],
+        })
+        policy_approvals = [
+            self.approval("reference_exclusion_policy", policy_binding,
+                          exclusion.exclusion_policy_digest(policy), i,
+                          dataset=manifest["snapshot_id"], sample=manifest["snapshot_id"])
+            for i in range(2)
+        ]
+        science_approvals = [
+            self.approval("scientific_review", gov.digest(review),
+                          review["reviewer_evidence_sha256"], i,
+                          dataset=manifest["snapshot_id"], sample=manifest["snapshot_id"])
+            for i in range(2)
+        ]
+        reference_result = phase7.verify_multi_artifact_scientific_approval(
+            manifest, policy, panel_root, limits, review, review_bytes,
+            policy_approvals, science_approvals, self.trust, NOW,
+        )
+        self.assertEqual(reference_result["status"], "PASS", reference_result["issues"])
+        self._phase7_scientific_result = reference_result
+
+        control, qualification_evidence = self.control()
+        qualification_result = gov.verify_signed_control_qualification(
+            control, qualification_evidence, self.trust, NOW,
+        )
+        analysis, truth, _, _, _ = self.analysis_truth()
+        truth_artifact = {"benchmark_snapshot_id": DS, "truth_bundle": truth}
+        truth_artifact_bytes = json.dumps(
+            truth_artifact, sort_keys=True, separators=(",", ":"),
+        ).encode()
+        truth_digest = hashlib.sha256(truth_artifact_bytes).hexdigest()
+        ref_context = {
+            **reference_result,
+            "evidence_sha256": reference_result["aggregate_exclusion_evidence_sha256"],
+            "reference_manifest_sha256": reference_result["reference_inventory_sha256"],
+            "policy_sha256": reference_result["exclusion_policy_sha256"],
+        }
+        context = gov.unblinding_context(
+            analysis["analysis_sha256"], truth_digest, scoring.scoring_policy_digest(),
+            ref_context, [qualification_result["scoring_qualification"]["qualification_sha256"]],
+        )
+        unblinding_approvals = [
+            self.approval("unblinding", gov.digest(context), truth_digest, i,
+                          sample=gov.AGGREGATE_SAMPLE)
+            for i in range(2)
+        ]
+        authorization = gov.verify_unblinding_authorization(
+            context, unblinding_approvals, self.trust, NOW,
+        )
+        self.assertEqual(authorization["status"], "PASS", authorization["issues"])
+        exclusion_result = {
+            "status": "PASS",
+            "evidence_sha256": reference_result["aggregate_exclusion_evidence_sha256"],
+            "results": [{"decision": "ACCEPT"}], "issues": [],
+        }
+        expected_result = scoring.score_synthetic_bundle(
+            analysis, truth, [qualification_result["scoring_qualification"]],
+            unblinding_authorization={
+                "approved": True, "reviewer_ids": authorization["reviewer_ids"],
+                "truth_bundle_sha256": scoring.canonical_sha256(truth["truth_records"]),
+            },
+            expected_policy_sha256=scoring.scoring_policy_digest(),
+            reference_exclusion_result=exclusion_result,
+            expected_reference_evidence_sha256=exclusion_result["evidence_sha256"],
+        )
+        qualification_digest = control["content"]["evidence_sha256"]
+        qualification_evidence_bundle = json.dumps({
+            "items": [{
+                "evidence_sha256": qualification_digest,
+                "evidence_bytes_base64": base64.b64encode(qualification_evidence).decode(),
+            }],
+        }, sort_keys=True, separators=(",", ":")).encode()
+        payloads = {
+            "QUALIFIED": {
+                "control_qualification": {
+                    "benchmark_snapshot_id": DS,
+                    "qualifications": [{
+                        "document": control, "evidence_sha256": qualification_digest,
+                    }],
+                },
+                "qualification_evidence": qualification_evidence_bundle,
+            },
+            "REFERENCE_APPROVED": {
+                "reference_panel_manifest": {
+                    "benchmark_snapshot_id": DS, "reference_manifest": manifest,
+                    "reference_root": "refs",
+                },
+                "exclusion_policy": policy,
+                "aggregate_exclusion": {
+                    "aggregate_limits": limits, "policy_approvals": policy_approvals,
+                    "scientific_approvals": science_approvals,
+                },
+                "scientific_review": {
+                    "review": review, "evidence_bytes_base64": base64.b64encode(review_bytes).decode(),
+                },
+            },
+            "BLINDED_ANALYSIS_VERIFIED": {
+                "blinded_analysis": {
+                    "benchmark_snapshot_id": DS,
+                    "reference_snapshot_id": manifest["snapshot_id"],
+                    "qualification_sha256s": [
+                        qualification_result["scoring_qualification"]["qualification_sha256"]
+                    ],
+                    "analysis": analysis,
+                },
+            },
+            "UNBLINDING_AUTHORISED": {
+                "unblinding_authorization": {
+                    "benchmark_snapshot_id": DS, "truth_bundle_sha256": truth_digest,
+                    "approvals": unblinding_approvals,
+                },
+            },
+            "SYNTHETIC_SCORING_COMPLETE": {
+                "synthetic_scoring_result": {"benchmark_snapshot_id": DS, "result": expected_result},
+                "truth_bundle": truth_artifact,
+            },
+        }
+        receipts, paths, previous = [], {}, None
+        for current, requested in zip(gov.STATES, gov.STATES[1:]):
+            paths[requested] = {}
+            digests = {}
+            for artifact_type, payload in payloads[requested].items():
+                if isinstance(payload, bytes):
+                    data = payload
+                else:
+                    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+                rel = f"{requested}/{artifact_type}.json"
+                destination = root / rel
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(data)
+                paths[requested][artifact_type] = rel
+                digests[artifact_type] = hashlib.sha256(data).hexdigest()
+            receipt = self.signed_transition_receipt(
+                current, requested, gov.TRANSITION_EVIDENCE_CATEGORIES[requested],
+                digests, previous,
+            )
+            receipts.append(receipt)
+            verified = gov.verify_governance_transitions(receipts, self.trust, NOW)
+            self.assertEqual(verified["status"], "PASS", verified["issues"])
+            previous = verified["transition_sha256"]
+        return receipts, paths, root
+
+    def test_phase7_all_canonical_adapters_verify_synthetic_progression(self):
+        receipts, paths, root = self.phase7_complete_synthetic_transition()
+        result = phase7.verify_artifact_backed_transitions(
+            receipts, paths, root, self.trust, now=NOW,
+        )
+        self.assertEqual(result["status"], "PASS", result["issues"])
+        self.assertEqual(result["semantic_adapter_status"], "PASS")
+        self.assertEqual(len(result["adapter_results"]), 5)
+        self.assertFalse(result["biological_execution_authorized"])
+        self.assertEqual(result["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
+
+    def test_phase7_matrix_attestation_requires_exact_signed_27_case_results(self):
+        cases = [{
+            "case_id": case, "test_name": "test_" + case,
+            "expected": "FAIL", "observed": "FAIL",
+        } for case in phase7.PHASE7_ACCEPTANCE_CASES]
+        matrix = {"schema_version": "m21-phase7-acceptance-matrix-v1", "cases": cases}
+        binding = gov.digest(matrix)
+        approvals = [
+            self.approval("governance_transition", binding, gov.digest(cases), i,
+                          sample=gov.AGGREGATE_SAMPLE)
+            for i in range(2)
+        ]
+        verified = phase7.verify_adversarial_matrix(matrix, approvals, self.trust, NOW)
+        self.assertEqual(verified["status"], "PASS", verified.get("issues"))
+        self.assertEqual(verified["case_count"], 27)
+        self.assertEqual(
+            phase7.phase7_readiness_report(None, None, None, None, verified)["adversarial_matrix_status"],
+            "PASS",
+        )
+        forged = dict(verified, status="PASS")
+        self.assertEqual(
+            phase7.phase7_readiness_report(None, None, None, None, forged)["adversarial_matrix_status"],
+            "INCOMPLETE",
+        )
+        cloned = type(verified)(verified)
+        self.assertEqual(
+            phase7.phase7_readiness_report(None, None, None, None, cloned)["adversarial_matrix_status"],
+            "INCOMPLETE",
+        )
+        altered = copy.deepcopy(matrix)
+        altered["cases"][0]["observed"] = "PASS"
+        rejected = phase7.verify_adversarial_matrix(altered, approvals, self.trust, NOW)
+        self.assertEqual(rejected["status"], "FAIL")
+
+    def test_phase7_readiness_pass_requires_all_canonical_verified_results(self):
+        receipts, paths, root = self.phase7_complete_synthetic_transition()
+        transitions = phase7.verify_artifact_backed_transitions(
+            receipts, paths, root, self.trust, now=NOW,
+        )
+        self.assertEqual(transitions["status"], "PASS", transitions["issues"])
+        for index in range(2):
+            reviewer = f"REV-{10000000 + index:08d}"
+            key_id = f"KEY-{1000000000 + index:010d}"
+            key = Ed25519PrivateKey.generate()
+            public = key.public_key().public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+            )
+            self.private[reviewer] = key
+            self.trust[reviewer] = {
+                "reviewer_id": reviewer, "key_id": key_id,
+                "public_key_ed25519": base64.b64encode(public).decode(),
+                "role": "governance_transition", "scopes": ["governance_transition"],
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2027-01-01T00:00:00Z", "revoked": False,
+            }
+            self.people["governance_transition"].append(reviewer)
+        events = [gov.make_audit_event(
+            "EVT-READINESS", "SYNTHETIC_SCORING_COMPLETE", "2026-10-21T10:00:00Z",
+            {"transition": transitions["transition_sha256"]}, None, "PASS", None,
+        )]
+        trust_identity = gov.digest(self.trust)
+        checkpoint_content = {
+            "dataset_id": DS, "chain_id": "CHAIN-READINESS-01", "event_count": 1,
+            "event_sha256": events[0]["event_sha256"], "sequence": 1,
+            "created_at": "2026-10-21T11:00:00Z", "previous_checkpoint_sha256": None,
+            "trust_store_identity": trust_identity,
+        }
+        checkpoint = {**checkpoint_content, "approval": self.approval(
+            "custody_checkpoint", gov.digest(checkpoint_content),
+            events[0]["event_sha256"], 0, dataset=DS, sample="CHAIN-READINESS-01",
+        )}
+        custody = phase7.verify_independent_custody(
+            events, [checkpoint], [checkpoint], self.trust, dataset_id=DS,
+            chain_id="CHAIN-READINESS-01", trust_store_identity=trust_identity, now=NOW,
+        )
+        self.assertEqual(custody["status"], "PASS", custody["issues"])
+        cases = [{
+            "case_id": case, "test_name": "test_" + case,
+            "expected": "FAIL", "observed": "FAIL",
+        } for case in phase7.PHASE7_ACCEPTANCE_CASES]
+        matrix = {"schema_version": "m21-phase7-acceptance-matrix-v1", "cases": cases}
+        binding = gov.digest(matrix)
+        matrix_approvals = [
+            self.approval("governance_transition", binding, gov.digest(cases), index + 2,
+                          sample=gov.AGGREGATE_SAMPLE)
+            for index in range(2)
+        ]
+        matrix_result = phase7.verify_adversarial_matrix(
+            matrix, matrix_approvals, self.trust, NOW,
+        )
+        self.assertEqual(matrix_result["status"], "PASS", matrix_result.get("issues"))
+        report = phase7.phase7_readiness_report(
+            self._phase7_panel_result, self._phase7_scientific_result,
+            custody, transitions, matrix_result,
+        )
+        self.assertEqual(report["decision"], "PASS", report["evidence_mismatches"])
+        self.assertFalse(report["biological_execution_authorized"])
+        self.assertEqual(report["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
+
+    def test_phase7_readiness_report_is_deterministic_and_never_authorizes_execution(self):
+        report = phase7.phase7_readiness_report(None, None, None, None)
+        self.assertEqual(report["decision"], "INCOMPLETE")
+        self.assertEqual(report["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
+        self.assertFalse(report["biological_execution_authorized"])
+        apparently_qualifying = phase7.phase7_readiness_report(
+            {"status": "PASS"}, {"status": "PASS"},
+            {"status": "PASS", "anchor_status": "INDEPENDENTLY_ANCHORED"},
+            {"status": "PASS"},
+        )
+        self.assertEqual(apparently_qualifying["decision"], "INCOMPLETE")
+        self.assertEqual(apparently_qualifying["canonical_stage_adapters_status"], "INCOMPLETE")
+        self.assertEqual(apparently_qualifying["adversarial_matrix_status"], "INCOMPLETE")
+        no_anchor = phase7.phase7_readiness_report(
+            {"status": "PASS"}, {"status": "PASS"},
+            {"status": "PASS", "anchor_status": "UNANCHORED"},
+            {"status": "PASS"},
+        )
+        self.assertEqual(no_anchor["decision"], "INCOMPLETE")
+        missing_matrix = phase7.phase7_readiness_report(
+            {"status": "PASS"}, {"status": "PASS"},
+            {"status": "PASS", "anchor_status": "INDEPENDENTLY_ANCHORED"},
+            {"status": "PASS"},
+        )
+        self.assertEqual(missing_matrix["decision"], "INCOMPLETE")
+        self.assertEqual(
+            report["human_readable"],
+            phase7.phase7_readiness_report(None, None, None, None)["human_readable"],
+        )
 
 
 if __name__ == "__main__":
