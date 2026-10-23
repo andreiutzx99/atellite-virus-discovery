@@ -22,6 +22,7 @@ class Phase7SchemaTests(unittest.TestCase):
             "m21_phase7_custody_checkpoint.schema.json",
             "m21_phase7_readiness.schema.json",
             "m21_phase7_reference_limits.schema.json",
+            "m21_phase7_transition_evidence.schema.json",
         ]
         for name in names:
             with self.subTest(schema=name):
@@ -75,3 +76,17 @@ class Phase7SchemaTests(unittest.TestCase):
         invalid_checkpoint = dict(valid_checkpoint, sequence=0)
         with self.assertRaises(Exception):
             checkpoint_validator.validate(invalid_checkpoint)
+
+        transition_schema = self.load_schema(names[3])
+        transition_validator = Draft202012Validator(transition_schema)
+        matrix = {
+            "schema_version": "m21-phase7-acceptance-matrix-v1",
+            "cases": [{
+                "case_id": case, "test_name": "test_" + case,
+                "expected": "FAIL", "observed": "FAIL",
+            } for case in phase7.PHASE7_ACCEPTANCE_CASES],
+        }
+        transition_validator.validate(matrix)
+        matrix["cases"][0]["observed"] = "PASS"
+        with self.assertRaises(Exception):
+            transition_validator.validate(matrix)

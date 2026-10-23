@@ -43,9 +43,28 @@ this package provides no external retention service.
 typed required artifacts, safe paths inside a declared root, matching
 receipt-bound digests, parseable structured artifacts, and resource caps.
 Caller-provided callbacks are not executed or treated as authoritative. The
-canonical built-in Phase 4–6 semantic adapter registry is not yet shipped, so
-artifact-backed governance readiness is `INCOMPLETE` even when signed bytes
-match.
+built-in five-stage registry calls the existing signed Phase 4 qualification,
+Phase 5 reference-exclusion and scoring validators, and Phase 6 approval and
+transition validators. It recomputes the panel and scoring outputs, checks
+analysis and truth bindings, and rejects reuse of reviewer identities across
+qualification, reference, and unblinding decisions.
+
+The stage payload contract is defined in
+`m21_phase7_transition_evidence.schema.json`. Every package carries the same
+synthetic benchmark snapshot; the reference snapshot, qualified samples,
+analysis digest, approval digests, and scoring result are chained explicitly.
+Qualification packages may contain multiple signed control records with a
+digest-addressed evidence bundle.
+
+## Readiness and adversarial evidence
+
+The readiness report accepts only in-process results returned by the canonical
+Phase 7 verifiers; plain dictionaries containing `PASS` strings remain
+`INCOMPLETE`. The 27 named adversarial cases are in
+`M21_PHASE7_ACCEPTANCE_MATRIX.md`. A matrix result must match the exact ordered
+case registry and be signed by two distinct trusted governance reviewers before
+it can contribute to a readiness `PASS`. A readiness `PASS` is infrastructure
+readiness for the synthetic scope only; it never authorizes biological work.
 
 ## Filesystem assumptions and residual risks
 

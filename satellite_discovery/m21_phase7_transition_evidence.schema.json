@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 7 typed transition evidence",
+  "description": "Typed JSON payloads used by the synthetic-only built-in Phase 4–6 transition adapters.",
+  "oneOf": [
+    { "$ref": "#/$defs/qualificationPackage" },
+    { "$ref": "#/$defs/qualificationEvidenceBundle" },
+    { "$ref": "#/$defs/referencePanelPackage" },
+    { "$ref": "#/$defs/aggregateApprovalPackage" },
+    { "$ref": "#/$defs/scientificReviewPackage" },
+    { "$ref": "#/$defs/blindedAnalysisPackage" },
+    { "$ref": "#/$defs/unblindingPackage" },
+    { "$ref": "#/$defs/scoringResultPackage" },
+    { "$ref": "#/$defs/truthBundlePackage" },
+    { "$ref": "#/$defs/adversarialMatrix" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "snapshot": { "type": "string", "const": "DS-SYNTH00001" },
+    "qualificationPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["benchmark_snapshot_id", "qualifications"],
+      "properties": {
+        "benchmark_snapshot_id": { "$ref": "#/$defs/snapshot" },
+        "qualifications": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["document", "evidence_sha256"],
+            "properties": {
+              "document": {
+                "type": "object", "additionalProperties": false,
+                "required": ["content", "approvals"],
+                "properties": {
+                  "content": { "type": "object" },
+                  "approvals": { "type": "array", "minItems": 2, "items": { "type": "object" } }
+                }
+              },
+              "evidence_sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
+    "qualificationEvidenceBundle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["evidence_sha256", "evidence_bytes_base64"],
+            "properties": {
+              "evidence_sha256": { "$ref": "#/$defs/sha256" },
+              "evidence_bytes_base64": { "type": "string", "contentEncoding": "base64" }
+            }
+          }
+        }
+      }
+    },
+    "referencePanelPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["benchmark_snapshot_id", "reference_manifest", "reference_root"],
+      "properties": {
+        "benchmark_snapshot_id": { "$ref": "#/$defs/snapshot" },
+        "reference_manifest": { "type": "object" },
+        "reference_root": { "type": "string", "minLength": 1 }
+      }
+    },
+    "aggregateApprovalPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["aggregate_limits", "policy_approvals", "scientific_approvals"],
+      "properties": {
+        "aggregate_limits": {
+          "type": "object", "additionalProperties": false,
+          "required": ["max_artifacts", "max_total_bytes", "max_total_bases", "max_references", "max_alignment_cells"],
+          "properties": {
+            "max_artifacts": { "type": "integer", "minimum": 1 },
+            "max_total_bytes": { "type": "integer", "minimum": 1 },
+            "max_total_bases": { "type": "integer", "minimum": 1 },
+            "max_references": { "type": "integer", "minimum": 1 },
+            "max_alignment_cells": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "policy_approvals": { "type": "array", "minItems": 2, "items": { "type": "object" } },
+        "scientific_approvals": { "type": "array", "minItems": 2, "items": { "type": "object" } }
+      }
+    },
+    "scientificReviewPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["review", "evidence_bytes_base64"],
+      "properties": {
+        "review": { "type": "object" },
+        "evidence_bytes_base64": { "type": "string", "contentEncoding": "base64" }
+      }
+    },
+    "blindedAnalysisPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["benchmark_snapshot_id", "reference_snapshot_id", "qualification_sha256s", "analysis"],
+      "properties": {
+        "benchmark_snapshot_id": { "$ref": "#/$defs/snapshot" },
+        "reference_snapshot_id": { "type": "string", "minLength": 1 },
+        "qualification_sha256s": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/sha256" } },
+        "analysis": {
+          "type": "object", "additionalProperties": false,
+          "required": ["analysis_sha256", "samples"],
+          "properties": {
+            "analysis_sha256": { "$ref": "#/$defs/sha256" },
+            "samples": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["sample_id", "candidates", "read_count", "read_unit"],
+                "properties": {
+                  "sample_id": { "type": "string", "pattern": "^BLD-[A-F0-9]{24}$" },
+                  "candidates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object", "additionalProperties": false,
+                      "required": ["candidate_id"],
+                      "properties": { "candidate_id": { "type": "string", "minLength": 1 } }
+                    }
+                  },
+                  "read_count": { "type": "integer", "minimum": 0 },
+                  "read_unit": { "enum": ["READS", "READ_PAIRS"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "unblindingPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["benchmark_snapshot_id", "truth_bundle_sha256", "approvals"],
+      "properties": {
+        "benchmark_snapshot_id": { "$ref": "#/$defs/snapshot" },
+        "truth_bundle_sha256": { "$ref": "#/$defs/sha256" },
+        "approvals": { "type": "array", "minItems": 2, "items": { "type": "object" } }
+      }
+    },
+    "scoringResultPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["benchmark_snapshot_id", "result"],
+      "properties": {
+        "benchmark_snapshot_id": { "$ref": "#/$defs/snapshot" },
+        "result": { "type": "object" }
+      }
+    },
+    "truthBundlePackage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["benchmark_snapshot_id", "truth_bundle"],
+      "properties": {
+        "benchmark_snapshot_id": { "$ref": "#/$defs/snapshot" },
+        "truth_bundle": {
+          "type": "object", "additionalProperties": false,
+          "required": ["analysis_sha256", "truth_records"],
+          "properties": {
+            "analysis_sha256": { "$ref": "#/$defs/sha256" },
+            "truth_records": { "type": "array", "items": { "type": "object" } }
+          }
+        }
+      }
+    },
+    "adversarialMatrix": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "cases"],
+      "properties": {
+        "schema_version": { "const": "m21-phase7-acceptance-matrix-v1" },
+        "cases": {
+          "type": "array", "minItems": 27, "maxItems": 27,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["case_id", "test_name", "expected", "observed"],
+            "properties": {
+              "case_id": { "type": "string", "minLength": 1 },
+              "test_name": { "type": "string", "minLength": 1 },
+              "expected": { "const": "FAIL" },
+              "observed": { "const": "FAIL" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
