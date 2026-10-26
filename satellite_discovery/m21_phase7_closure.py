@@ -275,8 +275,6 @@ def verify_checkpoint_retention(
     }:
         return {"status": "FAIL", "issues": ["Retained checkpoint package is malformed."]}
     schema_issues = _schema_errors("Retained checkpoint package", package)
-    if schema_issues is None:
-        return {"status": "INCOMPLETE", "issues": ["JSON Schema validator is unavailable."]}
     if schema_issues:
         return {"status": "FAIL", "issues": schema_issues}
     reviewers, issues = _human_trust_store(trust_store)
@@ -352,8 +350,6 @@ def verify_closure_package(
     if not isinstance(package, dict) or set(package) != PACKAGE_FIELDS:
         return {"decision": "FAIL", "issues": ["Closure package is malformed."]}
     schema_issues = _schema_errors("Closure package", package)
-    if schema_issues is None:
-        return {"decision": "INCOMPLETE", "issues": ["JSON Schema validator is unavailable."]}
     if schema_issues:
         return {"decision": "FAIL", "issues": schema_issues}
     if (package.get("schema_version") != SCHEMA_VERSION

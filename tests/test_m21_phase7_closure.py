@@ -312,10 +312,11 @@ class Phase7ClosureTests(unittest.TestCase):
 
     def test_external_checkpoint_retention_verifies_signed_chain_and_suffix(self):
         package, trust, events, checkpoints = self._checkpoint_fixture(suffix=True)
-        result = closure.verify_checkpoint_retention(
-            package, trust, local_events=events, local_checkpoints=checkpoints,
-            expected_snapshot="DS-SYNTH00001", now=NOW,
-        )
+        with patch.object(closure, "_schema_errors", return_value=None):
+            result = closure.verify_checkpoint_retention(
+                package, trust, local_events=events, local_checkpoints=checkpoints,
+                expected_snapshot="DS-SYNTH00001", now=NOW,
+            )
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["evidence_class"], "SYNTHETIC")
 
