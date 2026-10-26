@@ -87,6 +87,19 @@ result bytes and run attempt.
 
 ## Current verification boundary
 
+The integrated synthetic ZIP test runs the real trust-history, canonical
+transition, reference/control/scientific approval, custody-retention,
+CI-statement, and closure validators against archived bytes. Its offline CI
+fixture replaces only the GitHub CLI/API response boundary: run identity, run
+attempt, job results, attestation payload structure, and matrix digests are
+still checked by the real internal verifier. This test boundary is test-only;
+operational replay must use authoritative GitHub attestation verification.
+Complete-package mutations rehash their changed manifest entries and must still
+be rejected for invalid approvals, reference/control substitutions, changed
+transition receipts, custody checkpoints, reviewer signatures, CI attempts,
+and cross-snapshot evidence. A fixed verification time is injected to compare
+repeat reports deterministically.
+
 The command invokes the canonical Phase 7 transition adapter, which recomputes
 reference-panel exclusions, scientific approvals, signed control qualifications,
 blinded analysis, unblinding authorization, and synthetic scoring from retained
