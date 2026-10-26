@@ -38,6 +38,11 @@ duplicate or unlisted members, symlinks, oversized files, excessive compression
 ratios and malformed inventories. The schema is
 `m21_phase7b_evidence_package.schema.json`.
 
+Archive membership, declared sizes and digests are checked before attempting to
+load the independently provisioned trust anchor. A missing schema validator or
+external anchor therefore cannot turn known-invalid archive content into an
+`INCOMPLETE` result.
+
 Example:
 
 ```text
@@ -58,7 +63,9 @@ anchor and checkpoint pins, and the GitHub CI attestation. It deliberately
 returns `INCOMPLETE` after those checks: canonical replay adapters for the
 reference panel, scientific approval, control qualification, transition
 receipts, custody history and reviewer approvals are not yet wired into the ZIP
-reader. It does not accept serialized `PASS` fields as a substitute.
+reader. Key rotation also remains `INCOMPLETE` until authenticated historical
+registry evidence is supplied and linked. The verifier does not accept
+serialized `PASS` fields as a substitute.
 
 Consequently, this code does not establish M21 closure readiness. The decision
 remains `INCOMPLETE`, overall state remains
