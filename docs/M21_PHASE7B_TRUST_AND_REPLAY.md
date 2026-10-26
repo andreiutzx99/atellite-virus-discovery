@@ -100,6 +100,13 @@ transition receipts, custody checkpoints, reviewer signatures, CI attempts,
 and cross-snapshot evidence. A fixed verification time is injected to compare
 repeat reports deterministically.
 
+The Ubuntu/Windows offline-test matrix installs the `phase7-schema-validation`
+extra before running the complete suite, so these replay tests exercise the
+required schemas. The optional-tools job intentionally keeps its minimal
+dependencies; it skips only the complete ZIP-replay test class while retaining
+the fail-closed missing-validator checks. The schema-enabled offline matrix is
+the authoritative CI run for the full Phase 7B replay tests.
+
 The command invokes the canonical Phase 7 transition adapter, which recomputes
 reference-panel exclusions, scientific approvals, signed control qualifications,
 blinded analysis, unblinding authorization, and synthetic scoring from retained

@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import tempfile
 import unittest
 import zipfile
@@ -22,6 +23,8 @@ from satellite_discovery import m21_benchmark_readiness as readiness
 from tests import test_m21_phase7_closure as closure_fixtures
 from tests.test_m21_phase6_governance import M21Phase6GovernanceTests
 from tests.test_m21_phase7b_trust import TrustRootTests
+
+SKIP_PHASE7B_REPLAY_TESTS = os.environ.get("M21_SKIP_PHASE7B_REPLAY_TESTS") == "1"
 
 
 @unittest.skipIf(Ed25519PrivateKey is None, "cryptography required for synthetic Ed25519 fixtures")
@@ -161,6 +164,20 @@ class EvidencePackageTests(unittest.TestCase):
                 )
         self.assertEqual(result["decision"], "FAIL")
 
+    def test_missing_schema_validator_keeps_otherwise_valid_package_incomplete(self):
+        with tempfile.TemporaryDirectory() as temp:
+            package, anchor, fingerprint, pin = self._package(Path(temp))
+            with patch.object(replay, "_schema_valid", return_value=None):
+                result = replay.verify_package(
+                    package, trust_anchor_path=anchor,
+                    trust_anchor_fingerprint=fingerprint,
+                    trust_state_checkpoint_sha256=pin,
+                )
+        self.assertEqual(result["decision"], "INCOMPLETE")
+        self.assertIn(replay.SCHEMA_VALIDATOR_UNAVAILABLE, result["issues"])
+        self.assertEqual(result["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
+        self.assertFalse(result["biological_execution_authorized"])
+
     def test_invalid_archive_is_checked_before_unavailable_anchor(self):
         with tempfile.TemporaryDirectory() as temp:
             package, anchor, fingerprint, pin = self._package(Path(temp))
@@ -176,6 +193,10 @@ class EvidencePackageTests(unittest.TestCase):
 
 
 @unittest.skipIf(Ed25519PrivateKey is None, "cryptography required for synthetic Ed25519 fixtures")
+@unittest.skipIf(
+    SKIP_PHASE7B_REPLAY_TESTS,
+    "complete Phase 7B ZIP replay tests run in the schema-enabled offline matrix",
+)
 class CanonicalReplayMappingTests(unittest.TestCase):
     def test_content_addressed_stage_map_invokes_all_canonical_phase7_adapters(self):
         fixture = M21Phase6GovernanceTests()
