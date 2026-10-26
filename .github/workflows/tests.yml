@@ -26,15 +26,20 @@ jobs:
       - name: Run all 27 Phase 7 adversarial cases and bind their results to this run
         run: python scripts/run_m21_phase7_acceptance.py
       - name: Attest the CI run statement
+        id: attest
         uses: actions/attest@v2
         with:
           subject-path: m21_phase7_acceptance_matrix_results.json
           predicate-path: m21_phase7_ci_run_statement.json
           predicate-type: https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
-          push-to-registry: true
+      - name: Retain the generated attestation bundle
+        env:
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$ATTESTATION_BUNDLE" m21_phase7_attestation_bundle.jsonl
       - name: Verify the artifact's GitHub workflow provenance
         run: >-
           gh attestation verify m21_phase7_acceptance_matrix_results.json
+          --bundle m21_phase7_attestation_bundle.jsonl
           --repo "$GITHUB_REPOSITORY"
           --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/tests.yml"
           --predicate-type https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
@@ -44,6 +49,7 @@ jobs:
           path: |
             m21_phase7_acceptance_matrix_results.json
             m21_phase7_ci_run_statement.json
+            m21_phase7_attestation_bundle.jsonl
           retention-days: 14
 
   offline-tests:

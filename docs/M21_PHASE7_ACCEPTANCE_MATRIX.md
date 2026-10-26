@@ -48,10 +48,11 @@ The required `phase7-acceptance-evidence` GitHub Actions job runs exactly these
 27 methods, emits `m21_phase7_acceptance_matrix_results.json` and
 `m21_phase7_ci_run_statement.json`, attests the matrix results as the subject
 and the run statement as the predicate, and verifies the signer workflow and
-predicate type with `gh attestation verify`.
+predicate type from the retained `m21_phase7_attestation_bundle.jsonl` with
+`gh attestation verify`.
 To promote CI results into a signed matrix package, reviewers must independently
 retrieve that successful run and attestation, confirm the tested PR-head SHA and
-workflow identity, and include the attestation-bundle SHA-256 in the signed
+workflow identity, and include the SHA-256 of the retained bundle in the signed
 `ci_run` object. The Python verifier checks that these details are covered by
 the trusted reviewer signatures; it does not itself fetch GitHub metadata or
 verify a Sigstore bundle. GitHub-hosted run metadata and GitHub's attestation
