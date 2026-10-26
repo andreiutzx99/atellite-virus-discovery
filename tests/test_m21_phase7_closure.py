@@ -250,7 +250,7 @@ class Phase7ClosureTests(unittest.TestCase):
         self.assertTrue(any("personal identity" in issue for issue in result["issues"]))
         self.assertTrue(any("independently controlled retention" in issue for issue in result["issues"]))
 
-    def _checkpoint_fixture(self, suffix=False):
+    def _checkpoint_fixture(self, suffix=False, custodian_role=None):
         checkpoint_key = Ed25519PrivateKey.generate()
         custodian_key = Ed25519PrivateKey.generate()
         reviewers = {
@@ -260,7 +260,7 @@ class Phase7ClosureTests(unittest.TestCase):
             ),
             "REV-00000002": self._trust_record(
                 "REV-00000002", "KEY-0000000002", custodian_key,
-                closure.RETENTION_SCOPE, "SYNTHETIC",
+                custodian_role or closure.RETENTION_SCOPE, "SYNTHETIC",
             ),
         }
         chain_id = "CHAIN-SYNTH-01"
@@ -341,6 +341,17 @@ class Phase7ClosureTests(unittest.TestCase):
             )
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["evidence_class"], "SYNTHETIC")
+
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed custody fixtures")
+    def test_checkpoint_retention_rejects_identity_without_custody_role(self):
+        package, trust, events, checkpoints = self._checkpoint_fixture(
+            custodian_role="reviewer",
+        )
+        result = closure.verify_checkpoint_retention(
+            package, trust, local_events=events, local_checkpoints=checkpoints,
+            expected_snapshot="DS-SYNTH00001", now=NOW,
+        )
+        self.assertEqual(result["status"], "FAIL")
 
     @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed custody fixtures")
     def test_missing_cryptography_never_falls_back_to_unverified_checkpoint_pass(self):
