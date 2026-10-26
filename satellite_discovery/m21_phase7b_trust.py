@@ -149,7 +149,12 @@ def verify_registry(
         if (not isinstance(identity_id, str) or not identity_id
                 or identity_id in records or not isinstance(record.get("revoked"), bool)
                 or not isinstance(record.get("roles"), list) or not record["roles"]
-                or not isinstance(record.get("scopes"), list) or not record["scopes"]):
+                or any(role not in {"reviewer", "custodian", "trust_admin"} for role in record["roles"])
+                or not isinstance(record.get("scopes"), list) or not record["scopes"]
+                or not all(isinstance(scope, str) and scope for scope in record["scopes"])
+                or not isinstance(record.get("display_name"), str) or not record["display_name"]
+                or not isinstance(record.get("organization"), str) or not record["organization"]
+                or not isinstance(record.get("key_id"), str) or not record["key_id"]):
             issues.append("Trust identity is duplicated, revoked, or has no authorised role/scope.")
             continue
         try:
@@ -166,7 +171,7 @@ def verify_registry(
         key_ids.add(record["key_id"])
         start, end = _parse_time(record.get("valid_from")), _parse_time(record.get("valid_until"))
         verification = record.get("identity_verification")
-        if (not start or not end or start >= end or end <= now
+        if (not start or not end or start >= end or start > now or end <= now
                 or not isinstance(verification, dict)
                 or set(verification) != {"method", "evidence_sha256", "authority"}
                 or not verification.get("method") or not verification.get("authority")
