@@ -17,6 +17,7 @@ MAX_FILES = 100
 MAX_ARTIFACT_BYTES = 16 * 1024 * 1024
 MAX_PACKAGE_BYTES = 64 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 100
+SCHEMA_VALIDATOR_UNAVAILABLE = "Required JSON Schema validation is unavailable."
 REQUIRED_KINDS = {
     "reference_panel", "scientific_approval", "control_qualification",
     "transition_evidence", "ci_results", "ci_statement", "ci_attestation",
@@ -29,11 +30,11 @@ def _load_schema(name: str) -> dict[str, Any]:
     return json.loads(Path(__file__).with_name(name).read_text(encoding="utf-8"))
 
 
-def _schema_valid(name: str, value: Any) -> list[str]:
+def _schema_valid(name: str, value: Any) -> list[str] | None:
     try:
         from jsonschema import Draft202012Validator
     except ImportError:
-        return [f"JSON Schema validator is unavailable for {name}."]
+        return None
     try:
         errors = Draft202012Validator(_load_schema(name)).iter_errors(value)
     except (OSError, ValueError, json.JSONDecodeError):
@@ -51,8 +52,10 @@ def _safe_path(value: Any) -> bool:
 
 def _read_archive(path: Path) -> tuple[dict[str, Any], dict[str, bytes], list[str]]:
     issues: list[str] = []
-    if not path.is_file() or path.is_symlink():
+    if path.is_symlink() or not path.is_file():
         return {}, {}, ["Evidence package is not a regular file."]
+    if path.stat().st_size > MAX_PACKAGE_BYTES:
+        return {}, {}, ["Compressed evidence archive exceeds its size limit."]
     try:
         with zipfile.ZipFile(path) as archive:
             infos = archive.infolist()
@@ -90,6 +93,8 @@ def _read_archive(path: Path) -> tuple[dict[str, Any], dict[str, bytes], list[st
 
 def _validate_manifest(manifest: Any, files: dict[str, bytes]) -> tuple[dict[str, bytes], list[str]]:
     issues = _schema_valid("m21_phase7b_evidence_package.schema.json", manifest)
+    if issues is None:
+        return {}, [SCHEMA_VALIDATOR_UNAVAILABLE]
     if not isinstance(manifest, dict):
         return {}, issues or ["Evidence manifest is malformed."]
     if manifest.get("schema_version") != SCHEMA_VERSION:
@@ -140,8 +145,12 @@ def verify_package(
     gh_binary: str = "gh",
 ) -> dict[str, Any]:
     """Check archive integrity and authenticated roots; never trust package PASS fields."""
-    package_path = Path(package_path).resolve()
-    anchor_path = Path(trust_anchor_path).resolve()
+    raw_package_path = Path(package_path)
+    raw_anchor_path = Path(trust_anchor_path)
+    if raw_package_path.is_symlink() or raw_anchor_path.is_symlink():
+        return {"decision": "FAIL", "issues": ["Package and trust anchor must not be symlinks."]}
+    package_path = raw_package_path.resolve()
+    anchor_path = raw_anchor_path.resolve()
     repository_root = Path(__file__).resolve().parents[1]
     if anchor_path == package_path or anchor_path.is_relative_to(repository_root):
         return {"decision": "FAIL", "issues": ["Trust anchor must be provisioned outside the repository and package."]}
@@ -154,7 +163,8 @@ def verify_package(
         return {"decision": "FAIL", "issues": issues}
     artifacts, issues = _validate_manifest(manifest, files)
     if issues:
-        return {"decision": "FAIL", "issues": issues}
+        decision = "INCOMPLETE" if SCHEMA_VALIDATOR_UNAVAILABLE in issues else "FAIL"
+        return {"decision": decision, "issues": issues}
     artifact_by_kind = {
         item["kind"]: artifacts[item["artifact_id"]]
         for item in manifest["artifacts"]
