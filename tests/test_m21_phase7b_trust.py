@@ -39,6 +39,7 @@ class TrustRootTests(unittest.TestCase):
                 "key_id": f"KEY-{index + 1:08d}",
                 "public_key_ed25519": base64.b64encode(raw).decode(),
                 "key_fingerprint_sha256": trust.sha256(raw),
+                "identity_class": "SYNTHETIC",
                 "roles": ["trust_admin"] if index < 2 else ["reviewer", "custodian", "trust_admin"],
                 "scopes": [
                     "phase7_closure_approval", "phase7_checkpoint_retention",
@@ -102,6 +103,7 @@ class TrustRootTests(unittest.TestCase):
                 trust.canonical_bytes(registry),
             )).decode(),
         }
+        self.identity_keys = identity_keys
         fingerprint = "0" * 64 if wrong_anchor else anchor["key_fingerprint_sha256"]
         return bundle, anchor, fingerprint, trust.digest({
             key: value for key, value in checkpoint.items() if key != "signature_ed25519"
@@ -179,6 +181,103 @@ class TrustRootTests(unittest.TestCase):
             expected_previous_checkpoint_sha256="a" * 64, now=NOW,
         )
         self.assertEqual(result["status"], "FAIL")
+
+    def test_authenticated_history_binds_rotation_and_rejects_conflicts(self):
+        fixture = TrustRootTests()
+        prior, anchor, fingerprint, prior_pin, root_key = fixture._bundle()
+        records = copy.deepcopy(prior["registry"]["identities"])
+        rotated_index = 2
+        prior_key = fixture.identity_keys[rotated_index]
+        rotated_key = Ed25519PrivateKey.generate()
+        raw_new = rotated_key.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+        )
+        old_raw = prior_key.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+        )
+        target = records[rotated_index]
+        old_fingerprint = target["key_fingerprint_sha256"]
+        target.update({
+            "key_id": "KEY-ROTATED-0001",
+            "public_key_ed25519": base64.b64encode(raw_new).decode(),
+            "key_fingerprint_sha256": trust.sha256(raw_new),
+            "rotation": {
+                "previous_key_fingerprint_sha256": old_fingerprint,
+                "previous_public_key_ed25519": base64.b64encode(old_raw).decode(),
+                "continuity_signature_ed25519": base64.b64encode(prior_key.sign(
+                    trust.canonical_bytes({
+                        "identity_id": target["identity_id"],
+                        "new_key_fingerprint_sha256": trust.sha256(raw_new),
+                        "previous_key_fingerprint_sha256": old_fingerprint,
+                    }),
+                )).decode(),
+            },
+        })
+        all_keys = list(fixture.identity_keys)
+        all_keys[rotated_index] = rotated_key
+        for index, record in enumerate(records):
+            enrollment = {key: record[key] for key in (
+                "identity_id", "key_id", "key_fingerprint_sha256", "roles",
+                "scopes", "valid_from", "valid_until", "identity_verification",
+            )}
+            record["enrollment_approvals"] = [{
+                "identity_id": records[admin_index]["identity_id"],
+                "key_id": records[admin_index]["key_id"],
+                "signature_ed25519": base64.b64encode(key.sign(
+                    trust.canonical_bytes(enrollment),
+                )).decode(),
+            } for admin_index, key in enumerate(all_keys) if admin_index != index]
+        prior_checkpoint_body = {
+            key: value for key, value in prior["state_checkpoint"].items()
+            if key != "signature_ed25519"
+        }
+        registry = {
+            **prior["registry"], "generation": 2,
+            "previous_checkpoint_sha256": trust.digest(prior_checkpoint_body),
+            "issued_at": "2026-10-21T00:00:00Z", "identities": records,
+        }
+        checkpoint_body = {
+            "schema_version": trust.CHECKPOINT_SCHEMA,
+            "registry_id": registry["registry_id"], "generation": 2,
+            "registry_sha256": trust.digest(registry),
+            "previous_checkpoint_sha256": registry["previous_checkpoint_sha256"],
+            "issued_at": "2026-10-21T00:00:00Z",
+        }
+        current = {
+            "registry": registry,
+            "state_checkpoint": {
+                **checkpoint_body,
+                "signature_ed25519": base64.b64encode(
+                    root_key.sign(trust.canonical_bytes(checkpoint_body)),
+                ).decode(),
+            },
+            "anchor_signature": base64.b64encode(
+                root_key.sign(trust.canonical_bytes(registry)),
+            ).decode(),
+        }
+        state_pin = trust.digest(checkpoint_body)
+        verified = trust.verify_registry(
+            current, anchor, expected_anchor_fingerprint=fingerprint,
+            expected_state_checkpoint_sha256=state_pin,
+            expected_previous_checkpoint_sha256=trust.digest(prior_checkpoint_body),
+            historical_registry_bundles=[prior], now=NOW,
+        )
+        self.assertEqual(verified["status"], "PASS", verified)
+        missing_history = trust.verify_registry(
+            current, anchor, expected_anchor_fingerprint=fingerprint,
+            expected_state_checkpoint_sha256=state_pin,
+            expected_previous_checkpoint_sha256=trust.digest(prior_checkpoint_body),
+            now=NOW,
+        )
+        self.assertEqual(missing_history["status"], "INCOMPLETE")
+        altered = copy.deepcopy(current)
+        altered["registry"]["previous_checkpoint_sha256"] = "f" * 64
+        self.assertEqual(trust.verify_registry(
+            altered, anchor, expected_anchor_fingerprint=fingerprint,
+            expected_state_checkpoint_sha256=state_pin,
+            expected_previous_checkpoint_sha256="f" * 64,
+            historical_registry_bundles=[prior], now=NOW,
+        )["status"], "FAIL")
 
 
 if __name__ == "__main__":
