@@ -157,17 +157,9 @@ def verify_package(
     """Check archive integrity and authenticated roots; never trust package PASS fields."""
     raw_package_path = Path(package_path)
     raw_anchor_path = Path(trust_anchor_path)
-    if raw_package_path.is_symlink() or raw_anchor_path.is_symlink():
-        return {"decision": "FAIL", "issues": ["Package and trust anchor must not be symlinks."]}
+    if raw_package_path.is_symlink():
+        return {"decision": "FAIL", "issues": ["Evidence package must not be a symlink."]}
     package_path = raw_package_path.resolve()
-    anchor_path = raw_anchor_path.resolve()
-    repository_root = Path(__file__).resolve().parents[1]
-    if anchor_path == package_path or anchor_path.is_relative_to(repository_root):
-        return {"decision": "FAIL", "issues": ["Trust anchor must be provisioned outside the repository and package."]}
-    try:
-        anchor = json.loads(anchor_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"decision": "INCOMPLETE", "issues": ["Independently provisioned trust anchor is unavailable."]}
     manifest, files, issues = _read_archive(package_path)
     if issues:
         return {"decision": "FAIL", "issues": issues}
@@ -183,6 +175,16 @@ def verify_package(
             "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
             "biological_execution_authorized": False,
         }
+    if raw_anchor_path.is_symlink():
+        return {"decision": "FAIL", "issues": ["Trust anchor must not be a symlink."]}
+    anchor_path = raw_anchor_path.resolve()
+    repository_root = Path(__file__).resolve().parents[1]
+    if anchor_path == package_path or anchor_path.is_relative_to(repository_root):
+        return {"decision": "FAIL", "issues": ["Trust anchor must be provisioned outside the repository and package."]}
+    try:
+        anchor = json.loads(anchor_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"decision": "INCOMPLETE", "issues": ["Independently provisioned trust anchor is unavailable."]}
     artifact_by_kind = {
         item["kind"]: artifacts[item["artifact_id"]]
         for item in manifest["artifacts"]

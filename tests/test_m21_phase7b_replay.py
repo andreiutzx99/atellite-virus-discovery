@@ -114,6 +114,19 @@ class EvidencePackageTests(unittest.TestCase):
                 )
         self.assertEqual(result["decision"], "FAIL")
 
+    def test_invalid_archive_is_checked_before_unavailable_anchor(self):
+        with tempfile.TemporaryDirectory() as temp:
+            package, anchor, fingerprint, pin = self._package(Path(temp))
+            with zipfile.ZipFile(package, "a") as archive:
+                archive.writestr("unlisted.json", b"{}")
+            missing_anchor = Path(temp) / "not-provisioned.json"
+            result = replay.verify_package(
+                package, trust_anchor_path=missing_anchor,
+                trust_anchor_fingerprint=fingerprint,
+                trust_state_checkpoint_sha256=pin,
+            )
+        self.assertEqual(result["decision"], "FAIL")
+
 
 if __name__ == "__main__":
     unittest.main()
