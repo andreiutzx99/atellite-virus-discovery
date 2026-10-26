@@ -24,6 +24,38 @@ def qualification_digest(record: dict[str, Any]) -> str:
                              if key != "qualification_sha256"})
 
 
+def validate_blinded_analysis(analysis: Any) -> list[str]:
+    """Validate the Phase 5 blinded-analysis contract without opening truth data."""
+    issues: list[str] = []
+    if not isinstance(analysis, dict) or set(analysis) != {"analysis_sha256", "samples"}:
+        return ["Analysis output must contain exactly its digest and samples."]
+    if analysis.get("analysis_sha256") != canonical_sha256(analysis.get("samples")):
+        issues.append("Analysis output digest is missing or invalid.")
+    samples = analysis.get("samples")
+    if not isinstance(samples, list) or not samples:
+        return sorted(set(issues + ["Analysis samples must be a non-empty array."]))
+    seen: set[str] = set()
+    for row in samples:
+        if (not isinstance(row, dict)
+                or set(row) != {"sample_id", "candidates", "read_count", "read_unit"}
+                or not isinstance(row.get("sample_id"), str)
+                or not OPAQUE_SAMPLE.fullmatch(row["sample_id"])
+                or not isinstance(row.get("candidates"), list)
+                or not isinstance(row.get("read_count"), int)
+                or isinstance(row.get("read_count"), bool) or row["read_count"] < 0
+                or row.get("read_unit") not in {"READS", "READ_PAIRS"}):
+            issues.append("Malformed blinded analysis sample.")
+            continue
+        if row["sample_id"] in seen:
+            issues.append("Duplicate analysis sample identifier.")
+        seen.add(row["sample_id"])
+        for candidate in row["candidates"]:
+            if (not isinstance(candidate, dict) or set(candidate) != {"candidate_id"}
+                    or not isinstance(candidate.get("candidate_id"), str)):
+                issues.append("Candidate calls must contain only opaque candidate_id values.")
+    return sorted(set(issues))
+
+
 def _not_estimable(reason: str) -> dict[str, Any]:
     return {"value": None, "status": "NOT_ESTIMABLE", "reason": reason,
             "numerator": None, "denominator": None}

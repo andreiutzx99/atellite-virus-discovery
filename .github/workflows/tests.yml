@@ -1,8 +1,60 @@
 name: tests
 on: [push, pull_request]
 jobs:
+  phase7-schema-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install '.[phase7-schema-validation]'
+      - run: python -m unittest tests.test_m21_phase7_schemas -v
+
+  phase7-acceptance-evidence:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Run all 27 Phase 7 adversarial cases and bind their results to this run
+        run: python scripts/run_m21_phase7_acceptance.py
+      - name: Attest the CI run statement
+        id: attest
+        uses: actions/attest@v2
+        with:
+          subject-path: m21_phase7_acceptance_matrix_results.json
+          predicate-path: m21_phase7_ci_run_statement.json
+          predicate-type: https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
+      - name: Retain the generated attestation bundle
+        env:
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$ATTESTATION_BUNDLE" m21_phase7_attestation_bundle.jsonl
+      - name: Verify the artifact's GitHub workflow provenance
+        run: >-
+          gh attestation verify m21_phase7_acceptance_matrix_results.json
+          --bundle m21_phase7_attestation_bundle.jsonl
+          --repo "$GITHUB_REPOSITORY"
+          --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/tests.yml"
+          --predicate-type https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m21-phase7-ci-run-statement
+          path: |
+            m21_phase7_acceptance_matrix_results.json
+            m21_phase7_ci_run_statement.json
+            m21_phase7_attestation_bundle.jsonl
+          retention-days: 14
+
   offline-tests:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ['3.11', '3.12']
@@ -21,6 +73,7 @@ jobs:
 
   m11-pinned-runtime:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ['3.11', '3.12']

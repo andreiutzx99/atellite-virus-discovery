@@ -45,8 +45,13 @@ satellite_discovery = [
     "m21_phase6_transition_receipt.schema.json",
     "m21_phase6_audit_event.schema.json",
     "m21_phase6_governance_readiness.schema.json",
+    "m21_phase7_custody_checkpoint.schema.json",
+    "m21_phase7_reference_limits.schema.json",
+    "m21_phase7_readiness.schema.json",
+    "m21_phase7_transition_evidence.schema.json",
 ]
 
 [project.optional-dependencies]
 alignment = ["pysam==0.24.1"]
 plots = ["matplotlib>=3.8,<4"]
+phase7-schema-validation = ["jsonschema>=4.23,<5"]
