@@ -18,6 +18,7 @@ satellite-m19 = "satellite_discovery.m19_benchmark:main"
 satellite-controlled-fastq = "satellite_discovery.controlled_fastq_acquisition:main"
 satellite-controlled-exploratory-fastq = "satellite_discovery.trusted_single_run_acquisition:main"
 satellite-m21-readiness = "satellite_discovery.m21_benchmark_readiness:main"
+satellite-m21-phase7b-replay = "satellite_discovery.m21_phase7b_replay:main"
 
 [tool.setuptools.packages.find]
 include = ["satellite_discovery*"]
@@ -50,6 +51,8 @@ satellite_discovery = [
     "m21_phase7_readiness.schema.json",
     "m21_phase7_transition_evidence.schema.json",
     "m21_phase7_closure.schema.json",
+    "m21_phase7b_trust.schema.json",
+    "m21_phase7b_evidence_package.schema.json",
 ]
 
 [project.optional-dependencies]

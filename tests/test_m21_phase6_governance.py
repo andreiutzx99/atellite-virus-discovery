@@ -73,6 +73,19 @@ class M21Phase6GovernanceTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_signed_scope_projection_authorizes_canonical_gate_role(self):
+        scope = "control_qualification"
+        reviewer = self.people[scope][0]
+        record = dict(self.trust[reviewer], role=[scope])
+        approval = self.approval(
+            scope, gov.digest({"fixture": "binding"}),
+            gov.digest({"fixture": "evidence"}),
+        )
+        issues = readiness._check_approval(
+            DS, SAMPLE, scope, approval, {reviewer: record}, NOW,
+        )
+        self.assertEqual(issues, [])
+
     def approval(self, scope, binding, evidence, person=0, *, expires="2027-01-01T00:00:00Z",
                  approval_id=None, dataset=DS, sample=SAMPLE):
         reviewer = self.people[scope][person]

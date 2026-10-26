@@ -908,6 +908,8 @@ def verify_artifact_backed_transitions(
         "issues": sorted(set(issues)), "verified_stages": checked,
         "semantic_adapter_status": "FAIL" if issues else "PASS",
         "adapter_results": adapter_results,
+        "reference_panel_result": context.get("reference_result", {}).get("panel"),
+        "scientific_approval_result": context.get("reference_result"),
         "custom_callbacks_authoritative": False,
         "limitation": "PASS means synthetic Phase 7 evidence integrity only; independent retention and biological authorization remain separate.",
         "transition_sha256": authenticated["transition_sha256"],

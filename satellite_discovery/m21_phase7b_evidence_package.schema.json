@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 7B replay evidence package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "software_revision", "snapshot_id", "policy_version", "artifacts", "limitations"],
+  "properties": {
+    "schema_version": { "const": "m21-phase7b-evidence-package-v1" },
+    "software_revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "snapshot_id": { "const": "DS-SYNTH00001" },
+    "policy_version": { "type": "string", "minLength": 1 },
+    "artifacts": {
+      "type": "array", "minItems": 14, "maxItems": 100,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["artifact_id", "path", "kind", "sha256", "size_bytes"],
+        "properties": {
+          "artifact_id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{2,63}$" },
+          "path": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["reference_panel", "reference_file", "scientific_approval", "scientific_evidence", "control_qualification", "transition_evidence", "transition_artifact", "ci_results", "ci_statement", "ci_attestation", "reviewer_approvals", "trust_registry", "trust_registry_history", "checkpoint_history", "custody_receipt", "audit_chain", "replay_inputs"] },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "size_bytes": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "limitations": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+  }
+}
