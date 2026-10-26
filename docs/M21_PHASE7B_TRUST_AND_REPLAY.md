@@ -24,10 +24,12 @@ by the pinned root. They are not independent proof by themselves. Provisioning
 and authenticating the root remain operational responsibilities; synthetic
 fixture keys must never be used as operational credentials.
 
-Key rotation currently fails closed as `INCOMPLETE`: the bundle format does not
-yet provide the prior registry needed to prove that the old key was the key
-authorized by the previously pinned state. A valid signature from an arbitrary
-old key is not enough.
+For a rotated identity, include one `trust_registry_history` artifact containing
+the ordered signed registry bundles from generation 1 through the generation
+before the current registry. The verifier authenticates each generation under
+the pinned root, checks checkpoint continuity and binds each old key fingerprint
+to the prior signed identity record. Missing history is `INCOMPLETE`; reordered,
+conflicting, revoked, or discontinuous history is `FAIL`.
 
 ## Evidence archive and replay command
 
@@ -53,23 +55,50 @@ satellite-m21-phase7b-replay verify evidence.zip \
   --previous-trust-state-checkpoint-sha256 <prior-checkpoint-sha256>
 ```
 
-Omit the previous-checkpoint option only for generation 1. The command also
-requires GitHub CLI verification of the attested CI result bytes.
+Omit the previous-checkpoint option only for generation 1. The archive's
+`replay_inputs` artifact has this shape; the empty stage maps below are
+placeholders, and a valid package must supply every required artifact type for
+every state:
+
+```json
+{
+  "schema_version": "m21-phase7b-replay-inputs-v1",
+  "transition_receipts": [],
+  "stage_artifact_ids": {
+    "QUALIFIED": {"control_qualification": "artifact-id", "qualification_evidence": "artifact-id"},
+    "REFERENCE_APPROVED": {},
+    "BLINDED_ANALYSIS_VERIFIED": {},
+    "UNBLINDING_AUTHORISED": {},
+    "SYNTHETIC_SCORING_COMPLETE": {}
+  },
+  "chain_id": "synthetic-chain-id",
+  "local_checkpoints": []
+}
+```
+
+Each stage map must name every typed artifact required by the canonical Phase 7
+transition verifier. IDs resolve only to manifest-listed, digest-verified
+members. `checkpoint_history`, `audit_chain`, and `custody_receipt` contain the
+retained custody evidence. `reviewer_approvals` contains `closure_package` and
+its signed `approvals`. Reviewer gate roles are projected from scopes in the
+authenticated registry; package-supplied roles cannot extend those scopes.
+The command also requires GitHub CLI verification of the exact attested CI
+result bytes and run attempt.
 
 ## Current verification boundary
 
-The current command verifies archive membership and digests, the external trust
-anchor and checkpoint pins, and the GitHub CI attestation. It deliberately
-returns `INCOMPLETE` after those checks: canonical replay adapters for the
-reference panel, scientific approval, control qualification, transition
-receipts, custody history and reviewer approvals are not yet wired into the ZIP
-reader. Key rotation also remains `INCOMPLETE` until authenticated historical
-registry evidence is supplied and linked. The verifier does not accept
-serialized `PASS` fields as a substitute.
+The command invokes the canonical Phase 7 transition adapter, which recomputes
+reference-panel exclusions, scientific approvals, signed control qualifications,
+blinded analysis, unblinding authorization, and synthetic scoring from retained
+bytes. It then invokes the independent checkpoint-custody and closure-review
+validators, and verifies exact CI run, attempt, acceptance results, and GitHub
+attestation. Stored `PASS` fields are not used as evidence.
 
-Consequently, this code does not establish M21 closure readiness. The decision
-remains `INCOMPLETE`, overall state remains
-`BLOCKED_FOR_BENCHMARK_EXECUTION`, and biological execution is never authorized.
-All fixtures and tests must remain synthetic. Do not use biological data,
-provision operational reviewer/custodian identities, or start a biological
-benchmark as part of this work.
+Even a technically passing synthetic replay cannot establish operational
+readiness: the closure verifier deliberately returns `INCOMPLETE` until its
+trust roots, reviewer identities, and custody source are independently
+authenticated. Overall state remains `BLOCKED_FOR_BENCHMARK_EXECUTION`, and
+`biological_execution_authorized` remains false. All fixtures and tests must
+remain synthetic. Do not use biological data, provision operational
+reviewer/custodian identities, or start a biological benchmark as part of this
+work.
