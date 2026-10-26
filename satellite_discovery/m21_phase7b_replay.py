@@ -164,7 +164,11 @@ def verify_package(
     artifacts, issues = _validate_manifest(manifest, files)
     if issues:
         decision = "INCOMPLETE" if SCHEMA_VALIDATOR_UNAVAILABLE in issues else "FAIL"
-        return {"decision": decision, "issues": issues}
+        return {
+            "decision": decision, "issues": issues,
+            "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+            "biological_execution_authorized": False,
+        }
     artifact_by_kind = {
         item["kind"]: artifacts[item["artifact_id"]]
         for item in manifest["artifacts"]
