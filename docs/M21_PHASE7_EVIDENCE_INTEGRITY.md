@@ -62,9 +62,16 @@ The readiness report accepts only in-process results returned by the canonical
 Phase 7 verifiers; plain dictionaries containing `PASS` strings remain
 `INCOMPLETE`. The 27 named adversarial cases are in
 `M21_PHASE7_ACCEPTANCE_MATRIX.md`. A matrix result must match the exact ordered
-case registry and be signed by two distinct trusted governance reviewers before
-it can contribute to a readiness `PASS`. A readiness `PASS` is infrastructure
-readiness for the synthetic scope only; it never authorizes biological work.
+case registry, an attested successful CI run, the tested commit and workflow
+identity, and two distinct trusted governance reviewers' signatures over the
+complete evidence before it can contribute to readiness `PASS`. The CI job
+verifies GitHub's artifact attestation with `gh attestation verify`. The Python
+verifier does not fetch GitHub metadata or independently validate the Sigstore
+bundle; reviewer signatures bind its digest, and the GitHub workflow performs
+that verification. GitHub's hosted runner and attestation service remain trust
+dependencies and do not establish third-party retention. A readiness `PASS`
+is infrastructure readiness for the synthetic scope only; it never authorizes
+biological work.
 
 ## Filesystem assumptions and residual risks
 

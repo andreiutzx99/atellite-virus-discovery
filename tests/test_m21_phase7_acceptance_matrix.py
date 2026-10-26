@@ -5,6 +5,11 @@ import unittest
 from pathlib import Path
 from datetime import datetime, timezone
 
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+except ImportError:
+    Ed25519PrivateKey = None
+
 from satellite_discovery import m21_phase6_governance as gov
 from satellite_discovery import m21_phase7_evidence as phase7
 
@@ -56,19 +61,24 @@ def _wrong_artifact_type(fixture, receipts, paths, root):
 
 
 def _changed_after_verification(fixture, receipts, paths, root):
-    target = root / paths["QUALIFIED"]["control_qualification"]
     original = phase7._file_sha
-    calls = {"count": 0}
+    mutation = {"calls": 0, "changed": False}
 
     def race(path):
         result = original(path)
-        if Path(path) == target:
-            calls["count"] += 1
-            if calls["count"] == 1:
-                target.write_bytes(target.read_bytes() + b" ")
+        mutation["calls"] += 1
+        if mutation["calls"] == 1:
+            # Mutate the first artifact only after its initial digest has been
+            # computed. Append mode avoids replace/rename semantics that vary
+            # across Windows and POSIX filesystems.
+            with Path(path).open("ab") as stream:
+                stream.write(b" ")
+                stream.flush()
+            mutation["changed"] = True
         return result
 
     fixture._phase7_file_hash_patch = race
+    fixture._phase7_file_hash_mutation = mutation
 
 
 def _checkpoint_fixture(fixture, chain_id, event_id, event_time, checkpoint_time,
@@ -172,6 +182,10 @@ _CASES = [
 ]
 
 
+@unittest.skipIf(
+    Ed25519PrivateKey is None,
+    "cryptography is required for signed synthetic Phase 7 acceptance fixtures",
+)
 class M21Phase7AdversarialAcceptanceMatrix(unittest.TestCase):
     def test_named_matrix_functions_match_the_trusted_case_registry(self):
         self.assertEqual(
@@ -202,6 +216,10 @@ class M21Phase7AdversarialAcceptanceMatrix(unittest.TestCase):
                 result = phase7.verify_artifact_backed_transitions(
                     receipts, paths, root, self.fixture.trust, now=NOW,
                 )
+            self.assertTrue(
+                self.fixture._phase7_file_hash_mutation["changed"],
+                "the deterministic mutation hook must alter an artifact after its initial digest",
+            )
         else:
             result = phase7.verify_artifact_backed_transitions(
                 receipts, paths, root, self.fixture.trust, now=NOW,

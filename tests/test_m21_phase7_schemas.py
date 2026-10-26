@@ -80,7 +80,21 @@ class Phase7SchemaTests(unittest.TestCase):
         transition_schema = self.load_schema(names[3])
         transition_validator = Draft202012Validator(transition_schema)
         matrix = {
-            "schema_version": "m21-phase7-acceptance-matrix-v1",
+            "schema_version": "m21-phase7-acceptance-matrix-v2",
+            "ci_run": {
+                "repository": "andreiutzx99/atellite-virus-discovery",
+                "workflow": ".github/workflows/tests.yml",
+                "workflow_ref": "andreiutzx99/atellite-virus-discovery/.github/workflows/tests.yml@refs/pull/85/merge",
+                "run_id": "39966979127", "run_attempt": 1,
+                "run_sha": "a" * 40, "tested_commit_sha": "b" * 40,
+                "event_name": "pull_request", "conclusion": "success",
+                "matrix_results_sha256": phase7.phase6.digest([
+                    {"case_id": case, "test_name": "test_" + case,
+                     "expected": "FAIL", "observed": "FAIL"}
+                    for case in phase7.PHASE7_ACCEPTANCE_CASES
+                ]),
+                "attestation_bundle_sha256": "c" * 64,
+            },
             "cases": [{
                 "case_id": case, "test_name": "test_" + case,
                 "expected": "FAIL", "observed": "FAIL",

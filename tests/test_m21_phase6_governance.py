@@ -26,6 +26,19 @@ DS = "DS-SYNTH00001"
 SAMPLE = "BLD-0123456789ABCDEF01234567"
 
 
+def synthetic_ci_run(cases, run_id="39966979127"):
+    return {
+        "repository": "andreiutzx99/atellite-virus-discovery",
+        "workflow": ".github/workflows/tests.yml",
+        "workflow_ref": "andreiutzx99/atellite-virus-discovery/.github/workflows/tests.yml@refs/pull/85/merge",
+        "run_id": run_id, "run_attempt": 1,
+        "run_sha": "a" * 40, "tested_commit_sha": "b" * 40,
+        "event_name": "pull_request", "conclusion": "success",
+        "matrix_results_sha256": gov.digest(cases),
+        "attestation_bundle_sha256": "c" * 64,
+    }
+
+
 @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for synthetic Ed25519 tests")
 class M21Phase6GovernanceTests(unittest.TestCase):
     def setUp(self):
@@ -78,11 +91,15 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         return record
 
     def control(self, *, control_class="POSITIVE", eval_status="EVALUABLE",
-                inclusion="INCLUDE", sample=SAMPLE):
-        evidence = b"synthetic qualification evidence"
+                inclusion="INCLUDE", sample=SAMPLE, control_id="CTL-SYNTH00001",
+                sample_ids=None, study_id="STUDY-SYNTH-01",
+                replicate_group="BIO-SYNTH-01"):
+        evidence = f"synthetic qualification evidence {control_id}".encode()
+        sample_ids = sample_ids or [sample]
+        phase4_class = "SCREEN_NEGATIVE" if control_class == "NEGATIVE" else "POSITIVE"
         p4 = {
             "schema_version": "m21-control-qualification-v1",
-            "control_id": "CTL-SYNTH00001", "control_class": "POSITIVE",
+            "control_id": control_id, "control_class": phase4_class,
             "evidence_strength": "HIGH", "helper_status": "NOT_APPLICABLE",
             "sequence_completeness": "TERMINAL_VERIFIED", "study_group": "WITHIN_STUDY",
             "sensitivity_status": "ADEQUATE", "specificity_status": "ADEQUATE",
@@ -91,15 +108,18 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         }
         content = {
             "phase4_qualification": p4, "control_id": p4["control_id"],
-            "sample_ids": [sample], "control_class": control_class,
+            "sample_ids": sample_ids, "control_class": control_class,
             "evaluation_status": eval_status,
             "scoring_eligibility": eval_status == "EVALUABLE" and inclusion == "INCLUDE",
             "exclusion_reason": None if inclusion == "INCLUDE" and eval_status == "EVALUABLE" else "PENDING_EVIDENCE",
-            "study_id": "STUDY-SYNTH-01", "replicate_group": "BIO-SYNTH-01",
+            "study_id": study_id, "replicate_group": replicate_group,
             "evidence_sha256": hashlib.sha256(evidence).hexdigest(),
         }
         binding = gov.digest(content)
-        approvals = [self.approval("control_qualification", binding, content["evidence_sha256"], i)
+        approvals = [self.approval(
+            "control_qualification", binding, content["evidence_sha256"], i,
+            sample=sample_ids[0],
+        )
                      for i in range(2)]
         return {"content": content, "approvals": approvals}, evidence
 
@@ -108,7 +128,8 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         binding = gov.digest(content)
         evidence_sha = content["evidence_sha256"]
         document["approvals"] = [
-            self.approval("control_qualification", binding, evidence_sha, i)
+            self.approval("control_qualification", binding, evidence_sha, i,
+                          sample=content["sample_ids"][0])
             for i in range(2)
         ]
 
@@ -958,15 +979,87 @@ class M21Phase6GovernanceTests(unittest.TestCase):
         self.assertFalse(result["biological_execution_authorized"])
         self.assertEqual(result["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
 
+    def test_phase7_scoring_handles_multiple_qualified_controls_and_excluded_samples(self):
+        positive_samples = [SAMPLE, "BLD-1123456789ABCDEF01234567"]
+        negative_sample = "BLD-2123456789ABCDEF01234567"
+        excluded_sample = "BLD-3123456789ABCDEF01234567"
+        controls = [
+            self.control(sample_ids=positive_samples, control_id="CTL-SYNTH00001",
+                         replicate_group="BIO-POS-01"),
+            self.control(control_class="NEGATIVE", sample=negative_sample,
+                         control_id="CTL-SYNTH00002", replicate_group="BIO-NEG-01"),
+            self.control(control_class="POSITIVE", eval_status="UNEVALUABLE",
+                         inclusion="EXCLUDE", sample=excluded_sample,
+                         control_id="CTL-SYNTH00003", replicate_group="BIO-EXC-01"),
+        ]
+        qualifications = []
+        for document, evidence in controls:
+            verified = gov.verify_signed_control_qualification(document, evidence, self.trust, NOW)
+            self.assertEqual(verified["status"], "PASS", verified.get("issues"))
+            qualifications.append(verified["scoring_qualification"])
+
+        rows = [
+            {"sample_id": positive_samples[0], "candidates": [], "read_count": 10, "read_unit": "READS"},
+            {"sample_id": positive_samples[1], "candidates": [{"candidate_id": "cand-A"}],
+             "read_count": 12, "read_unit": "READS"},
+            {"sample_id": negative_sample, "candidates": [{"candidate_id": "cand-X"}],
+             "read_count": 200, "read_unit": "READS"},
+            {"sample_id": excluded_sample, "candidates": [{"candidate_id": "cand-Z"}],
+             "read_count": 900, "read_unit": "READS"},
+        ]
+        analysis = {"samples": rows, "analysis_sha256": scoring.canonical_sha256(rows)}
+        truth_records = [
+            {"sample_id": positive_samples[0], "label": "POSITIVE", "truth_candidate_ids": ["cand-A"]},
+            {"sample_id": positive_samples[1], "label": "POSITIVE", "truth_candidate_ids": ["cand-A"]},
+            {"sample_id": negative_sample, "label": "NEGATIVE", "truth_candidate_ids": []},
+        ]
+        truth = {"analysis_sha256": analysis["analysis_sha256"], "truth_records": truth_records}
+        self.assertEqual(scoring.validate_blinded_analysis(analysis), [])
+        self.assertNotIn("truth_records", analysis)
+        truth_bytes = json.dumps(truth, sort_keys=True, separators=(",", ":")).encode()
+        truth_sha = hashlib.sha256(truth_bytes).hexdigest()
+        reference_evidence, reference_verified = self.reference_input()
+        approvals = self.signed_unblinding(
+            analysis, truth_sha, reference_verified, qualifications,
+        )
+        context = gov.unblinding_context(
+            analysis["analysis_sha256"], truth_sha, scoring.scoring_policy_digest(),
+            reference_verified, [item["qualification_sha256"] for item in qualifications],
+        )
+        authorization = gov.verify_unblinding_authorization(
+            context, approvals, self.trust, NOW,
+        )
+        self.assertEqual(authorization["status"], "PASS", authorization["issues"])
+        result = scoring.score_synthetic_bundle(
+            analysis, truth, qualifications,
+            unblinding_authorization={
+                "approved": True, "reviewer_ids": authorization["reviewer_ids"],
+                "truth_bundle_sha256": scoring.canonical_sha256(truth_records),
+            },
+            expected_policy_sha256=scoring.scoring_policy_digest(),
+            reference_exclusion_result=reference_evidence["exclusion_result"],
+            expected_reference_evidence_sha256=reference_evidence["exclusion_result"]["evidence_sha256"],
+        )
+        self.assertEqual(result["status"], "PASS", result["issues"])
+        self.assertEqual(result["sample_level"]["confusion_matrix"], {"TP": 1, "FP": 1, "TN": 0, "FN": 0})
+        self.assertEqual(result["candidate_level"]["false_candidate_burden_per_million_reads_or_pairs"]["denominator"], 200)
+        self.assertEqual(result["candidate_level"]["false_candidate_burden_per_million_reads_or_pairs"]["value"], 5000)
+        self.assertEqual(len(result["excluded_controls"]), 1)
+        self.assertEqual(result["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
+
     def test_phase7_matrix_attestation_requires_exact_signed_27_case_results(self):
         cases = [{
             "case_id": case, "test_name": "test_" + case,
             "expected": "FAIL", "observed": "FAIL",
         } for case in phase7.PHASE7_ACCEPTANCE_CASES]
-        matrix = {"schema_version": "m21-phase7-acceptance-matrix-v1", "cases": cases}
+        matrix = {
+            "schema_version": "m21-phase7-acceptance-matrix-v2",
+            "cases": cases, "ci_run": synthetic_ci_run(cases),
+        }
         binding = gov.digest(matrix)
         approvals = [
-            self.approval("governance_transition", binding, gov.digest(cases), i,
+            self.approval("governance_transition", binding,
+                          gov.digest({"cases": cases, "ci_run": matrix["ci_run"]}), i,
                           sample=gov.AGGREGATE_SAMPLE)
             for i in range(2)
         ]
@@ -988,7 +1081,7 @@ class M21Phase6GovernanceTests(unittest.TestCase):
             "INCOMPLETE",
         )
         altered = copy.deepcopy(matrix)
-        altered["cases"][0]["observed"] = "PASS"
+        altered["ci_run"]["run_id"] = "39966979128"
         rejected = phase7.verify_adversarial_matrix(altered, approvals, self.trust, NOW)
         self.assertEqual(rejected["status"], "FAIL")
 
@@ -1038,10 +1131,15 @@ class M21Phase6GovernanceTests(unittest.TestCase):
             "case_id": case, "test_name": "test_" + case,
             "expected": "FAIL", "observed": "FAIL",
         } for case in phase7.PHASE7_ACCEPTANCE_CASES]
-        matrix = {"schema_version": "m21-phase7-acceptance-matrix-v1", "cases": cases}
+        matrix = {
+            "schema_version": "m21-phase7-acceptance-matrix-v2",
+            "cases": cases, "ci_run": synthetic_ci_run(cases, "39966973178"),
+        }
         binding = gov.digest(matrix)
         matrix_approvals = [
-            self.approval("governance_transition", binding, gov.digest(cases), index + 2,
+            self.approval(
+                "governance_transition", binding,
+                gov.digest({"cases": cases, "ci_run": matrix["ci_run"]}), index + 2,
                           sample=gov.AGGREGATE_SAMPLE)
             for index in range(2)
         ]

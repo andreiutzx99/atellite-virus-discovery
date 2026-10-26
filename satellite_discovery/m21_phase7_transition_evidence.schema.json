@@ -16,6 +16,7 @@
   ],
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "gitCommitSha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
     "snapshot": { "type": "string", "const": "DS-SYNTH00001" },
     "qualificationPackage": {
       "type": "object", "additionalProperties": false,
@@ -165,9 +166,10 @@
     },
     "adversarialMatrix": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "cases"],
+      "required": ["schema_version", "cases", "ci_run"],
       "properties": {
-        "schema_version": { "const": "m21-phase7-acceptance-matrix-v1" },
+        "schema_version": { "const": "m21-phase7-acceptance-matrix-v2" },
+        "ci_run": { "$ref": "#/$defs/ciRun" },
         "cases": {
           "type": "array", "minItems": 27, "maxItems": 27,
           "items": {
@@ -181,6 +183,30 @@
             }
           }
         }
+      }
+    },
+    "ciRun": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "repository", "workflow", "workflow_ref", "run_id", "run_attempt",
+        "run_sha", "tested_commit_sha", "event_name", "conclusion",
+        "matrix_results_sha256", "attestation_bundle_sha256"
+      ],
+      "properties": {
+        "repository": { "const": "andreiutzx99/atellite-virus-discovery" },
+        "workflow": { "const": ".github/workflows/tests.yml" },
+        "workflow_ref": {
+          "type": "string",
+          "pattern": "^andreiutzx99/atellite-virus-discovery/\\.github/workflows/tests\\.yml@refs/(heads/m21/phase7-evidence-integrity|pull/85/merge)$"
+        },
+        "run_id": { "type": "string", "pattern": "^[0-9]+$" },
+        "run_attempt": { "type": "integer", "minimum": 1 },
+        "run_sha": { "$ref": "#/$defs/gitCommitSha" },
+        "tested_commit_sha": { "$ref": "#/$defs/gitCommitSha" },
+        "event_name": { "enum": ["push", "pull_request"] },
+        "conclusion": { "const": "success" },
+        "matrix_results_sha256": { "$ref": "#/$defs/sha256" },
+        "attestation_bundle_sha256": { "$ref": "#/$defs/sha256" }
       }
     }
   }

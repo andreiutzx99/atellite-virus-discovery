@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import base64
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -60,6 +61,13 @@ PHASE7_ACCEPTANCE_CASES = (
     "checkpoint_rotation_reordered",
 )
 
+CI_RUN_EVIDENCE_FIELDS = {
+    "repository", "workflow", "workflow_ref", "run_id", "run_attempt",
+    "run_sha", "tested_commit_sha", "event_name", "conclusion",
+    "matrix_results_sha256", "attestation_bundle_sha256",
+}
+GIT_COMMIT_SHA_RE = re.compile(r"[a-f0-9]{40}\Z")
+
 
 def verify_adversarial_matrix(
     matrix: Any, approvals: Any, trusted_reviewers: dict[str, Any],
@@ -67,11 +75,12 @@ def verify_adversarial_matrix(
 ) -> dict[str, Any]:
     """Authenticate exact 27-case synthetic matrix outcomes; reject self-reported PASS."""
     now = now or datetime.now(timezone.utc)
-    if (not isinstance(matrix, dict) or set(matrix) != {"schema_version", "cases"}
-            or matrix.get("schema_version") != "m21-phase7-acceptance-matrix-v1"
+    if (not isinstance(matrix, dict) or set(matrix) != {"schema_version", "cases", "ci_run"}
+            or matrix.get("schema_version") != "m21-phase7-acceptance-matrix-v2"
             or not isinstance(matrix.get("cases"), list)):
         return {"status": "FAIL", "issues": ["Adversarial matrix evidence is malformed."]}
     cases = matrix["cases"]
+    ci_run = matrix["ci_run"]
     names = []
     issues = []
     for item in cases:
@@ -84,13 +93,35 @@ def verify_adversarial_matrix(
         names.append(item["case_id"])
     if tuple(names) != PHASE7_ACCEPTANCE_CASES:
         issues.append("Adversarial matrix does not contain the exact 27 ordered acceptance cases.")
+    if (not isinstance(ci_run, dict) or set(ci_run) != CI_RUN_EVIDENCE_FIELDS
+            or ci_run.get("repository") != "andreiutzx99/atellite-virus-discovery"
+            or ci_run.get("workflow") != ".github/workflows/tests.yml"
+            or not isinstance(ci_run.get("workflow_ref"), str)
+            or not ci_run["workflow_ref"].startswith(
+                "andreiutzx99/atellite-virus-discovery/.github/workflows/tests.yml@"
+            )
+            or ci_run["workflow_ref"].split("@", 1)[-1] not in {
+                "refs/heads/m21/phase7-evidence-integrity", "refs/pull/85/merge",
+            }
+            or not isinstance(ci_run.get("run_id"), str)
+            or not ci_run["run_id"].isdigit()
+            or not isinstance(ci_run.get("run_attempt"), int)
+            or isinstance(ci_run.get("run_attempt"), bool) or ci_run["run_attempt"] < 1
+            or ci_run.get("event_name") not in {"push", "pull_request"}
+            or ci_run.get("conclusion") != "success"
+            or any(not isinstance(ci_run.get(key), str) or not GIT_COMMIT_SHA_RE.fullmatch(ci_run[key])
+                   for key in ("run_sha", "tested_commit_sha"))
+            or any(not isinstance(ci_run.get(key), str) or not phase6.SHA_RE.fullmatch(ci_run[key])
+                   for key in ("matrix_results_sha256", "attestation_bundle_sha256"))
+            or ci_run.get("matrix_results_sha256") != phase6.digest(cases)):
+        issues.append("CI run evidence is incomplete, unsuccessful, mismatched, or unattested.")
     if issues:
         return {"status": "FAIL", "issues": sorted(set(issues))}
     binding = phase6.digest(matrix)
     signed = phase6._approval_set(
         dataset_id=BENCHMARK_SNAPSHOT_ID, sample_id=phase6.AGGREGATE_SAMPLE,
         scope="governance_transition", binding_digest=binding,
-        evidence_digest=phase6.digest(cases), approvals=approvals,
+        evidence_digest=phase6.digest({"cases": cases, "ci_run": ci_run}), approvals=approvals,
         trusted_reviewers=trusted_reviewers, now=now,
     )
     if signed["status"] != "PASS":
@@ -98,7 +129,9 @@ def verify_adversarial_matrix(
     return _verified_result({
         "status": "PASS", "issues": [], "case_count": len(cases),
         "matrix_sha256": binding, "approval_ids": signed["approval_ids"],
-        "reviewer_ids": signed["reviewer_ids"],
+        "reviewer_ids": signed["reviewer_ids"], "ci_run_sha256": phase6.digest(ci_run),
+        "workflow_identity": ci_run["workflow_ref"], "tested_commit_sha": ci_run["tested_commit_sha"],
+        "ci_run_id": ci_run["run_id"],
     })
 
 

@@ -37,6 +37,21 @@ controls in `test_phase7_custody_allows_valid_suffix_and_rejects_missing_local_h
 | Checkpoint history reordered | `test_checkpoint_rotation_reordered` | FAIL | FAIL |
 
 The signed matrix-attestation validator accepts only these 27 ordered case IDs,
-the exact associated test-function names, and matching `expected`/`observed`
-outcomes. Two distinct trusted governance reviewers must sign the canonical
-matrix digest before readiness can consume its result.
+the exact associated test-function names, matching `expected`/`observed`
+outcomes, and a successful run statement bound to this repository, workflow,
+workflow ref, run ID/attempt, tested commit, and matrix-result digest. Two
+distinct trusted governance reviewers sign the complete matrix, including its
+CI-run fields and the digest of the GitHub artifact-attestation bundle, before
+readiness can consume its result.
+
+The required `phase7-acceptance-evidence` GitHub Actions job runs exactly these
+27 methods, emits `m21_phase7_ci_run_statement.json`, creates a GitHub artifact
+attestation, and verifies its signer workflow with `gh attestation verify`.
+To promote CI results into a signed matrix package, reviewers must independently
+retrieve that successful run and attestation, confirm the tested PR-head SHA and
+workflow identity, and include the attestation-bundle SHA-256 in the signed
+`ci_run` object. The Python verifier checks that these details are covered by
+the trusted reviewer signatures; it does not itself fetch GitHub metadata or
+verify a Sigstore bundle. GitHub-hosted run metadata and GitHub's attestation
+service remain trust dependencies and do not prove independent third-party
+retention or biological validity.
