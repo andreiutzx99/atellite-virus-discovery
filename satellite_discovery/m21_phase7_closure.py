@@ -17,8 +17,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+try:
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+except ImportError:  # Tests and non-cryptographic tools may run without project extras.
+    InvalidSignature = Exception
+    Ed25519PublicKey = None
 
 from . import m21_benchmark_readiness as readiness
 from . import m21_phase6_governance as phase6
@@ -312,6 +316,11 @@ def verify_checkpoint_retention(
             or not (readiness._parse_time(custodian["valid_from"]) <= timestamp
                     < readiness._parse_time(custodian["valid_until"]))):
         issues.append("Retention source, custodian, identity, or package digest is invalid or non-independent.")
+    elif Ed25519PublicKey is None:
+        return {
+            "status": "INCOMPLETE",
+            "issues": ["cryptography is unavailable; checkpoint signature verification cannot run."],
+        }
     else:
         try:
             Ed25519PublicKey.from_public_bytes(_b64(custodian["public_key_ed25519"])).verify(
@@ -431,14 +440,15 @@ def verify_closure_package(
             "evidence_sha256": evidence_sha, "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
             "biological_execution_authorized": False,
         }
-    synthetic = (
-        any(reviewers[r].get("identity_class") != "HUMAN" for r in reviewer_ids if r in reviewers)
-        or ci_verification.get("evidence_class") != "GITHUB_ATTESTATION"
-        or checkpoint_verification.get("evidence_class") != "HUMAN"
-    )
-    decision = "INCOMPLETE" if synthetic else "PASS"
+    trust_boundary_issues = [
+        "HUMAN is a trust-store assertion; personal identity is not independently authenticated.",
+        "HTTPS and a custodian signature do not establish independently controlled retention.",
+        "Trust roots must be provisioned outside the repository and independently authenticated.",
+    ]
+    # No external trust-root or custody-source provenance is accepted by this
+    # verifier yet, so a syntactically HUMAN trust store cannot yield PASS.
     return {
-        "decision": decision, "issues": [],
+        "decision": "INCOMPLETE", "issues": trust_boundary_issues,
         "package_sha256": package_sha, "evidence_sha256": evidence_sha,
         "reviewer_ids": sorted(reviewer_ids), "verification_policy": SCHEMA_VERSION,
         "verified_at": now.isoformat(),

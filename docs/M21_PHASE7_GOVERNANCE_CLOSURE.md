@@ -22,6 +22,10 @@ Two distinct Ed25519 reviewer approvals must bind the same closure-package
 digest and verification-evidence digest. Trust records enforce key validity,
 revocation, role and scope. A package signed by synthetic test identities is
 never reported as operational `PASS`.
+The trust-store field `identity_class: HUMAN` is only an assertion in the
+supplied trust store; it does not verify a person's identity. Reviewer and
+custodian trust roots must be provisioned outside this repository and
+authenticated independently.
 
 ## Independently retained checkpoints
 
@@ -35,8 +39,8 @@ uncheckpointed local suffix.
 A signed file alone does not prove independent custody. The custodian key and
 retention source must be provisioned independently; the verifier does not
 claim immutable storage, trusted timestamps, or third-party retention merely
-because a URL or signature is present. Synthetic custody fixtures are tests
-only and cannot produce operational readiness `PASS`.
+because an HTTPS URL or signature is present. Synthetic custody fixtures are
+tests only and cannot produce operational readiness `PASS`.
 
 ## Package and decisions
 
@@ -49,11 +53,13 @@ The package uses content-addressed evidence references; the corresponding raw
 CI, checkpoint, and Phase 7 inputs must remain available for independent
 reverification.
 
-- `PASS`: all required component verifiers pass; GitHub attestation verification
-  succeeds; retained custody and reviewer trust are independently established;
-  approvals are distinct, valid and unexpired.
+- `PASS`: intended only after all component verifiers pass, GitHub attestation
+  succeeds, and reviewer identity plus custody-source provenance are
+  independently established. The current verifier does not authenticate those
+  trust-root origins and therefore deliberately does not emit operational `PASS`.
 - `INCOMPLETE`: required evidence or an authoritative verifier is unavailable,
-  or only synthetic reviewer/custody identities are present.
+  identity is only asserted by a trust-store record, custody independence is
+  not established, or only synthetic reviewer/custody identities are present.
 - `FAIL`: evidence is malformed, altered, expired, revoked, inconsistent, or
   fails cryptographic or continuity verification.
 
@@ -67,7 +73,8 @@ biological testing.
 1. Obtain the matrix results, CI run statement and attestation bundle from the
    successful GitHub Actions run for the exact software revision.
 2. Run the closure verifier in an environment with a trusted GitHub CLI and
-   independently provisioned reviewer/custodian trust stores.
+   reviewer/custodian trust roots provisioned outside the repository and
+   independently authenticated.
 3. Obtain the checkpoint package from the independently controlled retention
    source and record who retrieved it and when.
 4. Assemble and sign the closure package only after all underlying verifiers

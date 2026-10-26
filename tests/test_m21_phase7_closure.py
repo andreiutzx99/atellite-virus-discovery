@@ -6,8 +6,12 @@ from datetime import datetime, timezone
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+try:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+except ImportError:
+    serialization = None
+    Ed25519PrivateKey = None
 
 from satellite_discovery import m21_benchmark_readiness as readiness
 from satellite_discovery import m21_phase6_governance as gov
@@ -139,7 +143,9 @@ class Phase7ClosureTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "FAIL")
 
-    def _signed_synthetic_package(self):
+    def _signed_synthetic_package(
+        self, *, identity_class="SYNTHETIC", checkpoint_class="SYNTHETIC",
+    ):
         private = []
         trust = {}
         for index in range(2):
@@ -156,7 +162,7 @@ class Phase7ClosureTests(unittest.TestCase):
                 "role": closure.REVIEW_SCOPE, "scopes": [closure.REVIEW_SCOPE],
                 "valid_from": "2026-01-01T00:00:00Z",
                 "valid_until": "2027-01-01T00:00:00Z",
-                "revoked": False, "identity_class": "SYNTHETIC",
+                "revoked": False, "identity_class": identity_class,
             }
         component_results = {
             name: phase7._verified_result({"status": "PASS", "issues": []})
@@ -170,7 +176,7 @@ class Phase7ClosureTests(unittest.TestCase):
             "evidence_class": "GITHUB_ATTESTATION",
         })
         checkpoints = closure._verified_evidence({
-            "status": "PASS", "evidence_class": "SYNTHETIC",
+            "status": "PASS", "evidence_class": checkpoint_class,
         })
         package = {
             "schema_version": closure.SCHEMA_VERSION,
@@ -203,6 +209,7 @@ class Phase7ClosureTests(unittest.TestCase):
             approvals.append(record)
         return package, approvals, trust, component_results, ci, checkpoints
 
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed closure fixtures")
     def test_synthetic_closure_package_never_reports_operational_pass(self):
         package, approvals, trust, components, ci, checkpoints = self._signed_synthetic_package()
         result = closure.verify_closure_package(
@@ -213,6 +220,7 @@ class Phase7ClosureTests(unittest.TestCase):
         self.assertEqual(result["overall_state"], "BLOCKED_FOR_BENCHMARK_EXECUTION")
         self.assertFalse(result["biological_execution_authorized"])
 
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed closure fixtures")
     def test_closure_rejects_caller_supplied_pass_fields_and_changed_revision(self):
         package, approvals, trust, components, ci, checkpoints = self._signed_synthetic_package()
         caller_pass = {name: {"status": "PASS"} for name in components}
@@ -228,6 +236,19 @@ class Phase7ClosureTests(unittest.TestCase):
             ci_verification=ci, checkpoint_verification=checkpoints, now=NOW,
         )
         self.assertEqual(result["decision"], "FAIL")
+
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed closure fixtures")
+    def test_human_labels_and_https_custody_claims_never_establish_operational_pass(self):
+        package, approvals, trust, components, ci, checkpoints = self._signed_synthetic_package(
+            identity_class="HUMAN", checkpoint_class="HUMAN",
+        )
+        result = closure.verify_closure_package(
+            package, approvals, trust, verified_components=components,
+            ci_verification=ci, checkpoint_verification=checkpoints, now=NOW,
+        )
+        self.assertEqual(result["decision"], "INCOMPLETE")
+        self.assertTrue(any("personal identity" in issue for issue in result["issues"]))
+        self.assertTrue(any("independently controlled retention" in issue for issue in result["issues"]))
 
     def _checkpoint_fixture(self, suffix=False):
         checkpoint_key = Ed25519PrivateKey.generate()
@@ -310,6 +331,7 @@ class Phase7ClosureTests(unittest.TestCase):
             "revoked": False, "identity_class": identity_class,
         }
 
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed custody fixtures")
     def test_external_checkpoint_retention_verifies_signed_chain_and_suffix(self):
         package, trust, events, checkpoints = self._checkpoint_fixture(suffix=True)
         with patch.object(closure, "_schema_errors", return_value=None):
@@ -320,6 +342,17 @@ class Phase7ClosureTests(unittest.TestCase):
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["evidence_class"], "SYNTHETIC")
 
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed custody fixtures")
+    def test_missing_cryptography_never_falls_back_to_unverified_checkpoint_pass(self):
+        package, trust, events, checkpoints = self._checkpoint_fixture()
+        with patch.object(closure, "Ed25519PublicKey", None):
+            result = closure.verify_checkpoint_retention(
+                package, trust, local_events=events, local_checkpoints=checkpoints,
+                expected_snapshot="DS-SYNTH00001", now=NOW,
+            )
+        self.assertEqual(result["status"], "INCOMPLETE")
+
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed custody fixtures")
     def test_checkpoint_rollback_substitution_missing_and_unauthenticated_source_fail(self):
         package, trust, events, checkpoints = self._checkpoint_fixture()
         result = closure.verify_checkpoint_retention(
@@ -349,6 +382,7 @@ class Phase7ClosureTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "FAIL")
 
+    @unittest.skipIf(Ed25519PrivateKey is None, "cryptography is required for signed closure fixtures")
     def test_reviewer_approval_missing_duplicate_expired_or_revoked_is_rejected(self):
         package, approvals, trust, components, ci, checkpoints = self._signed_synthetic_package()
         result = closure.verify_closure_package(
