@@ -170,23 +170,30 @@ def _check_approval(dataset_id: str, sample_id: str, gate: str, record: Any,
     reviewer_record = trusted_reviewers.get(reviewer) if isinstance(reviewer, str) else None
     if not isinstance(reviewer_record, dict):
         issues.append(f"{prefix}: reviewer is not in the external trust store.")
-    elif record.get("key_id") != reviewer_record.get("key_id"):
-        issues.append(f"{prefix}: approval uses a stale or rotated reviewer key.")
-    elif reviewer_record.get("revoked") is not False:
-        issues.append(f"{prefix}: reviewer key is revoked or has no explicit active status.")
-    elif reviewer_record.get("role") != gate or gate not in reviewer_record.get("scopes", []):
-        issues.append(f"{prefix}: reviewer role or permitted scope does not authorize this gate.")
-    elif approved_at and (
-        approved_at < _parse_time(reviewer_record["valid_from"])
-        or approved_at >= _parse_time(reviewer_record["valid_until"])
-    ):
-        issues.append(f"{prefix}: approval was signed outside the reviewer key validity period.")
-    elif not (_parse_time(reviewer_record.get("valid_from")) and _parse_time(reviewer_record.get("valid_until"))
-              and _parse_time(reviewer_record["valid_from"]) <= now < _parse_time(reviewer_record["valid_until"])):
-        issues.append(f"{prefix}: reviewer key is outside its validity period.")
-    elif Ed25519PublicKey is None:
-        issues.append(f"{prefix}: cryptography dependency unavailable; approval verification cannot run.")
-    elif not issues:
+    else:
+        if record.get("key_id") != reviewer_record.get("key_id"):
+            issues.append(f"{prefix}: approval uses a stale or rotated reviewer key.")
+        if reviewer_record.get("revoked") is not False:
+            issues.append(f"{prefix}: reviewer key is revoked or has no explicit active status.")
+        role_claim = reviewer_record.get("role")
+        authorized_roles = (
+            {role_claim} if isinstance(role_claim, str)
+            else set(role_claim) if isinstance(role_claim, list)
+            and all(isinstance(role, str) for role in role_claim)
+            else set()
+        )
+        scopes = reviewer_record.get("scopes")
+        if (gate not in authorized_roles or not isinstance(scopes, list) or gate not in scopes):
+            issues.append(f"{prefix}: reviewer role or permitted scope does not authorize this gate.")
+        valid_from = _parse_time(reviewer_record.get("valid_from"))
+        valid_until = _parse_time(reviewer_record.get("valid_until"))
+        if approved_at and valid_from and valid_until and not (valid_from <= approved_at < valid_until):
+            issues.append(f"{prefix}: approval was signed outside the reviewer key validity period.")
+        if not valid_from or not valid_until or not valid_from <= now < valid_until:
+            issues.append(f"{prefix}: reviewer key is outside its validity period.")
+        if Ed25519PublicKey is None:
+            issues.append(f"{prefix}: cryptography dependency unavailable; approval verification cannot run.")
+    if isinstance(reviewer_record, dict) and not issues:
         try:
             key = Ed25519PublicKey.from_public_bytes(
                 base64.b64decode(reviewer_record["public_key_ed25519"], validate=True)
