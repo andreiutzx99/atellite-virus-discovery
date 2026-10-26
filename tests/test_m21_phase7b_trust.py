@@ -119,6 +119,63 @@ class TrustRootTests(unittest.TestCase):
         self.assertEqual(result["evidence_class"], "PINNED_EXTERNAL_TRUST_ROOT")
         self.assertEqual(result["generation"], 1)
 
+    def test_authenticated_revocation_and_replacement_identity(self):
+        bundle, anchor, fingerprint, _, root_key = self._bundle()
+        registry = copy.deepcopy(bundle["registry"])
+        replaced = registry["identities"][2]
+        replaced["revoked"] = True
+        replacement_key = Ed25519PrivateKey.generate()
+        raw = replacement_key.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+        )
+        registry["identities"].append({
+            "identity_id": "ID-0004", "display_name": "Synthetic replacement",
+            "organization": "Synthetic Test Authority", "key_id": "KEY-00000004",
+            "public_key_ed25519": base64.b64encode(raw).decode(),
+            "key_fingerprint_sha256": trust.sha256(raw),
+            "identity_class": "SYNTHETIC",
+            "roles": ["reviewer", "custodian"],
+            "scopes": list(replaced["scopes"]),
+            "valid_from": "2026-10-20T00:00:00Z",
+            "valid_until": "2027-01-01T00:00:00Z",
+            "revoked": False,
+            "identity_verification": {
+                "method": "synthetic replacement fixture",
+                "evidence_sha256": "4" * 64,
+                "authority": "synthetic-test-root",
+            },
+            "enrollment_approvals": [], "rotation": None,
+        })
+        checkpoint_body = {
+            "schema_version": trust.CHECKPOINT_SCHEMA,
+            "registry_id": registry["registry_id"],
+            "generation": 1,
+            "registry_sha256": trust.digest(registry),
+            "previous_checkpoint_sha256": None,
+            "issued_at": registry["issued_at"],
+        }
+        signed_bundle = {
+            "registry": registry,
+            "state_checkpoint": {
+                **checkpoint_body,
+                "signature_ed25519": base64.b64encode(
+                    root_key.sign(trust.canonical_bytes(checkpoint_body)),
+                ).decode(),
+            },
+            "anchor_signature": base64.b64encode(
+                root_key.sign(trust.canonical_bytes(registry)),
+            ).decode(),
+        }
+        result = trust.verify_registry(
+            signed_bundle, anchor,
+            expected_anchor_fingerprint=fingerprint,
+            expected_state_checkpoint_sha256=trust.digest(checkpoint_body),
+            now=NOW,
+        )
+        self.assertEqual(result["status"], "PASS", result)
+        self.assertTrue(result["identity_registry"]["ID-0003"]["revoked"])
+        self.assertIn("ID-0004", result["identity_registry"])
+
     def test_wrong_anchor_pin_checkpoint_rollback_expiry_and_tamper_fail(self):
         bundle, anchor, fingerprint, pin, _ = self._bundle()
         for wrong_fingerprint, wrong_pin, changed, expired in (
@@ -263,6 +320,43 @@ class TrustRootTests(unittest.TestCase):
             historical_registry_bundles=[prior], now=NOW,
         )
         self.assertEqual(verified["status"], "PASS", verified)
+        generation_three_registry = copy.deepcopy(current["registry"])
+        for identity in generation_three_registry["identities"]:
+            identity["rotation"] = None
+        generation_three_registry.update({
+            "generation": 3,
+            "previous_checkpoint_sha256": state_pin,
+            "issued_at": "2026-10-22T00:00:00Z",
+        })
+        generation_three_body = {
+            "schema_version": trust.CHECKPOINT_SCHEMA,
+            "registry_id": generation_three_registry["registry_id"],
+            "generation": 3,
+            "registry_sha256": trust.digest(generation_three_registry),
+            "previous_checkpoint_sha256": state_pin,
+            "issued_at": "2026-10-22T00:00:00Z",
+        }
+        generation_three = {
+            "registry": generation_three_registry,
+            "state_checkpoint": {
+                **generation_three_body,
+                "signature_ed25519": base64.b64encode(
+                    root_key.sign(trust.canonical_bytes(generation_three_body)),
+                ).decode(),
+            },
+            "anchor_signature": base64.b64encode(
+                root_key.sign(trust.canonical_bytes(generation_three_registry)),
+            ).decode(),
+        }
+        generation_three_pin = trust.digest(generation_three_body)
+        three_generation_result = trust.verify_registry(
+            generation_three, anchor,
+            expected_anchor_fingerprint=fingerprint,
+            expected_state_checkpoint_sha256=generation_three_pin,
+            expected_previous_checkpoint_sha256=state_pin,
+            historical_registry_bundles=[prior, current], now=NOW,
+        )
+        self.assertEqual(three_generation_result["status"], "PASS", three_generation_result)
         missing_history = trust.verify_registry(
             current, anchor, expected_anchor_fingerprint=fingerprint,
             expected_state_checkpoint_sha256=state_pin,
