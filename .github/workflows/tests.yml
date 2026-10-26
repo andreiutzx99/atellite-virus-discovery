@@ -31,6 +31,7 @@ jobs:
           subject-path: m21_phase7_acceptance_matrix_results.json
           predicate-path: m21_phase7_ci_run_statement.json
           predicate-type: https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
+          push-to-registry: true
       - name: Verify the artifact's GitHub workflow provenance
         run: >-
           gh attestation verify m21_phase7_acceptance_matrix_results.json
