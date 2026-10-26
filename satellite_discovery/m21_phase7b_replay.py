@@ -7,6 +7,7 @@ import json
 import stat
 import tempfile
 import zipfile
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -158,6 +159,7 @@ def _replay_canonical_transitions(
     replay_inputs_bytes: bytes, manifest: dict[str, Any],
     artifacts: dict[str, bytes], files: dict[str, bytes],
     identity_registry: dict[str, dict[str, Any]],
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Replay transition receipts and their content-addressed stage artifacts."""
     try:
@@ -225,7 +227,7 @@ def _replay_canonical_transitions(
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(content)
             result = phase7.verify_artifact_backed_transitions(
-                inputs["transition_receipts"], stage_paths, root, reviewers,
+                inputs["transition_receipts"], stage_paths, root, reviewers, now=now,
             )
     except (OSError, ValueError, TypeError) as exc:
         return {"status": "FAIL", "issues": [f"Canonical Phase 7 replay could not run ({exc})."]}
@@ -247,6 +249,7 @@ def verify_package(
     trust_anchor_fingerprint: str, trust_state_checkpoint_sha256: str,
     previous_trust_state_checkpoint_sha256: str | None = None,
     gh_binary: str = "gh",
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Check archive integrity and authenticated roots; never trust package PASS fields."""
     raw_package_path = Path(package_path)
@@ -300,6 +303,7 @@ def verify_package(
         expected_state_checkpoint_sha256=trust_state_checkpoint_sha256,
         expected_previous_checkpoint_sha256=previous_trust_state_checkpoint_sha256,
         historical_registry_bundles=history,
+        now=now,
     )
     if root_check.get("status") != "PASS":
         return _blocked_result(root_check.get("status", "FAIL"), root_check.get("issues", []))
@@ -309,13 +313,13 @@ def verify_package(
         return _blocked_result("FAIL", ["CI statement artifact is malformed JSON."])
     ci_check = closure.verify_ci_acceptance(
         artifact_by_kind["ci_results"], statement, artifact_by_kind["ci_attestation"],
-        expected_revision=manifest["software_revision"], gh_binary=gh_binary,
+        expected_revision=manifest["software_revision"], gh_binary=gh_binary, now=now,
     )
     if ci_check.get("status") != "PASS":
         return _blocked_result(ci_check.get("status", "INCOMPLETE"), ci_check.get("issues", []))
     transition_check = _replay_canonical_transitions(
         artifact_by_kind["replay_inputs"], manifest, artifacts, files,
-        root_check["identity_registry"],
+        root_check["identity_registry"], now=now,
     )
     if transition_check.get("status") != "PASS":
         return _blocked_result(
@@ -366,7 +370,7 @@ def verify_package(
     checkpoint_check = closure.verify_checkpoint_retention(
         checkpoint_package, closure_trust, local_events=local_events,
         local_checkpoints=replay_inputs["local_checkpoints"],
-        expected_snapshot=manifest["snapshot_id"],
+        expected_snapshot=manifest["snapshot_id"], now=now,
     )
     if checkpoint_check.get("status") != "PASS":
         return _blocked_result(
@@ -381,7 +385,7 @@ def verify_package(
     closure_check = closure.verify_closure_package(
         reviewer_bundle["closure_package"], reviewer_bundle["approvals"],
         closure_trust, verified_components=components,
-        ci_verification=ci_check, checkpoint_verification=checkpoint_check,
+        ci_verification=ci_check, checkpoint_verification=checkpoint_check, now=now,
     )
     decision = closure_check.get("decision", "INCOMPLETE")
     report_issues = list(closure_check.get("issues", []))
