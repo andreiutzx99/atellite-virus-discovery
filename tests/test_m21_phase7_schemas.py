@@ -23,6 +23,7 @@ class Phase7SchemaTests(unittest.TestCase):
             "m21_phase7_readiness.schema.json",
             "m21_phase7_reference_limits.schema.json",
             "m21_phase7_transition_evidence.schema.json",
+            "m21_phase7_closure.schema.json",
         ]
         for name in names:
             with self.subTest(schema=name):
@@ -104,3 +105,33 @@ class Phase7SchemaTests(unittest.TestCase):
         matrix["cases"][0]["observed"] = "PASS"
         with self.assertRaises(Exception):
             transition_validator.validate(matrix)
+
+        closure_schema = self.load_schema(names[4])
+        closure_validator = Draft202012Validator(
+            closure_schema, format_checker=FormatChecker(),
+        )
+        closure_validator.validate({
+            "schema_version": "m21-phase7-closure-v1",
+            "verification_policy": "m21-phase7-closure-v1",
+            "software_revision": "a" * 40,
+            "reference_panel_evidence": "a" * 64,
+            "scientific_approval_evidence": "b" * 64,
+            "canonical_transition_evidence": "c" * 64,
+            "ci_acceptance": "d" * 64,
+            "checkpoint_retention": "e" * 64,
+            "expires_at": "2027-01-01T00:00:00Z",
+            "limitations": ["Synthetic schema fixture."],
+        })
+        report_schema = closure_schema["$defs"]["closureReport"]
+        report_validator = Draft202012Validator(report_schema)
+        report_validator.validate({
+            "decision": "INCOMPLETE", "issues": [],
+            "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+            "biological_execution_authorized": False,
+        })
+        with self.assertRaises(Exception):
+            report_validator.validate({
+                "decision": "PASS", "issues": [],
+                "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+                "biological_execution_authorized": True,
+            })

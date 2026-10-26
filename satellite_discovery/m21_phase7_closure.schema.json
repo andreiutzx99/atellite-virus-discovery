@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M21 Phase 7 governance closure evidence",
+  "oneOf": [
+    { "$ref": "#/$defs/closurePackage" },
+    { "$ref": "#/$defs/closureTrustStore" },
+    { "$ref": "#/$defs/retainedCheckpointPackage" },
+    { "$ref": "#/$defs/closureReport" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "closureTrustStore": {
+      "type": "object", "minProperties": 1,
+      "propertyNames": { "pattern": "^REV-[A-Z0-9]{8}$" },
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": [
+          "reviewer_id", "key_id", "public_key_ed25519", "role", "scopes",
+          "valid_from", "valid_until", "revoked", "identity_class"
+        ],
+        "properties": {
+          "reviewer_id": { "type": "string", "pattern": "^REV-[A-Z0-9]{8}$" },
+          "key_id": { "type": "string", "pattern": "^KEY-[A-Z0-9]{10}$" },
+          "public_key_ed25519": { "type": "string", "contentEncoding": "base64" },
+          "role": { "type": "string", "minLength": 1 },
+          "scopes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+          "valid_from": { "type": "string", "format": "date-time" },
+          "valid_until": { "type": "string", "format": "date-time" },
+          "revoked": { "type": "boolean" },
+          "identity_class": { "enum": ["HUMAN", "SYNTHETIC"] }
+        }
+      }
+    },
+    "closurePackage": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema_version", "verification_policy", "software_revision",
+        "reference_panel_evidence", "scientific_approval_evidence",
+        "canonical_transition_evidence", "ci_acceptance",
+        "checkpoint_retention", "expires_at", "limitations"
+      ],
+      "properties": {
+        "schema_version": { "const": "m21-phase7-closure-v1" },
+        "verification_policy": { "const": "m21-phase7-closure-v1" },
+        "software_revision": { "$ref": "#/$defs/commit" },
+        "reference_panel_evidence": { "$ref": "#/$defs/sha256" },
+        "scientific_approval_evidence": { "$ref": "#/$defs/sha256" },
+        "canonical_transition_evidence": { "$ref": "#/$defs/sha256" },
+        "ci_acceptance": { "$ref": "#/$defs/sha256" },
+        "checkpoint_retention": { "$ref": "#/$defs/sha256" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "limitations": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "retainedCheckpointPackage": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema_version", "benchmark_snapshot_id", "dataset_id", "chain_id",
+        "retained_checkpoints", "retention_receipt"
+      ],
+      "properties": {
+        "schema_version": { "const": "m21-phase7-retained-checkpoints-v1" },
+        "benchmark_snapshot_id": { "const": "DS-SYNTH00001" },
+        "dataset_id": { "const": "DS-SYNTH00001" },
+        "chain_id": { "type": "string", "minLength": 1 },
+        "retained_checkpoints": { "type": "array", "minItems": 1, "items": { "type": "object" } },
+        "retention_receipt": {
+          "type": "object", "additionalProperties": false,
+          "required": [
+            "source_uri", "retrieved_at", "retrieved_by", "custodian_id",
+            "key_id", "signature_ed25519", "package_sha256"
+          ],
+          "properties": {
+            "source_uri": { "type": "string", "format": "uri" },
+            "retrieved_at": { "type": "string", "format": "date-time" },
+            "retrieved_by": { "type": "string", "minLength": 1 },
+            "custodian_id": { "type": "string", "minLength": 1 },
+            "key_id": { "type": "string", "minLength": 1 },
+            "signature_ed25519": { "type": "string", "minLength": 1 },
+            "package_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "closureReport": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "decision", "issues", "overall_state", "biological_execution_authorized"
+      ],
+      "properties": {
+        "decision": { "enum": ["PASS", "INCOMPLETE", "FAIL"] },
+        "issues": { "type": "array", "items": { "type": "string" } },
+        "package_sha256": { "$ref": "#/$defs/sha256" },
+        "evidence_sha256": { "$ref": "#/$defs/sha256" },
+        "reviewer_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "verification_policy": { "const": "m21-phase7-closure-v1" },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "limitations": { "type": "array", "items": { "type": "string" } },
+        "overall_state": { "const": "BLOCKED_FOR_BENCHMARK_EXECUTION" },
+        "biological_execution_authorized": { "const": false }
+      }
+    }
+  }
+}
