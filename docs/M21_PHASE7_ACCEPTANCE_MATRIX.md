@@ -45,8 +45,10 @@ CI-run fields and the digest of the GitHub artifact-attestation bundle, before
 readiness can consume its result.
 
 The required `phase7-acceptance-evidence` GitHub Actions job runs exactly these
-27 methods, emits `m21_phase7_ci_run_statement.json`, creates a GitHub artifact
-attestation, and verifies its signer workflow with `gh attestation verify`.
+27 methods, emits `m21_phase7_acceptance_matrix_results.json` and
+`m21_phase7_ci_run_statement.json`, attests the matrix results as the subject
+and the run statement as the predicate, and verifies the signer workflow and
+predicate type with `gh attestation verify`.
 To promote CI results into a signed matrix package, reviewers must independently
 retrieve that successful run and attestation, confirm the tested PR-head SHA and
 workflow identity, and include the attestation-bundle SHA-256 in the signed

@@ -3,9 +3,10 @@
 **Overall:** `INCOMPLETE` — the canonical synthetic transition adapters and
 27-case adversarial suite are implemented, but this draft does not contain a
 verified independently retained checkpoint set or signed matrix-attestation
-evidence for a complete readiness report. The new CI job verifies artifact
-provenance for its test statement; a signed reviewer matrix must still bind the
-completed run and attestation bundle. No biological benchmark is authorized.
+evidence for a complete readiness report. The new CI job attests its matrix
+results with the run identity as predicate; a signed reviewer matrix must still
+bind the completed run and attestation bundle. No biological benchmark is
+authorized.
 
 | Area | Status | Evidence / limitation |
 |---|---|---|

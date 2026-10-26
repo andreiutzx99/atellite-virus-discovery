@@ -60,7 +60,6 @@ def main() -> int:
         "tested_commit_sha": _tested_commit_sha(),
         "event_name": event_name,
         "acceptance_tests_conclusion": "success",
-        "matrix_results": cases,
         "matrix_results_sha256": gov.digest(cases),
     }
     required = (
@@ -69,9 +68,9 @@ def main() -> int:
     )
     if not all(required) or event_name not in {"push", "pull_request"} or attempt < 1:
         return 2
+    Path("m21_phase7_acceptance_matrix_results.json").write_bytes(gov.canonical_bytes(cases))
     Path("m21_phase7_ci_run_statement.json").write_text(
-        json.dumps(statement, sort_keys=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
+        json.dumps(statement, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8",
     )
     return 0
 

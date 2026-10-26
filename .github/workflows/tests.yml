@@ -28,17 +28,21 @@ jobs:
       - name: Attest the CI run statement
         uses: actions/attest@v2
         with:
-          subject-path: m21_phase7_ci_run_statement.json
-          predicate-type: https://slsa.dev/provenance/v1
+          subject-path: m21_phase7_acceptance_matrix_results.json
+          predicate-path: m21_phase7_ci_run_statement.json
+          predicate-type: https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
       - name: Verify the artifact's GitHub workflow provenance
         run: >-
-          gh attestation verify m21_phase7_ci_run_statement.json
+          gh attestation verify m21_phase7_acceptance_matrix_results.json
           --repo "$GITHUB_REPOSITORY"
           --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/tests.yml"
+          --predicate-type https://github.com/andreiutzx99/atellite-virus-discovery/attestations/m21-phase7-ci-run/v1
       - uses: actions/upload-artifact@v4
         with:
           name: m21-phase7-ci-run-statement
-          path: m21_phase7_ci_run_statement.json
+          path: |
+            m21_phase7_acceptance_matrix_results.json
+            m21_phase7_ci_run_statement.json
           retention-days: 14
 
   offline-tests:
