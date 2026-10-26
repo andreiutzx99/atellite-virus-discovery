@@ -317,6 +317,20 @@ def verify_package(
     )
     if ci_check.get("status") != "PASS":
         return _blocked_result(ci_check.get("status", "INCOMPLETE"), ci_check.get("issues", []))
+    try:
+        retained_receipts = json.loads(artifact_by_kind["transition_evidence"].decode("utf-8"))
+        replay_receipts = json.loads(
+            artifact_by_kind["replay_inputs"].decode("utf-8"),
+        )["transition_receipts"]
+        if (not isinstance(retained_receipts, list)
+                or phase6.canonical_bytes(retained_receipts)
+                != phase6.canonical_bytes(replay_receipts)):
+            return _blocked_result(
+                "FAIL",
+                ["Retained transition evidence does not match the receipts selected for replay."],
+            )
+    except (UnicodeError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return _blocked_result("FAIL", ["Retained transition evidence is malformed."])
     transition_check = _replay_canonical_transitions(
         artifact_by_kind["replay_inputs"], manifest, artifacts, files,
         root_check["identity_registry"], now=now,
