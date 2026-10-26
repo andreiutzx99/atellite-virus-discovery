@@ -29,6 +29,7 @@ jobs:
         uses: actions/attest@v2
         with:
           subject-path: m21_phase7_ci_run_statement.json
+          predicate-type: https://slsa.dev/provenance/v1
       - name: Verify the artifact's GitHub workflow provenance
         run: >-
           gh attestation verify m21_phase7_ci_run_statement.json
