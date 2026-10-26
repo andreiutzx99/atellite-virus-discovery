@@ -28,6 +28,11 @@ candidate classification and final evidence integration are absent from the
 M19 benchmark graph. No biological identity, function, novelty, or helper
 dependence is inferred from a candidate.
 
+Separately, the existing M20 Phase 2 live integration test passed through its
+registered M4→M6→M7 recurrence handoff on synthetic fixtures. That test is
+additional software integration evidence, but it does not establish biological
+candidate classification and is not folded into the M19 recovery rates above.
+
 ## Synthetic benchmark results
 
 The benchmark contains five positive cases and one negative control. Each
@@ -102,9 +107,10 @@ independent scientific validation.
 ## Tests and CI
 
 The Phase 8 validation tests (7) and M19 benchmark tests (10 passed, 1
-optional live-test skipped) passed locally. The full project test suite is
-currently being checked. GitHub Actions for this Phase 8 branch have not yet
-been run.
+optional live-test skipped) passed locally. Full repository discovery passed
+with 1,084 tests and 21 skips; the live M20 Phase 2 M4→M6→M7 test passed.
+GitHub Actions for the current PR commit remain the release check; consult
+PR #88 for their commit-specific status.
 
 ## Readiness assessment
 
