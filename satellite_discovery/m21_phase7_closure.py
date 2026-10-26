@@ -293,6 +293,12 @@ def verify_checkpoint_retention(
         return {"status": "FAIL", "issues": issues}
     source = urlparse(str(receipt["source_uri"]))
     custodian = reviewers.get(receipt["custodian_id"])
+    custodian_roles = (
+        [custodian.get("role")] if isinstance(custodian, dict)
+        and isinstance(custodian.get("role"), str)
+        else custodian.get("role", []) if isinstance(custodian, dict)
+        and isinstance(custodian.get("role"), list) else []
+    )
     content = {k: v for k, v in receipt.items() if k != "signature_ed25519"}
     package_digest = phase6.digest({
         "benchmark_snapshot_id": package["benchmark_snapshot_id"],
@@ -306,7 +312,7 @@ def verify_checkpoint_retention(
             or receipt["retrieved_by"] == receipt["custodian_id"]
             or receipt["package_sha256"] != package_digest
             or not timestamp or timestamp > now or not custodian
-            or custodian.get("role") != RETENTION_SCOPE
+            or RETENTION_SCOPE not in custodian_roles
             or RETENTION_SCOPE not in custodian.get("scopes", [])
             or custodian.get("identity_class") not in {"HUMAN", "SYNTHETIC"}
             or custodian.get("revoked") is not False
