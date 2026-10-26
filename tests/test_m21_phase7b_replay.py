@@ -5,11 +5,17 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+except ImportError:
+    Ed25519PrivateKey = None
+
 from satellite_discovery import m21_phase7_closure as closure
 from satellite_discovery import m21_phase7b_replay as replay
 from tests.test_m21_phase7b_trust import TrustRootTests
 
 
+@unittest.skipIf(Ed25519PrivateKey is None, "cryptography required for synthetic Ed25519 fixtures")
 class EvidencePackageTests(unittest.TestCase):
     def _package(self, root: Path):
         bundle, anchor, fingerprint, state_pin, _ = TrustRootTests()._bundle()
@@ -81,11 +87,31 @@ class EvidencePackageTests(unittest.TestCase):
             package, anchor, fingerprint, pin = self._package(Path(temp))
             with zipfile.ZipFile(package, "a") as archive:
                 archive.writestr("unlisted.json", b"{}")
-            result = replay.verify_package(
-                package, trust_anchor_path=anchor,
-                trust_anchor_fingerprint=fingerprint,
-                trust_state_checkpoint_sha256=pin,
-            )
+            with patch.object(replay, "_schema_valid", return_value=None):
+                result = replay.verify_package(
+                    package, trust_anchor_path=anchor,
+                    trust_anchor_fingerprint=fingerprint,
+                    trust_state_checkpoint_sha256=pin,
+                )
+        self.assertEqual(result["decision"], "FAIL")
+
+    def test_missing_schema_validator_does_not_mask_bad_artifact_digest(self):
+        with tempfile.TemporaryDirectory() as temp:
+            package, anchor, fingerprint, pin = self._package(Path(temp))
+            with zipfile.ZipFile(package, "r") as source:
+                members = {name: source.read(name) for name in source.namelist()}
+            manifest = json.loads(members["manifest.json"])
+            manifest["artifacts"][0]["sha256"] = "0" * 64
+            members["manifest.json"] = json.dumps(manifest, sort_keys=True).encode()
+            with zipfile.ZipFile(package, "w") as target:
+                for name, content in members.items():
+                    target.writestr(name, content)
+            with patch.object(replay, "_schema_valid", return_value=None):
+                result = replay.verify_package(
+                    package, trust_anchor_path=anchor,
+                    trust_anchor_fingerprint=fingerprint,
+                    trust_state_checkpoint_sha256=pin,
+                )
         self.assertEqual(result["decision"], "FAIL")
 
 

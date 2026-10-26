@@ -92,11 +92,11 @@ def _read_archive(path: Path) -> tuple[dict[str, Any], dict[str, bytes], list[st
 
 
 def _validate_manifest(manifest: Any, files: dict[str, bytes]) -> tuple[dict[str, bytes], list[str]]:
-    issues = _schema_valid("m21_phase7b_evidence_package.schema.json", manifest)
-    if issues is None:
-        return {}, [SCHEMA_VALIDATOR_UNAVAILABLE]
+    # Check all content-addressed archive facts before consulting the optional
+    # schema validator. Missing validation tooling must not hide known tampering.
+    issues: list[str] = []
     if not isinstance(manifest, dict):
-        return {}, issues or ["Evidence manifest is malformed."]
+        return {}, ["Evidence manifest is malformed."]
     if manifest.get("schema_version") != SCHEMA_VERSION:
         issues.append("Unsupported evidence-package schema version.")
     artifacts = manifest.get("artifacts")
@@ -112,7 +112,8 @@ def _validate_manifest(manifest: Any, files: dict[str, bytes]) -> tuple[dict[str
             issues.append("Artifact descriptor is malformed.")
             continue
         artifact_id, path, kind = item.get("artifact_id"), item.get("path"), item.get("kind")
-        if (not _safe_path(path) or path == "manifest.json" or path not in files
+        if (not isinstance(artifact_id, str) or not artifact_id
+                or not _safe_path(path) or path == "manifest.json" or path not in files
                 or artifact_id in by_id or path in paths):
             issues.append("Artifact is missing, unsafe, duplicated, or substituted.")
             continue
@@ -120,8 +121,12 @@ def _validate_manifest(manifest: Any, files: dict[str, bytes]) -> tuple[dict[str
             issues.append(f"Required artifact kind is duplicated: {kind}.")
             continue
         content = files[path]
-        if (len(content) != item.get("size_bytes")
-                or hashlib.sha256(content).hexdigest() != item.get("sha256")):
+        expected_size = item.get("size_bytes")
+        expected_sha = item.get("sha256")
+        if (not isinstance(expected_size, int) or isinstance(expected_size, bool)
+                or not isinstance(expected_sha, str)
+                or len(content) != expected_size
+                or hashlib.sha256(content).hexdigest() != expected_sha):
             issues.append(f"Artifact integrity check failed: {artifact_id}.")
             continue
         by_id[artifact_id] = content
@@ -135,6 +140,11 @@ def _validate_manifest(manifest: Any, files: dict[str, bytes]) -> tuple[dict[str
         issues.append("Evidence package is missing required artifact kinds.")
     if listed != set(files):
         issues.append("Evidence archive contains unlisted files.")
+    schema_issues = _schema_valid("m21_phase7b_evidence_package.schema.json", manifest)
+    if schema_issues is None:
+        issues.append(SCHEMA_VALIDATOR_UNAVAILABLE)
+    else:
+        issues.extend(schema_issues)
     return by_id, sorted(set(issues))
 
 
@@ -163,7 +173,11 @@ def verify_package(
         return {"decision": "FAIL", "issues": issues}
     artifacts, issues = _validate_manifest(manifest, files)
     if issues:
-        decision = "INCOMPLETE" if SCHEMA_VALIDATOR_UNAVAILABLE in issues else "FAIL"
+        decision = (
+            "INCOMPLETE"
+            if issues == [SCHEMA_VALIDATOR_UNAVAILABLE]
+            else "FAIL"
+        )
         return {
             "decision": decision, "issues": issues,
             "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
