@@ -26,7 +26,7 @@ REGISTRY_FIELDS = {
 }
 IDENTITY_FIELDS = {
     "identity_id", "display_name", "organization", "key_id", "public_key_ed25519",
-    "key_fingerprint_sha256", "roles", "scopes", "valid_from", "valid_until",
+    "key_fingerprint_sha256", "identity_class", "roles", "scopes", "valid_from", "valid_until",
     "revoked", "identity_verification", "enrollment_approvals", "rotation",
 }
 
@@ -67,6 +67,7 @@ def verify_registry(
     bundle: Any, anchor: Any, *, expected_anchor_fingerprint: str,
     expected_state_checkpoint_sha256: str,
     expected_previous_checkpoint_sha256: str | None = None,
+    historical_registry_bundles: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Authenticate a registry against an out-of-band pinned trust anchor and state digest.
@@ -150,6 +151,7 @@ def verify_registry(
                 or identity_id in records or not isinstance(record.get("revoked"), bool)
                 or not isinstance(record.get("roles"), list) or not record["roles"]
                 or any(role not in {"reviewer", "custodian", "trust_admin"} for role in record["roles"])
+                or record.get("identity_class") not in {"HUMAN", "SYNTHETIC"}
                 or not isinstance(record.get("scopes"), list) or not record["scopes"]
                 or not all(isinstance(scope, str) and scope for scope in record["scopes"])
                 or not isinstance(record.get("display_name"), str) or not record["display_name"]
@@ -235,13 +237,66 @@ def verify_registry(
                 }),
             ):
                 return {"status": "FAIL", "issues": ["Key rotation continuity signature is invalid."]}
-    if rotation_present:
-        return {
-            "status": "INCOMPLETE",
-            "issues": [
-                "Historical registry evidence is required to bind the old rotation key to the prior trust state."
-            ],
-        }
+    previous_registry: dict[str, dict[str, Any]] | None = None
+    if rotation_present or registry["generation"] > 1 and historical_registry_bundles is not None:
+        if not isinstance(historical_registry_bundles, list):
+            return {
+                "status": "INCOMPLETE",
+                "issues": ["Authenticated prior-registry history is required to verify key rotation."],
+            }
+        if len(historical_registry_bundles) != registry["generation"] - 1:
+            return {"status": "FAIL", "issues": ["Trust-registry history is incomplete or contains extra generations."]}
+        prior_checkpoint_sha: str | None = None
+        prior_identity_registry: dict[str, dict[str, Any]] | None = None
+        for index, prior_bundle in enumerate(historical_registry_bundles, start=1):
+            prior_registry = prior_bundle.get("registry") if isinstance(prior_bundle, dict) else None
+            prior_checkpoint = prior_bundle.get("state_checkpoint") if isinstance(prior_bundle, dict) else None
+            if (not isinstance(prior_registry, dict) or prior_registry.get("generation") != index
+                    or not isinstance(prior_checkpoint, dict)):
+                return {"status": "FAIL", "issues": ["Trust-registry history is reordered or malformed."]}
+            prior_body = {key: value for key, value in prior_checkpoint.items()
+                          if key != "signature_ed25519"}
+            prior_state_sha = digest(prior_body)
+            verified_prior = verify_registry(
+                prior_bundle, anchor,
+                expected_anchor_fingerprint=expected_anchor_fingerprint,
+                expected_state_checkpoint_sha256=prior_state_sha,
+                expected_previous_checkpoint_sha256=prior_checkpoint_sha,
+                historical_registry_bundles=historical_registry_bundles[:index - 1],
+                now=now,
+            )
+            if verified_prior.get("status") != "PASS":
+                return {
+                    "status": verified_prior.get("status", "FAIL"),
+                    "issues": ["A retained prior registry failed authentication.",
+                               *verified_prior.get("issues", [])],
+                }
+            prior_checkpoint_sha = verified_prior["state_checkpoint_sha256"]
+            prior_identity_registry = verified_prior["identity_registry"]
+        if prior_checkpoint_sha != registry["previous_checkpoint_sha256"]:
+            return {"status": "FAIL", "issues": ["Current registry conflicts with retained history or rolls back state."]}
+        previous_registry = prior_identity_registry
+        if previous_registry is not None:
+            for identity_id, record in records.items():
+                prior = previous_registry.get(identity_id)
+                if prior is None:
+                    continue
+                prior_fp = prior["key_fingerprint_sha256"]
+                current_fp = record["key_fingerprint_sha256"]
+                rotation = record.get("rotation")
+                if current_fp != prior_fp and rotation is None:
+                    return {"status": "FAIL", "issues": ["Reviewer key changed without an authenticated rotation record."]}
+                if rotation is not None and (
+                    prior.get("revoked") is not False
+                    or rotation["previous_key_fingerprint_sha256"] != prior_fp
+                    or rotation["previous_public_key_ed25519"] != prior["public_key_ed25519"]
+                ):
+                    return {"status": "FAIL", "issues": ["Rotation does not continue the prior authenticated reviewer key."]}
+                if prior.get("revoked") is True and current_fp == prior_fp and record.get("revoked") is False:
+                    return {"status": "FAIL", "issues": ["A revoked reviewer key was reactivated."]}
+            for identity_id, prior in previous_registry.items():
+                if (identity_id not in records and prior.get("revoked") is not True):
+                    return {"status": "FAIL", "issues": ["An active identity disappeared without an authenticated revocation."]}
     return {
         "status": "PASS", "identity_registry": records,
         "registry_sha256": digest(registry), "state_checkpoint_sha256": checkpoint_digest,
