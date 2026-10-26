@@ -39,6 +39,8 @@ class EvidencePackageTests(unittest.TestCase):
             path = f"evidence/{artifact_id}.json"
             if kind == "trust_registry":
                 content = json.dumps(bundle, sort_keys=True).encode()
+            elif kind == "transition_evidence":
+                content = b"[]"
             elif kind in {"checkpoint_history", "audit_chain"}:
                 content = b"[]"
             elif kind == "reviewer_approvals":
@@ -602,20 +604,7 @@ class CanonicalReplayMappingTests(unittest.TestCase):
                     "control_qualification", lambda _: b"{}",
                 ),
                 "altered transition receipt": (
-                    "replay_inputs",
-                    lambda raw: phase6.canonical_bytes({
-                        **json.loads(raw),
-                        "transition_receipts": [
-                            {
-                                **json.loads(raw)["transition_receipts"][0],
-                                "receipt": {
-                                    **json.loads(raw)["transition_receipts"][0]["receipt"],
-                                    "verification_result": "FAIL",
-                                },
-                            },
-                            *json.loads(raw)["transition_receipts"][1:],
-                        ],
-                    }),
+                    "transition_evidence", lambda _: b"[]",
                 ),
                 "missing custody checkpoint": (
                     "checkpoint_history", lambda _: b"[]",
@@ -822,6 +811,8 @@ class CanonicalReplayMappingTests(unittest.TestCase):
                 kind_paths[kind] = path
                 if kind == "trust_registry":
                     content = json.dumps(bundle, sort_keys=True).encode()
+                elif kind == "transition_evidence":
+                    content = phase6.canonical_bytes(receipts)
                 elif kind in {"checkpoint_history", "audit_chain"}:
                     content = b"[]"
                 elif kind == "custody_receipt":
