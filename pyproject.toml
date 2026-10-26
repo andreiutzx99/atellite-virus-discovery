@@ -49,6 +49,7 @@ satellite_discovery = [
     "m21_phase7_reference_limits.schema.json",
     "m21_phase7_readiness.schema.json",
     "m21_phase7_transition_evidence.schema.json",
+    "m21_phase7_closure.schema.json",
 ]
 
 [project.optional-dependencies]
