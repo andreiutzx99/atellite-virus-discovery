@@ -39,7 +39,8 @@ nominal depth (16–60×), read error (0–5%), reference divergence (25–45%),
 randomized read starts, repetitive and low-complexity sequence, target GC
 composition, and synthetic background composition. Candidate and background sequences are
 generated independently. Opaque analysis IDs are used in workflow inputs;
-scenario labels and truth remain in post-run sidecars.
+scenario labels and truth are kept in separate scoring sidecars outside the
+discovery inputs and joined only when results are scored.
 
 The same per-split input-manifest digest was verified for both predeclared
 configurations:
@@ -118,7 +119,18 @@ state is preserved and is not evidence of an M20 integration failure.
 Focused M22 generator/metrics tests: 4 passed. Focused M19 benchmark tests: 10
 passed, one optional-tool test skipped in that run. The complete local
 repository suite passed 1,091 tests with 21 skipped. GitHub Actions results are
-pending publication of the M22 branch.
+recorded below.
+
+The `tests` workflow passed all 11 jobs on implementation commit
+`eddbada852f2a267515a2ba996cfcf596e82751d` in both the push run
+([run 619](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/40514255809))
+and the pull-request run
+([run 620](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/40514289281)).
+The passing jobs covered optional-tool integration, offline tests on Ubuntu and
+Windows with Python 3.11 and 3.12, pinned-runtime checks on the same platform
+and version matrix, Phase 7 acceptance evidence, and Phase 7 schema validation.
+The follow-up commit updates this report only; its checks are verified before
+finalizing the draft PR.
 
 ## Limitations
 
