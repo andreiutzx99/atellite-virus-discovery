@@ -12,7 +12,8 @@ diagnostic outcomes. Two cases hit actual SPAdes reconstruction errors, so their
 zero-candidate results are execution failures, not evidence that the targets
 are unrecoverable. All results remain synthetic software evidence.
 
-**Phase 8 status: INCOMPLETE.** Biological discovery is not validated.
+**M21 Phase 8: TECHNICAL IMPLEMENTATION COMPLETE.** This is a software and
+synthetic-evidence completion status only; biological discovery is not validated.
 Governance remains `decision=INCOMPLETE` and
 `overall_state=BLOCKED_FOR_BENCHMARK_EXECUTION`; biological execution remains
 unauthorized.
@@ -94,6 +95,44 @@ and exited with return value 21. The high-error case had 480 assembly-eligible
 residual fragments; low coverage had 128. These are assembler execution
 failures, not evidence that target sequences were absent or unrecoverable.
 
+### SPAdes root-cause investigation
+
+Both failures used the same available SPAdes 4.1.0 runtime and M6 invocation:
+single-end `--only-assembler`, one thread, a 2-GiB tool memory limit, and
+automatic k selection from 100-nt reads. The generated M19 reads were
+deterministically and evenly spaced rather than randomly sampled: 480
+assembly-eligible 100-nt reads (60× nominal target coverage) in high-error,
+and 128 reads (16×) in low-coverage. The error was raised in the K55 stage at
+SPAdes' `EC Threshold Finding`; K21 and K33 had already run. The process exited
+quickly with code 21, not a timeout or memory-limit error.
+
+An isolated, separately labelled full M19 experiment held the generated inputs,
+SPAdes 4.1.0, memory, thread count, and registered M4/M6 read-back path fixed,
+changing only the k-mer list from automatic 21/33/55 to 21/33. Both former
+execution failures then completed assembly. This isolates the failure to the
+K55 coverage-histogram stage for these synthetic inputs, rather than missing
+tools, malformed FASTQ, or general SPAdes/runtime incompatibility. It does not
+establish a general SPAdes defect or prove which property of the synthetic
+k-mer spectrum triggers the upstream histogram guard.
+
+| Experimental case | SPAdes/M6 result | Truth comparison | Disposition |
+|---|---|---|---|
+| High error | Assembly completed; read-back supported | 794-nt contig; 99.87% local identity and 99.25% target coverage | One threshold-qualified partial candidate; not exact |
+| Low coverage | Assembly completed; read-back supported | 800-nt contig; 52.51% local identity and 99.0% target coverage | Unsupported candidate; below the fixed 95% identity threshold |
+
+Across the six-case experiment, exact recovery remained 2/5, partial recovery
+increased from 0/5 to 1/5, execution failures fell from two to zero, and
+non-exact candidates increased from one to three. The low-coverage candidate
+was supported by the same reads used to assemble it, but did not match held-out
+truth sufficiently to qualify as a partial recovery. Two candidates failed the
+fixed partial-recovery thresholds. The negative control remained candidate-free.
+
+No production k-mer change was adopted: the experimental setting trades the
+two assembler errors for more unsupported predictions and does not improve
+exact recovery. The original six-case M19 baseline and M1–M20 assembler
+configuration remain unchanged. The failures are adequately characterized for
+Phase 8 technical completion, but remain limitations of the baseline result.
+
 The numeric rates are descriptive software metrics only. One negative control
 is insufficient to validate specificity; no confidence intervals, runtime, or
 memory measurements are claimed. These results should not be generalized to
@@ -128,9 +167,10 @@ independent scientific validation.
 
 | Status | Recommendation and evidence |
 |---|---|
-| Reused | Fixed-seed synthetic controls and M19 held-out truth scoring; two runs matched including M6 failure states. |
+| Reused | Fixed-seed synthetic controls and M19 held-out truth scoring; two baseline runs matched including M6 failure states. |
 | Implemented | Exact/partial recovery, identity/coverage, M6 reconstruction/read-support states, and failure diagnostics. |
 | Implemented | Registered M20 synthetic M4→M15 and Phase 5 report; Phase 4 semantic replay matched. |
+| Evaluated; not adopted | Isolated SPAdes `-k 21,33` experiment completed the two failing assemblies but increased unsupported predictions without improving exact recovery. |
 | Deferred | M5, M13, M14, and M10 JSONL handoffs; current producer contracts do not supply or accept them, and were not changed. |
 | Satisfied | M21 Phase 4 synthetic streaming validator and bounded checks remain in place; they do not establish biological suitability. |
 | Deferred | Biological reads, data-use permission, library adequacy, independent truth labels, and reference-exclusion review. |
@@ -143,21 +183,25 @@ infrastructure-status note.
 
 ## Tests and CI
 
-The Phase 8 validation tests (9) pass locally, including tests for M6
-execution-failure diagnostics. Full repository discovery passed: 1,087 tests,
-21 skipped. GitHub Actions for the new PR head are pending.
+The 9 focused Phase 8 tests pass locally, including M6 execution-failure
+diagnostics. Full repository discovery passed: 1,087 tests, 21 skipped. On
+implementation commit `5a022bb18e3127bf9b744bf1764b6e01dce51b5c`, both GitHub
+Actions runs completed successfully with 11/11 jobs each. PR #88 remains open
+and draft for human review.
 
 ## Readiness assessment
 
 | Dimension | Assessment |
 |---|---|
-| Software implementation | M20 registered pipeline completed 10 synthetic cases through M15 and Phase 5; M19 had two SPAdes reconstruction errors |
+| Software implementation | Complete: M20 registered pipeline completed 10 synthetic cases through M15 and Phase 5; M19 baseline failures were reproduced and characterized, and unsupported candidates remain explicitly classified |
 | Synthetic benchmark | M19: 6 cases, 5 positive and 1 negative; M20: 10 cases, 8 positive and 2 target-absent |
 | Reproducibility | M19 semantic equality includes M6 execution states; M20 Phase 4 replay digest matched |
 | Scientific validity | Not established; one synthetic realization per condition and one negative control |
 | M21 governance | `INCOMPLETE`; benchmark execution remains `BLOCKED_FOR_BENCHMARK_EXECUTION` |
 | Operational authorization | Biological execution is not authorized |
 
-Phase 8 does not meet its technical acceptance criteria and is reported as
-`INCOMPLETE`. Passing software tests or synthetic benchmarks do not change
-operational authorization.
+M21 Phase 8 technical implementation is **COMPLETE**. The original M19
+baseline remains intact, and the experimental k-mer setting was not promoted.
+This conclusion does not imply biological validation: M21 governance remains
+`decision=INCOMPLETE`, `overall_state=BLOCKED_FOR_BENCHMARK_EXECUTION`, and
+`biological_execution_authorized=false`.
