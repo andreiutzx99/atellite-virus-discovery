@@ -173,8 +173,9 @@ independent scientific validation.
 | Evaluated; not adopted | Isolated SPAdes `-k 21,33` experiment completed the two failing assemblies but increased unsupported predictions without improving exact recovery. |
 | Deferred | M5, M13, M14, and M10 JSONL handoffs; current producer contracts do not supply or accept them, and were not changed. |
 | Satisfied | M21 Phase 4 synthetic streaming validator and bounded checks remain in place; they do not establish biological suitability. |
-| Deferred | Biological reads, data-use permission, library adequacy, independent truth labels, and reference-exclusion review. |
-| Deferred | Production reviewer trust, blind-key custody, authenticated approvals, and independently retained audit checkpoints. |
+| Future research | Evaluate randomized read starts, multiple seeds, coverage/error ranges, and more negative controls before generalizing M19 recovery or SPAdes k-mer behavior. |
+| Deferred pending authorization | Biological reads, data-use permission, library adequacy, independent truth labels, and reference-exclusion review. |
+| Deferred pending authorization | Production reviewer trust, blind-key custody, authenticated approvals, and independently retained audit checkpoints. |
 | Satisfied | M21 remains `INCOMPLETE` and `BLOCKED_FOR_BENCHMARK_EXECUTION`; biological execution remains unauthorized. |
 
 No scoped TODO/FIXME markers were found in M20/M21 documentation, milestone
