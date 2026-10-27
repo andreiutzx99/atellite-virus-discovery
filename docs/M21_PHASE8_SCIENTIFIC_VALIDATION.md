@@ -2,36 +2,57 @@
 
 ## Executive summary
 
-The existing M4 quality-control → M6 residual-evidence and assembly path completed
-the six-case fixed-seed M19 synthetic matrix twice, with identical semantic
-results. It recovered 2 of 5 planted artificial targets exactly (40%) and
-produced no candidates meeting the declared partial-recovery threshold. One
-non-exact, short repeat-derived candidate was produced. This is evidence about
-the bounded software path only; it is not a biological performance estimate.
+The registered M20 synthetic workflow completed 10 seeded cases through
+M4→M6, M7, M8/M9/M10, M12/M15 and the final Phase 5 report. Repeating Phase 4
+produced the same semantic digest. Phase 5 validated software integration but
+explicitly left biological discovery `NOT_VALIDATED`.
 
-**Phase 8 status: INCOMPLETE.** The full discovery workflow through candidate
-classification and final evidence/report integration was not demonstrated, and
-the wider M20/M21 recommendation backlog was not fully reviewed. Governance
-remains `decision=INCOMPLETE` and
+The six-case M19 matrix ran twice with matching recovery, candidate and M6
+diagnostic outcomes. Two cases hit actual SPAdes reconstruction errors, so their
+zero-candidate results are execution failures, not evidence that the targets
+are unrecoverable. All results remain synthetic software evidence.
+
+**Phase 8 status: INCOMPLETE.** Biological discovery is not validated.
+Governance remains `decision=INCOMPLETE` and
 `overall_state=BLOCKED_FOR_BENCHMARK_EXECUTION`; biological execution remains
 unauthorized.
 
 ## Pipeline status
 
-The benchmark reuses M19’s existing M4 QC and M6 residual-evidence workflow,
-including reference screening, assembly, candidate extraction, and read support.
-Held-out labels and target sequences remain outside the analysis graph and are
-used only for post-run scoring. M1–M20 implementation behavior was not changed.
+M19 reuses the existing M4 QC and M6 residual-evidence workflow. Held-out labels
+and target sequences stay outside the analysis graph and are used only for
+post-run scoring. M1–M20 implementation behavior was not changed.
 
-This is not the complete M1–M20 pipeline requested for Phase 8: downstream
-candidate classification and final evidence integration are absent from the
-M19 benchmark graph. No biological identity, function, novelty, or helper
-dependence is inferred from a candidate.
+Separately, the registered M20 Phase 2B→3→4→5 workflow passed on artificial
+fixtures. It exercised M4/M6 and M7, followed by M8/M9/M10, M12/M15, and the
+final integration report. The M20 Phase 5 result is
+`SOFTWARE_INTEGRATION_VALIDATED_BIOLOGICAL_DISCOVERY_NOT_VALIDATED`. No biological
+identity, function, novelty, or helper dependence is inferred.
 
-Separately, the existing M20 Phase 2 live integration test passed through its
-registered M4→M6→M7 recurrence handoff on synthetic fixtures. That test is
-additional software integration evidence, but it does not establish biological
-candidate classification and is not folded into the M19 recovery rates above.
+M20 ran 10 cases with 10 distinct read seeds (8 positives, 2 target-absent
+controls). Every case had 30 accepted M15 producer bindings from M6/M7/M8/M9/
+M10/M12. M13/M14 were absent. The Phase 4 semantic digest matched across its
+primary and replay runs; current M12 invalid findings: 0.
+Digest: `0265d7b54c599ce9edc9b472b81b14d131d38678632a6f12ee90a8c91fc9c267`.
+
+### M20 per-case read-to-report trace
+
+Each seed identifies the synthetic read realization. The final 30-record M15
+binding set for each case spans producer milestones M6/M7/M8/M9/M10/M12; the
+SHA-256 below is computed over its producer, artifact and digest bindings.
+
+| Case | Role | Read seed | M4/M6 | M7 | M8/M9 ORF/M9 BLASTP/M10 | M12/M15 | Bindings | M15 trace SHA-256 |
+|---|---|---:|---|---|---|---|---:|---|
+| c001 | positive | 20262117 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `7a8d64c0dab977ebfe7cf8922f01bb1b8ff6d1d4b600e650ec2022403034e404` |
+| c002 | positive | 20262118 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `ba5b46a8d0188c6eef1f0bd5391222b2e86abaf1c4526b2fa2e215f071da2204` |
+| c003 | positive | 20262119 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `cf0b2d9f5d047d1e681ec335ed2dce9cb457f1e32bb2b7d62240b4e285d58810` |
+| c004 | positive | 20262120 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `04d795e1de961dac7e518b51cfe1f25028c1216cc39384d47e95bd12a353749b` |
+| c005 | positive | 20262121 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `26549373a6a1d82a00f259aaf2f41285b0741887d063678d7547303bee39b12c` |
+| c006 | positive | 20262122 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `4738c77d2bc68fbdac573721448cf27e621feff261d71bb948ed7cc2af7a7b7c` |
+| c007 | positive | 20262123 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `5181ade7a3f26e867a99f0de786c9947f798d30593d2493cd59f4b0385a122b4` |
+| c008 | positive | 20262124 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `0cb211f3596bc73f0a7b7feeef90f8b1f2ea9fe98fc48dcbb1651334fcfd9994` |
+| c009 | negative control | 20262125 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `65d32e92c304056376decc8ad0df47e9cabd278467b462c2d7c0202eda1bd306` |
+| c010 | negative control | 20262126 | complete/complete | complete | complete/complete/complete/complete | complete/complete | 30 | `ce4349458bf1c71ce81a42a8dcacbb360cd738ec42477e27fcf666ce74c3ff5a` |
 
 ## Synthetic benchmark results
 
@@ -43,15 +64,15 @@ sequence was used.
 | Case | Expected target | M4/M6 state | Exact recovery | Partial candidates | Candidates | False candidates |
 |---|---:|---|---:|---:|---:|---:|
 | Baseline | Yes | Complete | Yes | 0 | 1 | 0 |
-| High error (5%) | Yes | Complete | No | 0 | 0 | 0 |
-| Low nominal coverage (16×) | Yes | Complete | No | 0 | 0 | 0 |
+| High error (5%) | Yes | Workflow complete; reconstruction failed | No | 0 | 0 | 0 |
+| Low nominal coverage (16×) | Yes | Workflow complete; reconstruction failed | No | 0 | 0 | 0 |
 | High reference divergence (45%) | Yes | Complete | Yes | 0 | 1 | 0 |
 | High repeat complexity | Yes | Complete | No | 0 | 1 | 1 |
 | Negative control | No | Complete | N/A | N/A | 0 | 0 |
 
 ### Aggregate metrics
 
-- **Synthetic target detection:** 2/5 (40%); only exact recoveries count as detections here.
+- **Synthetic target detection:** 2/5 (40%); this counts observed candidates, while two other positives hit SPAdes execution failures.
 - **Exact full-sequence recovery:** 2/5 (40%).
 - **Partial recovery:** 0/5 cases. A partial candidate must be non-exact, at least
   95% local identity, and cover at least 50% of the held-out target.
@@ -61,10 +82,17 @@ sequence was used.
   none in the single negative control.
 
 The recovered baseline and high-divergence candidates each had 100% identity and
-100% target coverage. The high-repeat candidate was 65 nt, with 72.86% best
-local identity over 8% target coverage; it is not a partial recovery under the
-declared threshold. The high-error and low-coverage cases produced no
-candidate. These single observations do not establish why those cases failed.
+100% target coverage. The high-repeat case emitted a 65-nt candidate with
+72.86% identity over 8% target coverage. M6 read-back reported
+`NO_SUPPORTED_ASSEMBLY`; the candidate is a false positive against held-out
+synthetic truth and is not a partial recovery.
+
+High-error and low-coverage M6 reconstruction both reported
+`EXECUTION_FAILED`, while read support was `NOT_EVALUATED`. SPAdes logged
+`Invalid kmer coverage histogram, make sure that the coverage is indeed uniform`
+and exited with return value 21. The high-error case had 480 assembly-eligible
+residual fragments; low coverage had 128. These are assembler execution
+failures, not evidence that target sequences were absent or unrecoverable.
 
 The numeric rates are descriptive software metrics only. One negative control
 is insufficient to validate specificity; no confidence intervals, runtime, or
@@ -73,11 +101,12 @@ biological samples or other sequence families.
 
 ## Reproducibility
 
-Two independent executions produced identical semantic signatures for the
-fixed-seed source manifest, held-out truth, per-case status and recovery,
-candidate sequence digests, alignment metrics, and false-positive counts:
+Two independent executions produced identical semantic signatures including
+fixed-seed inputs, held-out truth, per-case M6 reconstruction/read-support
+states, recovery, candidate sequence digests, alignment metrics, and false
+positive counts:
 
-`b8db3e053f27a45845ecc753fbadfb3b2faa1504dc2ee501bfb5b61d093eda4c`
+`e3791869aba2fb708bcb18182a41bc8a26acf82620f4822e2c5febebdef45bcd`
 
 Run-specific timestamps and filesystem paths are excluded from that comparison.
 The signature verifies equality for these two synthetic runs; it is not
@@ -89,36 +118,42 @@ independent scientific validation.
   machine-readable JSON and Markdown reports.
 - Added local-alignment identity and truth-coverage reporting so exact and
   partial recovery are separated.
-- Added semantic reproducibility checks including candidate sequence digests.
+- Added semantic reproducibility checks including M6 reconstruction and read-support states.
+- Ran the registered M20 synthetic pipeline through the final Phase 5 report and replayed Phase 4.
+- Recorded SPAdes failure diagnostics and residual counts for the two M19 assembly failures.
 - Added tests for partial alignment metrics, exact scoring, negative-control
   metrics, incomplete-evidence handling, and artifact path containment.
 
 ## Recommendation disposition
 
-- **Reused:** fixed-seed synthetic positives/negative, M4→M6 stages, and strict
-  exact truth scoring from M19.
-- **Implemented:** separate exact and thresholded partial recovery reporting,
-  candidate identity/coverage, and repeat-run semantic comparison.
-- **Deferred:** connect the current M4→M6 benchmark to all downstream candidate
-  classification and evidence-report stages.
-- **Not reviewed:** the complete M20/M21 recommendation backlog. This report
-  does not claim that every prior recommendation has been dispositioned.
+| Status | Recommendation and evidence |
+|---|---|
+| Reused | Fixed-seed synthetic controls and M19 held-out truth scoring; two runs matched including M6 failure states. |
+| Implemented | Exact/partial recovery, identity/coverage, M6 reconstruction/read-support states, and failure diagnostics. |
+| Implemented | Registered M20 synthetic M4→M15 and Phase 5 report; Phase 4 semantic replay matched. |
+| Deferred | M5, M13, M14, and M10 JSONL handoffs; current producer contracts do not supply or accept them, and were not changed. |
+| Satisfied | M21 Phase 4 synthetic streaming validator and bounded checks remain in place; they do not establish biological suitability. |
+| Deferred | Biological reads, data-use permission, library adequacy, independent truth labels, and reference-exclusion review. |
+| Deferred | Production reviewer trust, blind-key custody, authenticated approvals, and independently retained audit checkpoints. |
+| Satisfied | M21 remains `INCOMPLETE` and `BLOCKED_FOR_BENCHMARK_EXECUTION`; biological execution remains unauthorized. |
+
+No scoped TODO/FIXME markers were found in M20/M21 documentation, milestone
+modules, or related tests. The sole repository-wide match is an unrelated
+infrastructure-status note.
 
 ## Tests and CI
 
-The Phase 8 validation tests (7) and M19 benchmark tests (10 passed, 1
-optional live-test skipped) passed locally. Full repository discovery passed
-with 1,084 tests and 21 skips; the live M20 Phase 2 M4→M6→M7 test passed.
-GitHub Actions for the current PR commit remain the release check; consult
-PR #88 for their commit-specific status.
+The Phase 8 validation tests (9) pass locally, including tests for M6
+execution-failure diagnostics. Full repository discovery passed: 1,087 tests,
+21 skipped. GitHub Actions for the new PR head are pending.
 
 ## Readiness assessment
 
 | Dimension | Assessment |
 |---|---|
-| Software implementation | Existing M4→M6 path works for this synthetic matrix; full requested end-to-end path is not demonstrated |
-| Synthetic benchmark | Completed; 6 cases, 5 positive and 1 negative |
-| Reproducibility | Two-run semantic equality demonstrated |
+| Software implementation | M20 registered pipeline completed 10 synthetic cases through M15 and Phase 5; M19 had two SPAdes reconstruction errors |
+| Synthetic benchmark | M19: 6 cases, 5 positive and 1 negative; M20: 10 cases, 8 positive and 2 target-absent |
+| Reproducibility | M19 semantic equality includes M6 execution states; M20 Phase 4 replay digest matched |
 | Scientific validity | Not established; one synthetic realization per condition and one negative control |
 | M21 governance | `INCOMPLETE`; benchmark execution remains `BLOCKED_FOR_BENCHMARK_EXECUTION` |
 | Operational authorization | Biological execution is not authorized |

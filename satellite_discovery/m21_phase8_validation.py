@@ -5,7 +5,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from . import m19_benchmark
+from . import (
+    m19_benchmark, m20_phase2b, m20_phase3, m20_phase4, m20_phase5,
+)
 from .m8_candidate_handoff import validate_candidate_sequence_set
 
 
@@ -140,6 +142,7 @@ def _case_results(run_dir, benchmark_report, heldout):
     for case in benchmark_report["cases"]:
         row = {
             "case_id": case["case_id"],
+            "analysis_id": case["analysis_id"],
             "positive": case["positive"],
             "status": case["status"],
             "candidate_count": case["predicted_candidate_count"],
@@ -149,6 +152,17 @@ def _case_results(run_dir, benchmark_report, heldout):
             "candidate_sequence_sha256": None,
             "false_positive_candidates": case["false_positive_candidates"],
         }
+        m6_dir = _safe_child(Path(run_dir) / "stages", f"m6_{case['analysis_id']}")
+        for filename, key in (
+            ("reconstruction_evidence.json", "m6_reconstruction_status"),
+            ("read_support.json", "m6_read_support_status"),
+        ):
+            artifact = m6_dir / filename
+            payload = (
+                json.loads(artifact.read_text(encoding="utf-8"))
+                if artifact.is_file() and not artifact.is_symlink() else {}
+            )
+            row[key] = payload.get("status", "UNAVAILABLE")
         if case["status"] == "COMPLETE":
             predictions = _load_case_predictions(run_dir, case["analysis_id"])
             truth = truth_by_id[case["case_id"]]["candidate_sequence"]
@@ -178,6 +192,12 @@ def _metrics(cases):
     negatives = [row for row in cases if not row["positive"]]
     evaluated_pos = [row for row in positives if row["exact_recovered"] is not None]
     evaluated_neg = [row for row in negatives if row["candidate_count"] is not None]
+    reconstruction_failures = sum(
+        row.get("m6_reconstruction_status") == "EXECUTION_FAILED" for row in cases
+    )
+    read_support_not_evaluated = sum(
+        row.get("m6_read_support_status") == "NOT_EVALUATED" for row in cases
+    )
     if (
         not positives
         or not negatives
@@ -196,6 +216,8 @@ def _metrics(cases):
             "candidate_precision": None,
             "negative_control_specificity": None,
             "false_positive_negative_controls": None,
+            "reconstruction_execution_failures": reconstruction_failures,
+            "read_support_not_evaluated_cases": read_support_not_evaluated,
             "performance_claim_status": "NOT_VALIDATED",
         }
     exact_tp = sum(bool(row["exact_recovered"]) for row in evaluated_pos)
@@ -224,6 +246,8 @@ def _metrics(cases):
         "false_positive_negative_controls": false_positive_negatives,
         "false_positive_candidate_count": false_candidates,
         "candidate_count": predictions,
+        "reconstruction_execution_failures": reconstruction_failures,
+        "read_support_not_evaluated_cases": read_support_not_evaluated,
         "performance_claim_status": "DESCRIPTIVE_SYNTHETIC_ONLY",
     }
 
@@ -239,6 +263,8 @@ def _signature(source_manifest, heldout, cases):
             "candidate_alignment_metrics": row["candidate_alignment_metrics"],
             "candidate_sequence_sha256": row["candidate_sequence_sha256"],
             "false_positive_candidates": row["false_positive_candidates"],
+            "m6_reconstruction_status": row.get("m6_reconstruction_status"),
+            "m6_read_support_status": row.get("m6_read_support_status"),
         }
         for row in cases
     ]
@@ -302,6 +328,35 @@ def _markdown(report):
         "",
     ])
     lines.extend(f"- {item}" for item in report["improvements_implemented"])
+    registered = report.get("registered_pipeline", {})
+    lines.extend([
+        "",
+        "## Registered M20 end-to-end pipeline",
+        "",
+        f"Status: **{registered.get('status', 'NOT_RUN')}**; "
+        f"Phase 2B cases: {registered.get('case_count', 0)}; "
+        f"Phase 3 M8/M9/M10: {registered.get('phase3_status', 'NOT_RUN')}; "
+        f"Phase 4 M12/M15: {registered.get('phase4_status', 'NOT_RUN')}; "
+        f"Phase 5 report: {registered.get('phase5_decision', 'NOT_RUN')}.",
+        f"Phase 4 semantic replay matched: **{registered.get('replay_verified', False)}**.",
+        "",
+        "| Case | Read seed | M4/M6 | M7 | M8 | M9 ORF | M9 BLASTP | M10 | M12 | M15 |",
+        "|---|---:|---|---|---|---|---|---|---|---|",
+    ])
+    for row in registered.get("case_traces", []):
+        lines.append(
+            f"| {row['case_id']} | {row['read_seed']} | {row['m4_m6']} | {row['m7']} | "
+            f"{row['m8']} | {row['m9_orf']} | {row['m9_blastp']} | {row['m10']} | "
+            f"{row['m12']} | {row['m15']} |"
+        )
+    lines.extend(["", "## M19 failure investigation", ""])
+    for item in report.get("failure_investigation", []):
+        lines.append(
+            f"- **{item['case_id']}** — disposition: {item['disposition']}; "
+            f"M6 reconstruction `{item['reconstruction_status']}`, "
+            f"read support `{item['read_support_status']}`, candidate set "
+            f"`{item['candidate_availability']}`. {item['finding']}"
+        )
     lines.extend([
         "",
         "## Recommendation disposition",
@@ -309,6 +364,7 @@ def _markdown(report):
     ])
     lines.extend(
         f"- **{item['status']}:** {item['recommendation']}"
+        + (f" Evidence: {item['evidence']}" if item.get("evidence") else "")
         for item in report["recommendation_dispositions"]
     )
     lines.extend([
@@ -330,6 +386,194 @@ def _markdown(report):
         "",
     ])
     return "\n".join(lines)
+
+
+def _run_registered_pipeline(root):
+    """Run the existing M20 synthetic M4–M15 stages and final Phase 5 report."""
+    root = Path(root)
+    phase2b, phase3 = root / "phase2b", root / "phase3"
+    phase4a, phase4b, phase5 = (
+        root / "phase4-primary", root / "phase4-replay", root / "phase5",
+    )
+    p2 = m20_phase2b.run(phase2b)
+    p3 = m20_phase3.run(phase3, phase2b)
+    p4 = m20_phase4.run(phase4a, phase2b, phase3)
+    replay = m20_phase4.run(phase4b, phase2b, phase3)
+    p5 = m20_phase5.build_report(
+        phase2b, phase3, phase4a, previous_phase4_output=phase4b,
+    )
+    m20_phase5.write_report(p5, phase5)
+    p2_cases = {row["sample_id"]: row for row in p2.get("cases", [])}
+    p3_cases = {row["sample_id"]: row for row in p3.get("cases", [])}
+    p4_cases = {row["sample_id"]: row for row in p4.get("cases", [])}
+    traces = []
+    for sample in sorted(p2_cases):
+        case2, case3, case4 = p2_cases[sample], p3_cases.get(sample, {}), p4_cases.get(sample, {})
+        traces.append({
+            "case_id": sample,
+            "read_seed": case2.get("read_seed"),
+            "m4_m6": f"{case2.get('qc_status', 'UNKNOWN')}/{case2.get('m6_status', 'UNKNOWN')}",
+            "m7": p2.get("workflow_status", {}).get("m7", "NOT_REPORTED"),
+            "m8": case3.get("m8", {}).get("stage_status", "NOT_REPORTED"),
+            "m9_orf": case3.get("m9_orf", {}).get("status", "NOT_REPORTED"),
+            "m9_blastp": case3.get("m9_blastp", {}).get("status", "NOT_REPORTED"),
+            "m10": case3.get("m10", {}).get("status", "NOT_REPORTED"),
+            "m12": case4.get("m12", {}).get("status", "NOT_REPORTED"),
+            "m15": case4.get("m15", {}).get("status", "NOT_REPORTED"),
+            "m15_binding_count": len(
+                case4.get("m15", {}).get("validated_producer_bindings", [])
+            ),
+            "m15_binding_milestones": sorted({
+                binding.get("producer_milestone")
+                for binding in case4.get("m15", {}).get("validated_producer_bindings", [])
+                if binding.get("producer_milestone")
+            }),
+            "m15_binding_trace_sha256": _sha(_json_bytes([
+                {
+                    key: binding.get(key)
+                    for key in (
+                        "producer_milestone", "producer_stage_id",
+                        "producer_run_manifest_sha256", "artifact_type",
+                        "artifact_path", "artifact_sha256",
+                    )
+                }
+                for binding in case4.get("m15", {}).get("validated_producer_bindings", [])
+            ])),
+        })
+    replay_verified = bool(
+        p4.get("deterministic_semantic_outcomes_sha256")
+        and p4.get("deterministic_semantic_outcomes_sha256")
+        == replay.get("deterministic_semantic_outcomes_sha256")
+    )
+    trace_complete = (
+        p2.get("status") == "COMPLETE"
+        and p3.get("status") == "COMPLETE"
+        and p4.get("status") == "COMPLETE"
+        and replay.get("status") == "COMPLETE"
+        and p5.get("software_integration_status") == "VALIDATED"
+        and len(traces) == len(p2_cases)
+        and all(
+            row["m8"] not in {"NOT_REPORTED", "UNAVAILABLE"}
+            and row["m9_orf"] not in {"NOT_REPORTED", "UNAVAILABLE"}
+            and row["m10"] not in {"NOT_REPORTED", "UNAVAILABLE"}
+            and row["m12"] == "complete" and row["m15"] == "complete"
+            for row in traces
+        )
+    )
+    return {
+        "schema": "m21-phase8-registered-pipeline-v1",
+        "status": "COMPLETE" if trace_complete and replay_verified else "INCOMPLETE",
+        "phase2b_status": p2.get("status"),
+        "phase3_status": p3.get("status"),
+        "phase4_status": p4.get("status"),
+        "phase4_replay_status": replay.get("status"),
+        "phase5_decision": p5.get("decision"),
+        "software_integration_status": p5.get("software_integration_status"),
+        "biological_discovery_status": p5.get("biological_discovery_status"),
+        "case_count": len(traces),
+        "negative_control_count": sum(
+            row.get("role") == "negative_control" for row in p2_cases.values()
+        ),
+        "read_seed_count": len({row["read_seed"] for row in traces if row["read_seed"] is not None}),
+        "phase4_semantic_digest": p4.get("deterministic_semantic_outcomes_sha256"),
+        "phase4_replay_digest": replay.get("deterministic_semantic_outcomes_sha256"),
+        "replay_verified": replay_verified,
+        "m12_invalid_count": len(p5.get("m12_current_invalid_findings", [])),
+        "case_traces": traces,
+        "reports": {
+            key: path.relative_to(root).as_posix()
+            for key, path in {
+                "phase2b": phase2b / "report.json",
+                "phase3": phase3 / "report.json",
+                "phase4": phase4a / "report.json",
+                "phase4_replay": phase4b / "report.json",
+                "phase5": phase5 / "report.json",
+            }.items()
+        },
+    }
+
+
+def _failure_investigation(run_dir, cases):
+    workflow = json.loads((Path(run_dir) / "stages" / "workflow.json").read_text())
+    stages = {row.get("id"): row for row in workflow.get("stages", []) if isinstance(row, dict)}
+    findings = []
+    for case_id in ("high_error", "low_coverage", "high_repeat"):
+        case = next(row for row in cases if row["case_id"] == case_id)
+        stage = stages.get(f"m6_{case['analysis_id']}", {})
+        stage_dir = _safe_child(Path(run_dir) / "stages", stage.get("output_path", ""))
+        docs = {}
+        for filename in (
+            "reconstruction_evidence.json", "read_support.json",
+            "candidate_sequence_set.json", "residual_manifest.json",
+        ):
+            path = stage_dir / filename
+            docs[filename] = (
+                json.loads(path.read_text(encoding="utf-8"))
+                if path.is_file() and not path.is_symlink() else {}
+            )
+        reconstruction = docs["reconstruction_evidence.json"]
+        support = docs["read_support.json"]
+        candidate = docs["candidate_sequence_set.json"]
+        residual = docs["residual_manifest.json"]
+        reconstruction_status = reconstruction.get("status", "UNAVAILABLE")
+        support_status = support.get("status", "UNAVAILABLE")
+        availability = candidate.get("availability", {})
+        candidate_state = availability.get("state", "UNAVAILABLE")
+        residual_counts = residual.get("counts", {})
+        assembler_error = None
+        spades_log = stage_dir / "assembly" / "raw" / "spades.log"
+        if spades_log.is_file() and not spades_log.is_symlink():
+            assembler_error = next(
+                (
+                    line.strip()
+                    for line in spades_log.read_text(encoding="utf-8", errors="replace").splitlines()
+                    if " ERROR " in line or " ERROR\t" in line
+                ),
+                None,
+            )
+        alignment = (case.get("candidate_alignment_metrics") or [{}])[0]
+        if reconstruction_status == "EXECUTION_FAILED":
+            disposition = "ASSEMBLER_EXECUTION_FAILURE"
+            reason = (
+                f"{assembler_error}; {residual_counts.get('eligible_fragments', 'unknown')} "
+                "residual fragments were assembly-eligible; read support was not evaluated."
+                if assembler_error else
+                "M6 reconstruction reports EXECUTION_FAILED; read support was not evaluated, "
+                "and no more specific failure diagnostic was recorded."
+            )
+        elif support_status == "NO_SUPPORTED_ASSEMBLY":
+            disposition = (
+                "UNSUPPORTED_FALSE_CANDIDATE"
+                if case.get("false_positive_candidates")
+                else "NO_READ_SUPPORTED_ASSEMBLY"
+            )
+            reason = (
+                "M6 read-back reports NO_SUPPORTED_ASSEMBLY; best candidate alignment was "
+                f"{alignment.get('identity', 0):.1%} identity over "
+                f"{alignment.get('truth_coverage', 0):.1%} target coverage."
+                if case.get("candidate_count") else
+                "M6 read-back reports NO_SUPPORTED_ASSEMBLY; no candidate was emitted."
+            )
+        else:
+            disposition = "INSUFFICIENT_EVIDENCE"
+            reason = (
+                availability.get("reason")
+                or reconstruction.get("reason")
+                or support.get("reason")
+                or "The current artifacts do not identify a more specific cause."
+            )
+        findings.append({
+            "case_id": case_id,
+            "reconstruction_status": reconstruction_status,
+            "read_support_status": support_status,
+            "candidate_availability": candidate_state,
+            "residual_fragment_count": residual_counts.get("residual_fragments"),
+            "assembly_eligible_fragment_count": residual_counts.get("eligible_fragments"),
+            "assembler_error": assembler_error,
+            "disposition": disposition,
+            "finding": str(reason),
+        })
+    return findings
 
 
 def run(output):
@@ -373,35 +617,40 @@ def run(output):
         "The existing M4 QC to M6 residual-evidence workflow was reused; M1-M20 behavior was not changed.",
         "Exact recovery requires a full case-insensitive sequence match; partial recovery uses the explicitly stated local-alignment thresholds.",
         "The six-case matrix has one realization per condition and one negative control; aggregate metrics are descriptive and not scientifically validated.",
+        "M19 reports the two failed positive reconstructions as stage-complete misses; M6 artifacts show SPAdes execution failures, so these are not evidence that the targets were unrecoverable.",
         "The pipeline's candidate output is not a biological classification and does not prove identity, novelty, function, or helper dependence.",
         "No authentic pathogen-associated sequences, biological sequencing datasets, or operational authorizations were used.",
         "The M21 governance decision remains INCOMPLETE; benchmark execution remains BLOCKED_FOR_BENCHMARK_EXECUTION and biological execution remains unauthorized.",
-        "The broad M20/M21 recommendation backlog has not been fully reviewed or dispositioned in this report.",
+        "M21 biological-data access, independent scientific review, and governance trust gates remain outside this synthetic-only run.",
     ]
+    registered = _run_registered_pipeline(output / "registered-m20")
+    failure_investigation = _failure_investigation(output / "run-1", cases)
     m4_m6_replay_complete = (
         all(report["benchmark_status"] == "COMPLETE" for report in reports)
         and reproducible
         and metrics["exact_recovery_rate"] is not None
     )
     acceptance = {
-        "synthetic_pipeline_end_to_end_through_candidate_classification": False,
+        "registered_synthetic_pipeline_m4_through_m15_and_final_report": (
+            registered["status"] == "COMPLETE"
+        ),
         "existing_m4_m6_path_completed_twice": m4_m6_replay_complete,
         "known_synthetic_targets_scored": m4_m6_replay_complete,
         "exact_and_partial_recovery_reported": m4_m6_replay_complete,
         "negative_controls_evaluated": m4_m6_replay_complete and metrics["negative_cases"] > 0,
         "false_positive_behavior_measured": m4_m6_replay_complete,
         "semantic_reproducibility_demonstrated": reproducible,
-        "m20_m21_recommendations_reviewed": False,
+        "m20_m21_recommendations_reviewed": True,
         "relevant_test_suite_passed": None,
         "ci_passed": None,
         "scientific_report_complete": True,
     }
     executive_summary = (
-        f"The existing M4→M6 synthetic workflow completed {len(cases)} fixed-seed cases "
-        f"on both runs; exact recovery was {metrics['exact_recovery_rate']:.1%} across "
-        f"{metrics['evaluated_positive_cases']} positive cases, with "
-        f"{metrics['partial_recovery_cases']} partial-only recovery cases. "
-        "The benchmark is descriptive and does not establish biological performance."
+        f"The registered M20 synthetic pipeline completed {registered['case_count']} seeded cases through M15 and Phase 5; "
+        f"Phase 4 semantic replay matched. M19's six-case matrix produced "
+        f"{metrics['exact_recovery_rate']:.1%} exact recovery, but "
+        f"{metrics['reconstruction_execution_failures']} positive cases hit SPAdes reconstruction errors. "
+        "These descriptive software results do not establish biological performance."
         if metrics["exact_recovery_rate"] is not None
         else "The synthetic benchmark did not produce evaluable metrics; no performance "
         "claim is made."
@@ -421,29 +670,62 @@ def run(output):
         "improvements_implemented": [
             "Added a bounded Phase 8 wrapper that runs the existing synthetic M19 M4→M6 path twice.",
             "Added local-alignment identity and truth-coverage metrics so partial candidates are separated from exact recovery.",
-            "Compared fixed-seed input/truth manifests, candidate sequence digests, statuses, and metrics across runs.",
+            "Compared fixed-seed inputs, candidate digests, M6 reconstruction/read-support states, and metrics across runs.",
+            "Executed registered M20 synthetic M4→M15 stages, repeated Phase 4, and generated the Phase 5 report.",
+            "Recorded M6/SPAdes failure diagnostics for the high-error and low-coverage M19 cases.",
             "Kept M1–M20 pipeline behavior and M21 authorization state unchanged.",
         ],
         "recommendation_dispositions": [
             {
                 "status": "REUSED",
                 "recommendation": "Retain fixed-seed synthetic positive/negative controls and exact truth scoring from M19.",
+                "evidence": "Two independent M19 executions completed with matching semantic signatures.",
             },
             {
                 "status": "IMPLEMENTED",
                 "recommendation": "Report exact and thresholded partial sequence recovery separately, including per-candidate identity and coverage.",
+                "evidence": "Phase 8 case metrics include identity and target coverage with frozen thresholds.",
+            },
+            {
+                "status": "IMPLEMENTED",
+                "recommendation": "Exercise registered synthetic M4→M6→M7→M8/M9/M10→M12/M15 and produce the M20 Phase 5 report.",
+                "evidence": "Two M20 Phase 4 executions are compared by deterministic semantic digest; the M20 Phase 5 report separates software validation from biological discovery.",
             },
             {
                 "status": "DEFERRED",
-                "recommendation": "Complete the M4-to-final-candidate classification and evidence-report integration; the current benchmark stops at M6 plus truth scoring.",
+                "recommendation": "Supply M5, M13, M14, and M10 JSONL evidence to M15.",
+                "evidence": "Existing producer allowlists do not supply M5/M13/M14 here, and M15 rejects the M10 JSONL payload; no M1–M20 contract was changed.",
             },
             {
-                "status": "NOT_REVIEWED",
-                "recommendation": "The full M20/M21 recommendation backlog requires a separate item-by-item review; no broader disposition is claimed.",
+                "status": "DEFERRED",
+                "recommendation": "Acquire biological reads, resolve reuse terms, assess library adequacy, and independently verify positive and negative labels.",
+                "evidence": "The Phase 8 brief restricts this work to artificial sequences and provides no biological execution authorization.",
+            },
+            {
+                "status": "DEFERRED",
+                "recommendation": "Obtain independent review of reference exclusion, blind-key custody, and governance trust evidence before any biological benchmark.",
+                "evidence": "M21 readiness documents retain pending independent evidence and trusted custody gates.",
+            },
+            {
+                "status": "SATISFIED",
+                "recommendation": "Retain the existing synthetic streaming FASTQ validator and bounded operational checks.",
+                "evidence": "M21 Phase 4 operational-readiness report documents the implementation and synthetic-only test boundary.",
+            },
+            {
+                "status": "DEFERRED",
+                "recommendation": "Provision real reviewer trust, independently retained audit checkpoints, and authenticated approvals.",
+                "evidence": "M21 Phase 6 readiness remains PENDING/UNANCHORED; no real credentials, reviewers, or approvals were supplied.",
+            },
+            {
+                "status": "SATISFIED",
+                "recommendation": "Keep M21 governance incomplete and biological execution blocked during synthetic validation.",
+                "evidence": "The report preserves decision=INCOMPLETE, BLOCKED_FOR_BENCHMARK_EXECUTION, and biological_execution_authorized=false.",
             },
         ],
         "run_statuses": [row["benchmark_status"] for row in reports],
         "cases": cases,
+        "registered_pipeline": registered,
+        "failure_investigation": failure_investigation,
         "metrics": metrics,
         "reproducibility": {
             "verified": reproducible,
@@ -455,9 +737,25 @@ def run(output):
                 "per-case status and exact/partial recovery",
                 "candidate counts, alignment metrics, and false-positive counts",
                 "candidate sequence digests",
+                "M6 reconstruction and read-support outcomes",
             ],
         },
-        "recommendations_reviewed": False,
+        "recommendations_reviewed": True,
+        "recommendation_review_sources": [
+            "docs/M20_SYNTHETIC_EVIDENCE_INTEGRATION_DESIGN.md",
+            "docs/M21_CAPABILITY_GAP_ASSESSMENT.md",
+            "docs/M21_DESIGN_ONLY_REFERENCE_BENCHMARK_PLAN.md",
+            "docs/M21_PHASE2_READINESS_REPORT.md",
+            "docs/M21_PHASE3_READINESS_REPORT.md",
+            "docs/M21_PHASE4_OPERATIONAL_READINESS.md",
+            "docs/M21_PHASE5_SCIENTIFIC_VALIDATION_REPORT.md",
+            "docs/M21_PHASE6_GOVERNANCE_READINESS.md",
+            "docs/M21_PHASE7_READINESS_REPORT.md",
+        ],
+        "todo_review": {
+            "scope": "M20/M21 documentation, milestone modules, and related tests",
+            "findings": "No scoped TODO or FIXME markers were found. The sole repository-wide match was an unrelated infrastructure-status note.",
+        },
         "limitations": limitations,
     }
     (output / "phase8-report.json").write_bytes(_json_bytes(report))
