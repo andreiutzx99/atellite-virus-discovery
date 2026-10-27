@@ -12,6 +12,7 @@ dependencies = ["cryptography>=44,<51"]
 [project.scripts]
 satellite-discovery = "satellite_discovery.cli:main"
 satellite-reviews = "satellite_discovery.review_ui:main"
+satellite-m21-phase8 = "satellite_discovery.m21_phase8_validation:main"
 satellite-m17 = "satellite_discovery.m17_workflow:main"
 satellite-m18 = "satellite_discovery.m18_workflow:main"
 satellite-m19 = "satellite_discovery.m19_benchmark:main"
