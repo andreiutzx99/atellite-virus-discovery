@@ -45,7 +45,9 @@ Candidate confidence AUC for high-quality partial versus other positive candidat
 
 ## End-to-end and test verification
 
-M20 Phase 1 through Phase 5 integration suites: 38 tests passed. Full repository unittest discovery was attempted but exceeded the 300-second local command limit; completion is not claimed. GitHub Actions results are tracked by the draft PR.
+M20 Phase 1 through Phase 5 integration suites: 38 tests passed. Focused M19–M22 and M21 regression tests: 142 passed, 1 skipped. M23 focused tests: 3 passed. Full repository unittest discovery was attempted but exceeded the 300-second local command limit; completion is not claimed.
+
+Both GitHub Actions runs for this commit completed. Offline tests passed on Ubuntu and Windows with Python 3.11/3.12; pinned M11 runtime and optional-tools jobs passed. The Phase 7 acceptance-matrix step ran all 27 adversarial cases successfully, but the subsequent attestation step failed with `InternalError: error fetching tlog entry`. Therefore the workflow conclusion is failure because evidence attestation did not complete; the attestation requirement was not waived.
 
 ## Limitations and governance
 
