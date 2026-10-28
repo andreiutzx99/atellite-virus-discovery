@@ -74,8 +74,7 @@ identity. No M20 integration result is claimed.
   five-minute command limit while entering live M20 Phase 2. A second run with
   external tools hidden completed 1,101 tests but had 2 environment-related
   failures because that restricted `PATH` also hid `pip` and the NCBI toolkit;
-  1,099 tests passed and 45 were skipped. Neither run establishes a clean full
-  suite.
+  1,054 passed and 45 were skipped. Neither run establishes a clean full suite.
 - The registered M20 Phase 5 integration remains unavailable because its
   frozen Phase 2B, Phase 3, and Phase 4 handoff directories are absent.
 - Remote CI remains to be verified on the draft PR.
