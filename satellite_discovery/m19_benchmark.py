@@ -125,6 +125,12 @@ def _fastq(case, truth, reference, params, backgrounds=()):
         count = math.ceil(params["coverage"] * len(truth) / READ_LENGTH)
         if case.get("read_start_mode") == "random":
             starts = [rng.randrange(len(truth) - READ_LENGTH + 1) for _ in range(count)]
+        elif case.get("read_start_mode") == "terminal_enriched":
+            last_start = len(truth) - READ_LENGTH
+            starts = [0, last_start][:count]
+            starts.extend(
+                rng.randrange(last_start + 1) for _ in range(count - len(starts))
+            )
         else:
             starts = [
                 round(i * (len(truth) - READ_LENGTH) / max(1, count - 1))
