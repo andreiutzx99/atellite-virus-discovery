@@ -123,7 +123,15 @@ M24 and M23 focused tests: 6 passed. The M20 Phase 1–5, M22, M23, and M24
 focused regression set passed 48 tests. Full repository unittest discovery
 completed locally: 1,097 passed, 21 skipped, 0 failed.
 
-GitHub Actions status will be recorded after the draft PR has run its checks.
+GitHub Actions passed on commit
+`be88b8f71e0328ae2e0f865489cffcf6d9b6c0ba`: push run
+[40698315073](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/40698315073)
+and pull-request run
+[40698325517](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/40698325517).
+All 11 jobs passed in each run, including the full offline test matrix on
+Ubuntu and Windows with Python 3.11 and 3.12, optional tools, pinned M11
+runtime, Phase 7 acceptance evidence, and Phase 7 schema validation. The
+Phase 7 attestation step also passed; no CI failure was waived.
 
 ## Limitations
 
