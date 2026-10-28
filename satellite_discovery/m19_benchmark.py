@@ -81,8 +81,17 @@ def _generated_path(root, relative):
     return target
 
 
-def _sequence(rng):
-    return "".join(rng.choice("ACGT") for _ in range(SEQUENCE_LENGTH))
+def _sequence(rng, length=SEQUENCE_LENGTH, gc_fraction=None):
+    if gc_fraction is None:
+        return "".join(rng.choice("ACGT") for _ in range(length))
+    if not isinstance(gc_fraction, (int, float)) or not 0 <= gc_fraction <= 1:
+        raise ValueError("Synthetic GC fraction must be between zero and one")
+    gc_count = round(length * gc_fraction)
+    gc_positions = set(rng.sample(range(length), gc_count))
+    return "".join(
+        rng.choice("GC") if position in gc_positions else rng.choice("AT")
+        for position in range(length)
+    )
 
 
 def _mutate(sequence, rate, rng):
@@ -94,16 +103,33 @@ def _mutate(sequence, rate, rng):
     return "".join(result)
 
 
-def _fastq(case, truth, reference, params):
+def _fastq(case, truth, reference, params, backgrounds=()):
     analysis_id = case["analysis_id"]
     rng = random.Random(SEED + sum(analysis_id.encode()))
     reads = []
-    for i in range(8):
-        start = round(i * (len(reference) - READ_LENGTH) / 7)
-        reads.append((f"{analysis_id}-ref-{i}", reference[start:start + READ_LENGTH], "I" * READ_LENGTH))
+    for background_index, reference_sequence in enumerate((reference, *backgrounds)):
+        for i in range(8):
+            start = round(i * (len(reference_sequence) - READ_LENGTH) / 7)
+            if case.get("read_start_mode") == "random":
+                start = rng.randrange(len(reference_sequence) - READ_LENGTH + 1)
+            read_id = (
+                f"{analysis_id}-ref-{i}" if background_index == 0 and not backgrounds
+                else f"{analysis_id}-ref-{background_index}-{i}"
+            )
+            if case.get("opaque_read_ids"):
+                read_id = f"{analysis_id}-read-{len(reads):06d}"
+            reads.append((
+                read_id,
+                reference_sequence[start:start + READ_LENGTH], "I" * READ_LENGTH))
     if truth is not None:
         count = math.ceil(params["coverage"] * len(truth) / READ_LENGTH)
-        starts = [round(i * (len(truth) - READ_LENGTH) / max(1, count - 1)) for i in range(count)]
+        if case.get("read_start_mode") == "random":
+            starts = [rng.randrange(len(truth) - READ_LENGTH + 1) for _ in range(count)]
+        else:
+            starts = [
+                round(i * (len(truth) - READ_LENGTH) / max(1, count - 1))
+                for i in range(count)
+            ]
         for i, start in enumerate(starts):
             original = truth[start:start + READ_LENGTH]
             sequence = list(original)
@@ -112,7 +138,11 @@ def _fastq(case, truth, reference, params):
             for position in rng.sample(range(len(sequence)), errors):
                 sequence[position] = rng.choice("ACGT".replace(sequence[position], ""))
                 quality[position] = "5"
-            reads.append((f"{analysis_id}-cand-{i:04d}", "".join(sequence), "".join(quality)))
+            read_id = (
+                f"{analysis_id}-cand-{i:04d}" if not case.get("opaque_read_ids")
+                else f"{analysis_id}-read-{len(reads):06d}"
+            )
+            reads.append((read_id, "".join(sequence), "".join(quality)))
     text = "".join(f"@{name}\n{seq}\n+\n{qual}\n" for name, seq, qual in reads).encode()
     buffer = BytesIO()
     with gzip.GzipFile(fileobj=buffer, mode="wb", filename="", mtime=0) as out:
@@ -126,16 +156,38 @@ def generate_inputs(root):
     files, heldout = {}, {"schema": "m19-heldout-synthetic-truth-v1", "cases": []}
     for index, case in enumerate(CASES):
         rng = random.Random(SEED + index * 101)
-        truth = _sequence(rng) if case["positive"] else None
+        target_length = case.get("target_length", SEQUENCE_LENGTH)
+        if type(target_length) is not int or target_length < READ_LENGTH:
+            raise ValueError("Synthetic target length must be an integer at least one read long")
+        gc_fraction = case.get("gc_fraction")
+        truth = _sequence(rng, target_length, gc_fraction) if case["positive"] else None
         if truth and case["repeat_complexity"] == "high":
-            truth = ("ACGTGCAATG" * 80)
-        reference = _mutate(truth, case["divergence"], random.Random(SEED + index * 101 + 1)) if truth else _sequence(rng)
+            truth = ("ACGTGCAATG" * math.ceil(target_length / 10))[:target_length]
+        elif truth and case["repeat_complexity"] == "low_complexity":
+            truth = ("AAAAC" * math.ceil(target_length / 5))[:target_length]
+        reference = (
+            _mutate(truth, case["divergence"], random.Random(SEED + index * 101 + 1))
+            if truth else _sequence(rng, target_length, gc_fraction)
+        )
+        background_gc = case.get("background_gc_fraction")
+        backgrounds = (
+            [_sequence(random.Random(SEED + index * 101 + 2), target_length, background_gc)]
+            if background_gc is not None else []
+        )
         analysis_id = case["analysis_id"]
         folder = Path("datasets") / analysis_id
-        fastq = _fastq(case, truth, reference, case)
-        reference_fasta = f">m19-reference-{analysis_id}\n{reference}\n".encode()
+        fastq = _fastq(case, truth, reference, case, backgrounds)
+        reference_rows = [(f"m19-reference-{analysis_id}", reference)]
+        reference_rows.extend(
+            (f"m19-background-{analysis_id}-{i:02d}", sequence)
+            for i, sequence in enumerate(backgrounds)
+        )
+        reference_fasta = "".join(f">{name}\n{sequence}\n" for name, sequence in reference_rows).encode()
         roles = ("reference_id,reference_role,reference_source,reference_version\n"
-                 f"m19-reference-{analysis_id},technical_reference,m19-synthetic,M19-v1\n").encode()
+                 + "".join(
+                     f"{name},technical_reference,m19-synthetic,M19-v1\n"
+                     for name, _ in reference_rows
+                 )).encode()
         for name, data in (("reads.fastq.gz", fastq), ("reference.fasta", reference_fasta),
                            ("reference_roles.csv", roles)):
             rel = (folder / name).as_posix()
