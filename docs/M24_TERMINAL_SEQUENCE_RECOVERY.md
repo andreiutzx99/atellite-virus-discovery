@@ -106,7 +106,7 @@ threshold was added.
 The registered M20 run completed both recorded M4/M6 executions. M20 Phase 2B,
 Phase 3, Phase 4 primary, and Phase 4 replay reports were `COMPLETE`. Primary
 and replay produced the same deterministic semantic-outcomes digest:
-`660a022931c4f9d5f2cdaec597cac61c841b53c752cc2be4c851488bcf50e396`.
+`94821b9d7a940b4d6541d6e844a2757a3eebab634229315df6f4fe26fb5fd927`.
 Phase 5 reported software integration validated and biological discovery not
 validated. M12/M15 producer-binding checks remained within the registered
 synthetic contracts; unavailable M5/M13/M14 handoffs and the excluded M10
