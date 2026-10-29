@@ -9,9 +9,17 @@
       "complete": 18
     },
     "corrected_partial_recoveries": 2,
+    "exact_recovery_wilson_95": [
+      0,
+      0.2991450484195441
+    ],
     "m25_input_manifests_match": true,
     "negative_controls": 9,
     "original_failure_flags": 3,
+    "partial_recovery_wilson_95": [
+      0.06322510711784671,
+      0.5474110308930111
+    ],
     "positive_cases": 9,
     "reconstruction_status_counts": {
       "EXECUTION_FAILED": 1,
@@ -1614,22 +1622,39 @@
   "evidence_quality_audit": {
     "assembly_origin": "SPAdes assembly/contigs.fasta",
     "candidate_count_below_full_support": 32,
+    "candidate_coverage_fraction": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 1.0
+    },
     "candidate_lengths_nt": {
       "111": 1,
       "56": 30,
       "62": 1
     },
-    "candidate_records": 64,
+    "candidate_records": 32,
     "candidate_truth_comparisons_used_for_discovery": false,
     "exact_56nt_repeat_fragments": 30,
+    "exact_target_subsequence_56nt_records": 30,
     "low_support_assembly": 1,
     "read_back_support_rows": {
       "111nt_low_support": 1,
       "unsupported_56nt_and_62nt": 0
     },
     "scoring_thresholds_changed": false,
+    "target_coverage_fraction": {
+      "max": 0.12333333333333334,
+      "median": 0.06222222222222222,
+      "min": 0.04
+    },
     "unique_candidate_sequences": 12,
     "unique_repeat_fragments_repeated_across_splits": 10,
+    "unique_sequence_pairwise_local_identity": {
+      "max": 1.0,
+      "median": 1.0,
+      "min": 0.9818181818181818,
+      "pair_count": 66
+    },
     "unsupported_assembly": 31
   },
   "governance": {
@@ -1664,5 +1689,24 @@
     "strict_identity_checks_retained": true
   },
   "schema": "m26-sam-candidate-evidence-v1",
-  "synthetic_only": true
+  "synthetic_only": true,
+  "verification": {
+    "corrected_m25_replay": {
+      "cases": 18,
+      "input_manifests_matched": true,
+      "m6_complete_cases": 18
+    },
+    "focused_test_suite": {
+      "failed": 0,
+      "passed": 62,
+      "run": 63,
+      "skipped": 1
+    },
+    "full_repository_test_discovery": {
+      "failed": 0,
+      "passed": 1083,
+      "run": 1104,
+      "skipped": 21
+    }
+  }
 }
