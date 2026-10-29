@@ -40,12 +40,16 @@ manifest digests also reproduce. The historical M25 report is not rewritten.
 | Metric | Historical M25 | Corrected replay |
 |---|---:|---:|
 | Cases / positive / target-absent controls | 18 / 9 / 9 | 18 / 9 / 9 |
+| Positive targets with complete generated input coverage | 6/9 | 6/9 |
 | Exact recoveries | 0/9 | 0/9 |
 | Partial recoveries | 2/9 | 2/9 |
 | M6 SAM-validation failures | 2 | 0 |
 | Actual assembler execution failures | 1 | 1 |
 | Cases with no assembly-eligible reads | 1 | 3 |
 | Candidate records below full read support | 32 | 32 |
+
+All nine target-absent controls produce zero candidate sequences in both
+reports.
 
 The two former M6 failures now complete reference screening, but their read
 retention differs substantially. The development target has 745 of 747 reads
