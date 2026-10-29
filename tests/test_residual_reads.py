@@ -9,6 +9,38 @@ from satellite_discovery.residual_reads import prepare_normalized_fastqs, screen
 
 
 class ResidualReadTests(unittest.TestCase):
+    def test_sam_sequences_validate_soft_and_hard_clipped_reads(self):
+        original = "AACCGTTA"
+        self.assertTrue(residual_reads._sam_sequence_matches(
+            "AACCGTTA", "IIIIIIII", 0, "8M", original))
+        self.assertTrue(residual_reads._sam_sequence_matches(
+            "AACCG", "IIIII", 0x800, "2S3M3H", original))
+        self.assertTrue(residual_reads._sam_sequence_matches(
+            "AACCGTTA", "IIIIIIII", 0x800, "2S6M", original))
+        self.assertTrue(residual_reads._sam_sequence_matches(
+            "AACC", "IIII", 0x800, "4M4H", original))
+        self.assertTrue(residual_reads._sam_sequence_matches(
+            "GTTA", "IIII", 0x800, "4H4M", original))
+        self.assertTrue(residual_reads._sam_sequence_matches(
+            "ACGGTT", "IIIIII", 0x810, "2H6M", original))
+
+    def test_sam_clipping_and_sequence_inconsistencies_fail_closed(self):
+        original = "AACCGTTA"
+        invalid = [
+            ("AACC", "IIII", 0x800, "2M2H2M2H"),
+            ("AACC", "IIII", 0x800, "4M3H"),
+            ("AACC", "III", 0x800, "4M4H"),
+        ]
+        for sequence, quality, flag, cigar in invalid:
+            with self.subTest(cigar=cigar, sequence=sequence, quality=quality):
+                with self.assertRaises(ValueError):
+                    residual_reads._sam_sequence_matches(
+                        sequence, quality, flag, cigar, original)
+        self.assertFalse(residual_reads._sam_sequence_matches(
+            "TTTT", "IIII", 0x800, "4M4H", original))
+        with self.assertRaisesRegex(ValueError, "unsupported bases"):
+            residual_reads._sam_sequence_matches("AACX", "IIII", 0, "8M", original)
+
     def test_unsafe_prefix_and_bad_mate_flags_fail_closed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

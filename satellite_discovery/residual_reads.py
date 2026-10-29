@@ -111,6 +111,50 @@ def _sequence_digest(sequence, flag=0):
     return hashlib.sha256(value.encode("ascii")).hexdigest()
 
 
+def _sam_sequence_matches(sequence, quality, flag, cigar, original):
+    """Validate SAM SEQ against the complete source read, accounting for H clips."""
+    if sequence == "*" or not sequence or set(sequence.upper()) - set("ACGTN"):
+        raise ValueError("SAM sequence is missing or contains unsupported bases")
+    if quality != "*" and len(quality) != len(sequence):
+        raise ValueError("SAM quality length does not match sequence length")
+    expected = original.upper()
+    if flag & 0x10:
+        expected = expected.translate(str.maketrans("ACGTN", "TGCAN"))[::-1]
+    if cigar == "*":
+        if len(sequence) != len(expected):
+            raise ValueError("SAM sequence length does not match the declared input read")
+        return sequence.upper() == expected
+
+    operations = [(int(n), op) for n, op in re.findall(r"([1-9][0-9]*)([MIDNSHP=X])", cigar)]
+    if "".join(f"{n}{op}" for n, op in operations) != cigar:
+        raise ValueError("Mapped SAM record has malformed CIGAR")
+    left_h = right_h = 0
+    start, end = 0, len(operations)
+    if start < end and operations[start][1] == "H":
+        left_h = operations[start][0]
+        start += 1
+    if start < end and operations[start][1] == "S":
+        start += 1
+    if start < end and operations[end - 1][1] == "H":
+        right_h = operations[end - 1][0]
+        end -= 1
+    if start < end and operations[end - 1][1] == "S":
+        end -= 1
+    if any(op in {"H", "S"} for _, op in operations[start:end]):
+        raise ValueError("CIGAR clipping operations are not terminal")
+
+    query_length = sum(n for n, op in operations if op in "MIS=X")
+    reference_length = sum(n for n, op in operations if op in "MDN=X")
+    if query_length != len(sequence):
+        raise ValueError("SAM sequence length is inconsistent with CIGAR")
+    if query_length + left_h + right_h != len(expected):
+        raise ValueError("CIGAR clipping length does not match the declared input read")
+    if reference_length < 1 or query_length < 1:
+        raise ValueError("Mapped CIGAR must consume query and reference sequence")
+    stop = len(expected) - right_h if right_h else len(expected)
+    return sequence.upper() == expected[left_h:stop]
+
+
 def prepare_normalized_fastqs(read1, read2, output_dir, *, include_fragment_ids=None, prefix="screen"):
     if not isinstance(prefix, str) or not _SAFE_PREFIX.fullmatch(prefix) or prefix in {".", ".."}:
         raise ValueError("prefix must be a conservative portable basename")
@@ -180,7 +224,7 @@ def _sam(path, *, paired, expected, references=None):
             continue
         if not line or line.startswith("@"):
           continue
-        fields = line.split("\t")
+        fields = line.rstrip("\r\n").split("\t")
         if len(fields) < 11:
             raise ValueError("Malformed SAM alignment")
         try:
@@ -204,8 +248,6 @@ def _sam(path, *, paired, expected, references=None):
                     raise ValueError("Mapped SAM record is outside the declared reference collection")
                 operations = [(int(n), op) for n, op in
                               re.findall(r"([1-9][0-9]*)([MIDNSHP=X])", fields[5])]
-                if "".join(f"{n}{op}" for n, op in operations) != fields[5]:
-                    raise ValueError("Mapped SAM record has malformed CIGAR")
                 reference_span = sum(n for n, op in operations if op in "MDN=X")
                 if pos + reference_span - 1 > references[fields[2]]:
                     raise ValueError("Mapped SAM record extends beyond the declared reference")
@@ -220,7 +262,7 @@ def _sam(path, *, paired, expected, references=None):
             seen.add(key)
         if not (flag & (0x100 | 0x800)):
             primary[key] = flag
-        if fields[9] == "*" or _sequence_digest(fields[9], flag) != expected[key]:
+        if not _sam_sequence_matches(fields[9], fields[10], flag, fields[5], expected[key]):
             raise ValueError("SAM sequence does not match the declared input read")
         if len(primary) > MAX_READ_COUNT * (2 if paired else 1):
             raise ValueError("SAM exceeds the maximum supported record count")
@@ -250,25 +292,21 @@ def screen_and_triage(read1, read2, screen_sam, output_dir, *, config, paired,
         "hashers": {"read1": hashlib.sha256(), "read2": hashlib.sha256()},
     }
     duplicate_counts = Counter()
-    sequence_hashes = {}
+    source_sequences = {}
     fragments = 0
     for left, right in _source(read1, read2, paired, count_state=state):
         fragments += 1
         duplicate_counts[left[1].upper()] += 1
-        sequence_hashes[(_qname(fragments), 1 if paired else 0)] = _sequence_digest(left[1])
+        source_sequences[(_qname(fragments), 1 if paired else 0)] = left[1]
         if right:
             duplicate_counts[right[1].upper()] += 1
-            sequence_hashes[(_qname(fragments), 2)] = _sequence_digest(right[1])
+            source_sequences[(_qname(fragments), 2)] = right[1]
     first_state = {
         "reads": state["reads"], "bases": state["bases"], "bytes": state["bytes"],
         "hashes": {name: digest.hexdigest() for name, digest in state["hashers"].items()
                    if name == "read1" or paired},
     }
-    expected = {}
-    for i in range(1, fragments + 1):
-        expected[(_qname(i), 1 if paired else 0)] = sequence_hashes[(_qname(i), 1 if paired else 0)]
-        if paired:
-            expected[(_qname(i), 2)] = sequence_hashes[(_qname(i), 2)]
+    expected = source_sequences
     primary = _sam(screen_sam, paired=paired, expected=expected,
                    references=references)
     thresholds = {
