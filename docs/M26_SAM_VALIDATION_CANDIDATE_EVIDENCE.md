@@ -21,6 +21,10 @@ assembler execution failure remains. Three low-complexity cases do not produce
 assembly-eligible reads. Running more cases is not evidence of improved
 scientific performance.
 
+For the nine-positive-case synthetic pilot, Wilson 95% intervals are 0–29.9%
+for exact recovery (0/9) and 6.3–54.7% for partial recovery (2/9). These wide
+intervals reflect the small pilot; no recovery improvement is claimed.
+
 The 32 candidates previously grouped as below full read support comprise 31
 `UNSUPPORTED_ASSEMBLY` and one `LOW_SUPPORT_ASSEMBLY` record. Thirty 56-nt
 repeat fragments are only ten distinct sequences, repeated once in each of the
@@ -130,16 +134,17 @@ controls continued to produce zero candidates.
 
 All below-full-support records originate from SPAdes `assembly/contigs.fasta`.
 The 30 unsupported 56-nt sequences have ten distinct sequence hashes; each
-distinct sequence occurs in all three split-specific assemblies. Pairwise
-local alignment of the twelve distinct below-support sequences has median
-identity 98.2% (56 aligned columns at the median), consistent with repeated
-and overlapping fragments of the periodic synthetic target rather than 30
-independent predictions.
+distinct sequence occurs in all three split-specific assemblies. All 30 are
+exact substrings of their synthetic target. The twelve distinct
+below-full-support sequences produce 66 pairwise local alignments with 98.18%
+to 100% identity (median 100%), consistent with repeat-associated overlap
+rather than 32 independent predictions.
 
-The 56-nt fragments cover approximately 4.0–6.2% of their targets and have no
-qualifying read-back rows. The unsupported 62-nt fragment covers about 6.9%
-and has no support rows. The 111-nt low-support fragment covers about 12.3%;
-one row qualifies, below the existing two-distinct-fragment support
+All 32 candidates have 100% candidate coverage, but only 4.0–12.33% target
+coverage. The 56-nt fragments have no qualifying read-back rows. The
+unsupported 62-nt fragment covers 6.89% of its target and has no support rows.
+The 111-nt low-support fragment covers 12.33%; it has 16 read-support rows, of
+which one qualifies, below the existing two-distinct-fragment support
 requirement. These are incomplete fragments, not near-complete candidates.
 
 Truth comparisons are retrospective and excluded from discovery-stage
@@ -172,10 +177,12 @@ changed.
 
 - Focused M26/M25/M19–M24 tests: 63 run, 62 passed, one optional live-tool test
   skipped.
+- Full repository discovery: 1,104 tests run, 1,083 passed, 21 skipped, no
+  failures.
 - Corrected M25 replay: all 18 cases completed; all input-manifest digests
   matched; governance fields remained unchanged.
-- Full repository discovery and GitHub Actions results are attached to the
-  draft PR and will be updated after the final CI run.
+- GitHub Actions is running for the draft PR; its final status will be checked
+  and recorded before handoff.
 
 ## Limitations and governance
 
