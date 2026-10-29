@@ -14,6 +14,7 @@
       0.2991450484195441
     ],
     "m25_input_manifests_match": true,
+    "negative_control_cases_with_candidates": 0,
     "negative_controls": 9,
     "original_failure_flags": 3,
     "partial_recovery_wilson_95": [
@@ -21,6 +22,7 @@
       0.5474110308930111
     ],
     "positive_cases": 9,
+    "positive_targets_with_complete_generated_input_coverage": 6,
     "reconstruction_status_counts": {
       "EXECUTION_FAILED": 1,
       "NO_SUPPORTED_ASSEMBLY": 12,
