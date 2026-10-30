@@ -1,6 +1,17 @@
 import unittest
 
-from satellite_discovery.m27_low_complexity_validation import complexity_metrics
+from satellite_discovery.m27_low_complexity_validation import (
+    _is_target_read_id,
+    complexity_metrics,
+)
+
+
+class M27TargetReadIdTests(unittest.TestCase):
+    def test_exact_target_pattern_excludes_reference_ids(self):
+        self.assertTrue(_is_target_read_id("m2503-r00001"))
+        self.assertFalse(_is_target_read_id("m2503-ref-0-1"))
+        self.assertFalse(_is_target_read_id("m2503-r00001-extra"))
+        self.assertFalse(_is_target_read_id("m2503-r1"))
 
 
 class M27ComplexityMetricTests(unittest.TestCase):
