@@ -110,6 +110,11 @@ def _coverage(records, target_ids, truth):
     }
 
 
+def _is_target_read_id(read_id):
+    """Match generated M25 target IDs without including reference-read IDs."""
+    return re.fullmatch(r"m2503-r\d{5}", read_id) is not None
+
+
 def audit_focus_cases(baseline_root):
     """Trace generated IDs through raw, QC, screen, and assembly eligibility."""
     baseline_root = Path(baseline_root)
@@ -129,7 +134,7 @@ def audit_focus_cases(baseline_root):
         truth = json.loads((root / "heldout_truth.json").read_text())["cases"][0][
             "candidate_sequence"
         ]
-        target_ids = {rid for rid in raw if re.fullmatch(r"m2503-r\d{5}", rid)}
+        target_ids = {rid for rid in raw if _is_target_read_id(rid)}
         if not target_ids:
             raise ValueError(f"No synthetic target read IDs found for {case_id}")
         qcreject_ids = set(raw) - set(clean)
