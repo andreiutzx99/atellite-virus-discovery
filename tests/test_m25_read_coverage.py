@@ -1,7 +1,10 @@
 import random
+import tempfile
 import unittest
+from pathlib import Path
 
 from satellite_discovery.m25_read_coverage import (
+    _stage_evaluation,
     _classification,
     _make_starts,
     _theory,
@@ -10,6 +13,15 @@ from satellite_discovery.m25_read_coverage import (
 
 
 class M25ReadCoverageTests(unittest.TestCase):
+    def test_missing_stage_output_is_not_measured_as_zero(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / "residual.fastq.gz"
+            self.assertEqual(_stage_evaluation(output, "failed"), "FAILED")
+            self.assertEqual(_stage_evaluation(output, "complete"), "OUTPUT_MISSING")
+            self.assertEqual(_stage_evaluation(output), "NOT_EVALUATED")
+            output.write_bytes(b"")
+            self.assertEqual(_stage_evaluation(output, "complete"), "COMPLETE")
+
     def test_uniform_start_model_has_correct_edge_probabilities(self):
         model = _theory(10, 4, 1)
         self.assertAlmostEqual(model["first_base_covered_probability"], 1 / 7)

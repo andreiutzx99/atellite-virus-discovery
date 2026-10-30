@@ -264,6 +264,17 @@ def _fastq_ids(path):
             yield name[1:].split()[0], seq, qual
 
 
+def _stage_evaluation(path, upstream_status=None):
+    """Distinguish a measured empty file from an unavailable stage artifact."""
+    if Path(path).is_file():
+        return "COMPLETE"
+    if upstream_status == "failed":
+        return "FAILED"
+    if upstream_status == "complete":
+        return "OUTPUT_MISSING"
+    return "NOT_EVALUATED"
+
+
 def _classification(summary):
     if summary["coverage_gaps"]:
         return "COVERAGE_INSUFFICIENT"
@@ -348,7 +359,11 @@ def run(output, case_limit=None):
                     json.loads((stage / "reconstruction_evidence.json").read_text()).get("status")
                     == "EXECUTION_FAILED"
                     if (stage / "reconstruction_evidence.json").exists()
-                    else row["status"] != "COMPLETE"
+                    else False
+                ),
+                "upstream_stage_failure": (
+                    json.loads((stage / "manifest.json").read_text()).get("status") == "failed"
+                    if (stage / "manifest.json").exists() else True
                 ),
             }
             coverage_class = cov["classification"]
@@ -356,16 +371,25 @@ def run(output, case_limit=None):
                 coverage_class = "COVERAGE_COMPLETE_BUT_EXACT_RECONSTRUCTION_UNSUCCESSFUL"
             layout = state.get("_m25_layout", {})
             read_locations = layout.get("target_read_ids", {})
-            target_id_sets = {
-                "after_qc": {r[0] for r in _fastq_ids(run_dir / "stages" / f"qc_{case['analysis_id']}" / "clean_single.fastq.gz")}
-                if (run_dir / "stages" / f"qc_{case['analysis_id']}" / "clean_single.fastq.gz").is_file() else set(),
-                "after_reference_screen": {r[0] for r in _fastq_ids(stage / "residual_read1.fastq.gz")}
-                if (stage / "residual_read1.fastq.gz").is_file() else set(),
-                "assembly_eligible": {r[0] for r in _fastq_ids(stage / "eligible_read1.fastq.gz")}
-                if (stage / "eligible_read1.fastq.gz").is_file() else set(),
+            m6_status = json.loads((stage / "manifest.json").read_text()).get("status") \
+                if (stage / "manifest.json").exists() else None
+            stage_paths = {
+                "after_qc": run_dir / "stages" / f"qc_{case['analysis_id']}" / "clean_single.fastq.gz",
+                "after_reference_screen": stage / "residual_read1.fastq.gz",
+                "assembly_eligible": stage / "eligible_read1.fastq.gz",
             }
-            stage_coverage = {}
-            for stage_name, read_ids in target_id_sets.items():
+            qc_manifest = stage_paths["after_qc"].parent / "qc.json"
+            qc_status = json.loads(qc_manifest.read_text()).get("status") \
+                if qc_manifest.exists() else None
+            stage_coverage, stage_evaluations = {}, {}
+            for stage_name, path in stage_paths.items():
+                upstream_status = qc_status if stage_name == "after_qc" else m6_status
+                state_name = _stage_evaluation(path, upstream_status)
+                stage_evaluations[stage_name] = state_name
+                if state_name != "COMPLETE":
+                    stage_coverage[stage_name] = None
+                    continue
+                read_ids = {r[0] for r in _fastq_ids(path)}
                 kept_starts = [read_locations[rid] for rid in read_ids if rid in read_locations]
                 stage_coverage[stage_name] = coverage_summary(truth or "", kept_starts, read_length, [])
                 stage_coverage[stage_name]["classification"] = (
@@ -379,6 +403,7 @@ def run(output, case_limit=None):
                 "coverage": cov,
                 "coverage_classification": coverage_class,
                 "coverage_after_stages": stage_coverage,
+                "stage_evaluations": stage_evaluations,
                 "generated_read_orientation": "forward, single-end",
                 "pipeline": pipeline,
                 "workflow_status": report["workflow_status"],
