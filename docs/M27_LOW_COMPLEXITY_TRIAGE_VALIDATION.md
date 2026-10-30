@@ -90,7 +90,7 @@ binary did not match the stage's approved 2.17.0+ executable pin; this is not a
 completed no-hit result. M9 BLASTP ran, and M10 reported partial aggregate
 results. All M20 inputs and reference panels were artificial.
 
-The focused M27 tests passed (3 tests). The focused M20 Phase 1/2B/3 set passed
+The focused M27 tests passed (4 tests). The focused M20 Phase 1/2B/3 set passed
 (18 tests, including its live synthetic integrations). A broad test discovery
 run exceeded the five-minute command limit and was terminated before producing
 a suite summary, so the full repository suite is not reported as passing.
