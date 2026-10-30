@@ -1,0 +1,67 @@
+{
+  "schema": "m27-low-complexity-triage-summary-v1",
+  "synthetic_only": true,
+  "biological_data_used": false,
+  "baseline_commit": "a2c654e59eeca4e6b35c3e34ead937cd98e3889b",
+  "baseline_reproduction": {
+    "status": "COMPLETE",
+    "cases": 18,
+    "positive_cases": 9,
+    "target_absent_controls": 9,
+    "m24_input_manifest_digests_matched": 3,
+    "exact_recoveries": 0,
+    "partial_recoveries": 2,
+    "sam_validation_failures": 0,
+    "assembler_execution_failures": 1,
+    "negative_control_candidates": 0
+  },
+  "focus_case_read_flow": [
+    {
+      "case_id": "development-m25-03",
+      "target_reads_generated": 747,
+      "target_reads_after_qc": 747,
+      "target_reads_after_reference_screen": 2,
+      "target_reads_default_assembly_eligible": 0,
+      "truth_coverage_after_qc": 0.11,
+      "truth_coverage_after_screen": 0.10785714285714286,
+      "default_triage_exclusion": "LOW_SEQUENCE_COMPLEXITY"
+    },
+    {
+      "case_id": "tuning-m25-03",
+      "target_reads_generated": 267,
+      "target_reads_after_qc": 267,
+      "target_reads_after_reference_screen": 265,
+      "target_reads_default_assembly_eligible": 0,
+      "truth_coverage_after_qc": 0.308,
+      "truth_coverage_after_screen": 0.308,
+      "default_triage_exclusion": "LOW_SEQUENCE_COMPLEXITY"
+    },
+    {
+      "case_id": "held_out-m25-03",
+      "target_reads_generated": 747,
+      "target_reads_after_qc": 747,
+      "target_reads_after_reference_screen": 673,
+      "target_reads_default_assembly_eligible": 0,
+      "truth_coverage_after_qc": 0.11,
+      "truth_coverage_after_screen": 0.11,
+      "default_triage_exclusion": "LOW_SEQUENCE_COMPLEXITY"
+    }
+  ],
+  "paired_experiments": [
+    {"case_id": "development-m25-03", "setting": "A_existing_default", "min_entropy_bits": 1.2, "eligible_reads": 0, "assembler_status": "NO_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "development-m25-03", "setting": "B_conservative_entropy_0_95", "min_entropy_bits": 0.95, "eligible_reads": 1, "assembler_status": "EXECUTION_FAILED", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "development-m25-03", "setting": "C_diagnostic_entropy_0", "min_entropy_bits": 0.0, "eligible_reads": 2, "assembler_status": "EXECUTION_FAILED", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "tuning-m25-03", "setting": "A_existing_default", "min_entropy_bits": 1.2, "eligible_reads": 0, "assembler_status": "NO_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "tuning-m25-03", "setting": "B_conservative_entropy_0_95", "min_entropy_bits": 0.95, "eligible_reads": 175, "assembler_status": "EXECUTION_FAILED", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "tuning-m25-03", "setting": "C_diagnostic_entropy_0", "min_entropy_bits": 0.0, "eligible_reads": 265, "assembler_status": "EXECUTION_FAILED", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "held_out-m25-03", "setting": "A_existing_default", "min_entropy_bits": 1.2, "eligible_reads": 0, "assembler_status": "NO_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
+    {"case_id": "held_out-m25-03", "setting": "B_conservative_entropy_0_95", "min_entropy_bits": 0.95, "eligible_reads": 504, "assembler_status": "READ_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 6, "unsupported_candidates": 1, "low_support_candidates": 2},
+    {"case_id": "held_out-m25-03", "setting": "C_diagnostic_entropy_0", "min_entropy_bits": 0.0, "eligible_reads": 673, "assembler_status": "READ_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 7, "unsupported_candidates": 1, "low_support_candidates": 2}
+  ],
+  "promotion_decision": "RETAIN_EXISTING_DEFAULT",
+  "governance": {
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+    "biological_execution_authorized": false
+  }
+}
