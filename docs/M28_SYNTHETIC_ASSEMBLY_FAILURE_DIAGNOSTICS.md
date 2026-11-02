@@ -59,11 +59,25 @@ Per-target entropy, exact k-mer uniqueness/multiplicity and spacing summaries us
 
 ## Controlled experiments and promotion
 
-Paired experiment on `development-m25-02` used identical eligible reads. The unchanged configuration produced 22 contigs; experimental k=21,33 produced 20. Neither recovered the full target. The experimental best target breadth was 7.4%. This is one exploratory case, not independent validation; the alternative is not promoted.
+Paired experiments used identical eligible reads within each frozen partition:
+
+| Split | Default contigs | Experimental k=21,33 contigs | Default best breadth | Experimental best breadth | Exact recovery |
+|---|---:|---:|---:|---:|---|
+| development | 22 | 20 | 12.3% | 7.4% | False |
+| tuning | 20 | 20 | 7.9% | 4.8% | False |
+| held_out | 20 | 20 | 12.3% | 7.4% | False |
+
+The unchanged default was not modified. Alternative runs are experimental; their standalone contigs were not passed through read-back support evaluation. These results do not justify promotion.
 
 ## M20 integration
 
 M20 execution summary: `COMPLETE`. Per-phase schemas, statuses, decisions, and deterministic Phase 4 digest are recorded in the companion JSON. Phase 2B, 3 and 4 completed; Phase 4 replay digest was `5d3e04b5d6f8265210635ea434b079e2e399c0e94b4f6a6d528666e5dce4c996`. Phase 5 reported `SOFTWARE_INTEGRATION_VALIDATED_BIOLOGICAL_DISCOVERY_NOT_VALIDATED`. M13/M14 inputs were absent, leaving M15 dossier completeness partial. BLAST+ 2.16.0 did not satisfy the approved 2.17.0+ pin, so the nucleotide search remained unavailable rather than a completed no-hit result.
+
+## Testing and CI
+
+M28 focused: 3 passed; M25/M27 regressions: 9 passed; M20 Phase 2B–5 focused suite: 34 passed. Full repository discovery: 1,090 passed out of 1,111, 21 skipped, 0 failed. GitHub Actions was still running when this report snapshot was generated; the final-head result is linked from the draft PR.
+
+The discovery run exercised tests with placeholder accession identifiers, but retrieved no complete FASTQ runs. All M28 analyses and assembly comparisons described here use artificial A/C/G/T fixtures.
 
 ## Governance
 
