@@ -22,9 +22,9 @@ No experimental configuration is promoted. Existing M6 and assembly defaults rem
 
 Failure classes across all cases: `{"ASSEMBLER_COMPLETED_INCOMPLETE_SUPPORTED_CONTIGS": 5, "ASSEMBLER_PROCESS_FAILURE": 1, "NO_ASSEMBLY_ELIGIBLE_READS": 12}`.
 
-The single process failure was `development-m25-01`: 107 assembly-eligible single-end reads were present. SPAdes 4.1.0 was found and version-checked; it exited with code 21 after `spades-core` reported an abnormal system call involving `K55/configs/config.info`. Immediately before that, SPAdes logged: `Invalid kmer coverage histogram, make sure that the coverage is indeed uniform`. The configuration file existed as a regular file; captured stderr was empty. The report records input identity, command, runtime settings, output inventory and log hashes. This is evidence of SPAdes' coverage-model failure on this input, not proof of the lower-level OS error's cause. This was an actual assembler process failure, not an upstream eligibility failure, and no contig FASTA was produced.
+Failure attribution is derived from persisted M6 stage manifests and reconstruction evidence. A missing output is not treated as proof of assembler failure; upstream failure and zero eligible reads remain separate categories. Prior M25–M27 reports contain historical incident descriptions, but their original run outputs are unavailable here and those details are not independently reverified by this report.
 
-Twelve cases had zero assembly-eligible reads; these are not assembler failures. Five completed with read-supported but incomplete assemblies. Invalid-input, missing-dependency, and completed-empty-contig outcomes did not occur in the frozen replay. Configured timeout/output limits are cooperative, not hard operating-system resource quotas.
+Configured timeout/output limits are cooperative, not hard operating-system resource quotas.
 
 ## Case-level assembly outcomes
 
@@ -61,23 +61,23 @@ Per-target entropy, exact k-mer uniqueness/multiplicity and spacing summaries us
 
 Paired experiments used identical eligible reads within each frozen partition:
 
-| Split | Default contigs | Experimental k=21,33 contigs | Default best breadth | Experimental best breadth | Exact recovery |
-|---|---:|---:|---:|---:|---|
-| development | 22 | 20 | 12.3% | 7.4% | False |
-| tuning | 20 | 20 | 7.9% | 4.8% | False |
-| held_out | 20 | 20 | 12.3% | 7.4% | False |
+| Split | Default contigs | Experimental k=21,33 contigs | Default best breadth | Experimental best breadth | Exact recovery | Support (supported / low / unsupported) |
+|---|---:|---:|---:|---:|---|---|
+| development | 22 | 20 | 12.3% | 7.4% | False | 0 / 0 / 20 |
+| tuning | 20 | 20 | 7.9% | 4.8% | False | 0 / 0 / 20 |
+| held_out | 20 | 20 | 12.3% | 7.4% | False | 0 / 0 / 20 |
 
-The unchanged default was not modified. Alternative runs are experimental; their standalone contigs were not passed through read-back support evaluation. These results do not justify promotion.
+The unchanged default was not modified. Experimental contigs were evaluated against matching frozen M6 read-support thresholds. This synthetic comparison does not justify promotion.
 
 ## M20 integration
 
-M20 execution summary: `COMPLETE`. Per-phase schemas, statuses, decisions, and deterministic Phase 4 digest are recorded in the companion JSON. Phase 2B, 3 and 4 completed; Phase 4 replay digest was `5d3e04b5d6f8265210635ea434b079e2e399c0e94b4f6a6d528666e5dce4c996`. Phase 5 reported `SOFTWARE_INTEGRATION_VALIDATED_BIOLOGICAL_DISCOVERY_NOT_VALIDATED`. M13/M14 inputs were absent, leaving M15 dossier completeness partial. BLAST+ 2.16.0 did not satisfy the approved 2.17.0+ pin, so the nucleotide search remained unavailable rather than a completed no-hit result.
+M20 execution summary: `NOT_SUPPLIED`. Available per-phase evidence is recorded in the companion JSON; missing artifacts remain unavailable and are not inferred.
 
 ## Testing and CI
 
-M28 focused: 3 passed; M25/M27 regressions: 9 passed; M20 Phase 2B–5 focused suite: 34 passed. Full repository discovery: 1,090 passed out of 1,111, 21 skipped, 0 failed. GitHub Actions was still running when this report snapshot was generated; the final-head result is linked from the draft PR.
+Test and CI outcomes are not embedded in this scientific report. Use current test output and final-head GitHub Actions checks on the draft PR; historical test counts are not presented as current verification.
 
-The discovery run exercised tests with placeholder accession identifiers, but retrieved no complete FASTQ runs. All M28 analyses and assembly comparisons described here use artificial A/C/G/T fixtures.
+All M28 analyses and assembly comparisons described here use artificial A/C/G/T fixtures.
 
 ## Governance
 

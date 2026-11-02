@@ -8,7 +8,7 @@
       "assembly_execution": {
         "assembler": "spades",
         "contigs_fasta_present": false,
-        "duration_seconds": 1.320496736999985,
+        "duration_seconds": 1.544360748000031,
         "error": "External tool failed with exit status 21; see stderr.log",
         "error_type": "ExternalToolExitError",
         "executable": {
@@ -75,9 +75,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5240,
+            "bytes": 5252,
             "path": "raw/K21/configs/config.info",
-            "sha256": "2cf114c70e2fb91c3f59dc7b25512277d342e2d7ddc56258a9b9c472e23d1716"
+            "sha256": "30a145d1926855b4bb591dca35e4b62a279b47f5db58a4e38a8dce831e21a109"
           },
           {
             "bytes": 645,
@@ -165,9 +165,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1344,
+            "bytes": 1359,
             "path": "raw/K21/final.lib_data",
-            "sha256": "ebe47915e22fc98a34ef747d6bbea734d80805a8e7c4ee818feee431fcbc5bdd"
+            "sha256": "7c4dbe4d0c89a5ecdc8e02bc9fa8efc964c8a42bf690380cd9cb8a4ae7b4dc10"
           },
           {
             "bytes": 8,
@@ -195,9 +195,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5326,
+            "bytes": 5341,
             "path": "raw/K33/configs/config.info",
-            "sha256": "f3057f60ec19974d810a662358021e19595146d83a770125e0db7ed1afa9a596"
+            "sha256": "002367b6dce0756df3a0bd0ec77c4bf9da7c64db86f63dd4c1893546356beddb"
           },
           {
             "bytes": 645,
@@ -285,9 +285,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1344,
+            "bytes": 1359,
             "path": "raw/K33/final.lib_data",
-            "sha256": "b2cb55817b580c72c6a0f84a4d3e0451f419b72f5b9604a478479e3668583bb4"
+            "sha256": "26d395bf5819ea9a11e6c3dfe34bb3cef8c2c240450b60f7d45d81b867f3748c"
           },
           {
             "bytes": 8,
@@ -315,9 +315,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5331,
+            "bytes": 5346,
             "path": "raw/K55/configs/config.info",
-            "sha256": "9574aa7bcbf28efc374e97dc51ff09e9c3c66426b843688e49ed360c232e20f5"
+            "sha256": "535717786f407f9f9e550c3004b5f1fda2ff1893b5e484efd62487ee88436ff7"
           },
           {
             "bytes": 645,
@@ -520,19 +520,19 @@
             "sha256": "49ef1b7ef890478a573e4445d9adb93dc19d63b6a80dc620f0103afde456a550"
           },
           {
-            "bytes": 107,
+            "bytes": 110,
             "path": "raw/dataset.info",
-            "sha256": "ec0448b9f99174e53e44be3fdd6a05b5ffc8c01cf58f1bb482de2c2f3496ec71"
+            "sha256": "6f3b7240327054520d94c8fe332fea28037cbec15acdff17b21025afe68134fc"
           },
           {
-            "bytes": 174,
+            "bytes": 177,
             "path": "raw/input_dataset.yaml",
-            "sha256": "2a0c08d20ee6e588bbb30b91086c64352bf9f15cd2ff1ee2f5d41c2406742a8c"
+            "sha256": "a9d5e5738de81491819aef7914236ee63ee68d5279aed77744920d979c4199ea"
           },
           {
-            "bytes": 1543,
+            "bytes": 1558,
             "path": "raw/params.txt",
-            "sha256": "1d95c5cf729579889a3a2d6b9ab3e8b06d9d8fa2868de405aece21ebb3509129"
+            "sha256": "89f4ad7dc354290594f19fa57a49bfccad159e64747265c06faf3ce38d699f43"
           },
           {
             "bytes": 0,
@@ -555,19 +555,19 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 3314,
+            "bytes": 3389,
             "path": "raw/run_spades.sh",
-            "sha256": "6e551852b66dedd6a969caba6f5e4e72b50cb44fe0fa79d064a1706a8d8b0436"
+            "sha256": "cc3df6b774df8dc05b027779bed6d3360dc98d95eb3aa231607dd8fe6f1cfd43"
           },
           {
-            "bytes": 4475,
+            "bytes": 4550,
             "path": "raw/run_spades.yaml",
-            "sha256": "f60e0e238f236abe8a9d2a1ec1e54ead18ff627958ab06f6687bd790ad0a1e62"
+            "sha256": "4c70fe1c5cacb984f67ff8923df738a9fa4ddc6e18c1a2f831270158a51b328e"
           },
           {
-            "bytes": 67328,
+            "bytes": 67394,
             "path": "raw/spades.log",
-            "sha256": "bef716b9a04c248fa6866cffdd453900fc348a3c74592f0621f1e10e08c0ed91"
+            "sha256": "ab7a97db1c3a9a91e08694cdc2fff29d00c3c97d631cb5a79f6fb4eb479413ce"
           },
           {
             "bytes": 0,
@@ -575,9 +575,9 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 67468,
+            "bytes": 67534,
             "path": "stdout.log",
-            "sha256": "60641b5fecfac3e5c21274ccfff7644d508af6d0f8de0826d915c8308ac8fc61"
+            "sha256": "08a4836d96d5ecc4cae40186df2f26a11aa7737ec17aadf7b92004a1fb2151c2"
           }
         ],
         "raw_output_files": [
@@ -715,9 +715,9 @@
           "tail": ""
         },
         "stdout.log": {
-          "bytes": 67468,
-          "sha256": "60641b5fecfac3e5c21274ccfff7644d508af6d0f8de0826d915c8308ac8fc61",
-          "tail": "23M   INFO   StageManager             (stage.cpp                 : 189)   STAGE == EC Threshold Finding (id: ec_threshold_finder)\n  0:00:00.004     1M / 23M   ERROR   General                 (kmer_coverage_model.cpp   : 188)   Invalid kmer coverage histogram, make sure that the coverage is indeed uniform\n=== Stack Trace ===\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x46762a]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x8a9844]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x7daaaf]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x7fcc8f]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x4632f3]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x45a66f]\n/nix/store/zdpby3l6azi78sl83cpad2qjpfj25aqx-glibc-2.40-66/lib/libc.so.6(+0x2a47e) [0x7f65aab7e47e]\n/nix/store/zdpby3l6azi78sl83cpad2qjpfj25aqx-glibc-2.40-66/lib/libc.so.6(__libc_start_main+0x89) [0x7f65aab7e539]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x45f2f5]\n\n\n== Error ==  system call for: \"['/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core', '/tmp/m28-m25-baseline/development/development-m25-01/stages/m6_m2501/assembly/raw/K55/configs/config.info']\" finished abnormally, OS return value: 21\nNone\n\nIn case you have troubles running SPAdes, you can report an issue on our GitHub repository github.com/ablab/spades\nPlease provide us with params.txt and spades.log files from the output directory.\n\nSPAdes log can be found here: /tmp/m28-m25-baseline/development/development-m25-01/stages/m6_m2501/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
+          "bytes": 67534,
+          "sha256": "08a4836d96d5ecc4cae40186df2f26a11aa7737ec17aadf7b92004a1fb2151c2",
+          "tail": "INFO   StageManager             (stage.cpp                 : 189)   STAGE == EC Threshold Finding (id: ec_threshold_finder)\n  0:00:00.008     1M / 22M   ERROR   General                 (kmer_coverage_model.cpp   : 188)   Invalid kmer coverage histogram, make sure that the coverage is indeed uniform\n=== Stack Trace ===\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x46762a]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x8a9844]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x7daaaf]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x7fcc8f]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x4632f3]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x45a66f]\n/nix/store/zdpby3l6azi78sl83cpad2qjpfj25aqx-glibc-2.40-66/lib/libc.so.6(+0x2a47e) [0x7f45591cc47e]\n/nix/store/zdpby3l6azi78sl83cpad2qjpfj25aqx-glibc-2.40-66/lib/libc.so.6(__libc_start_main+0x89) [0x7f45591cc539]\n/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core() [0x45f2f5]\n\n\n== Error ==  system call for: \"['/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core', '/tmp/m28-baseline-replay/development/development-m25-01/stages/m6_m2501/assembly/raw/K55/configs/config.info']\" finished abnormally, OS return value: 21\nNone\n\nIn case you have troubles running SPAdes, you can report an issue on our GitHub repository github.com/ablab/spades\nPlease provide us with params.txt and spades.log files from the output directory.\n\nSPAdes log can be found here: /tmp/m28-baseline-replay/development/development-m25-01/stages/m6_m2501/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
         },
         "threads": 1
       },
@@ -806,7 +806,7 @@
       "assembly_execution": {
         "assembler": "spades",
         "contigs_fasta_present": true,
-        "duration_seconds": 0.7844668019999972,
+        "duration_seconds": 0.886785524000004,
         "error": null,
         "error_type": null,
         "executable": {
@@ -828,9 +828,9 @@
         "memory_mb": 2048,
         "output_inventory": [
           {
-            "bytes": 30258,
+            "bytes": 30260,
             "path": "assembly_manifest.json",
-            "sha256": "506ca643aa4196d20ca3bed32ade16f4c97ea4540e1de178e22c707febaae7f4"
+            "sha256": "f1e20604d95c6661df9c02031b20da4368043eaa4654a8f36e0e23e7a220e844"
           },
           {
             "bytes": 2607,
@@ -848,9 +848,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5240,
+            "bytes": 5252,
             "path": "raw/K21/configs/config.info",
-            "sha256": "a2bec20bfdd432119d61d9453ca700362bdd34eceed781ad7b0f63c12302bf11"
+            "sha256": "095e08c38a4ad4aaf3e67817ed6900e6b670e2f64329b8deeafe31755b563959"
           },
           {
             "bytes": 645,
@@ -938,9 +938,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1348,
+            "bytes": 1363,
             "path": "raw/K21/final.lib_data",
-            "sha256": "da50b616489cd49b5fccc9a8922c91e4fca9b576d7e2af8e30a38e750ce18a55"
+            "sha256": "63b68d5cd50138409fafd03cb725d0fceb525b32ae22a39d00e4ca532594e9ad"
           },
           {
             "bytes": 8,
@@ -968,9 +968,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5326,
+            "bytes": 5341,
             "path": "raw/K33/configs/config.info",
-            "sha256": "b0c8c59140500863a390006433e82195143b3c97f329fe55eaf105b5cecf012d"
+            "sha256": "2aa45d8b3b3acd1731af044bf218d83d807cb7a6f03fdaa8e838b140b6cb0950"
           },
           {
             "bytes": 645,
@@ -1058,9 +1058,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1349,
+            "bytes": 1364,
             "path": "raw/K33/final.lib_data",
-            "sha256": "7fe486879889f9ece9161426f617ed9ef45091f272631696d62817fe532d5744"
+            "sha256": "344934487f27e7ce2e2eb75702010dc612e4524a3e07b89091528e83c905276b"
           },
           {
             "bytes": 8,
@@ -1108,9 +1108,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5331,
+            "bytes": 5346,
             "path": "raw/K55/configs/config.info",
-            "sha256": "a4787cea66abe509297247347ac30b62b4b081cbdc0de50a5c5ab52997809c4a"
+            "sha256": "8dea65f49f029d68103e91b4e90518b716882d163317d1b65ca9a8ae642c2a5f"
           },
           {
             "bytes": 645,
@@ -1198,9 +1198,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1348,
+            "bytes": 1363,
             "path": "raw/K55/final.lib_data",
-            "sha256": "0d9f60b2c889de3c6479f85efc0504844028cc739eb62066719e15d31981f713"
+            "sha256": "552bfb7962b1dcc6bea5ca8008aa79d5071dd4620b9e210f805929f5b9a51403"
           },
           {
             "bytes": 2607,
@@ -1253,19 +1253,19 @@
             "sha256": "7880641ad7b1f7d85528430190a35a3e41254c03011b5fdfa987ab82e0c2137d"
           },
           {
-            "bytes": 107,
+            "bytes": 110,
             "path": "raw/dataset.info",
-            "sha256": "3f22f2ffeb6266c47ae72f52562787734e5cefca8b8c43c5a490b5d1761f13b9"
+            "sha256": "529f03692e80669f457ec823422e9f6f8102c648f57a879085864836d6596bd8"
           },
           {
-            "bytes": 174,
+            "bytes": 177,
             "path": "raw/input_dataset.yaml",
-            "sha256": "68fe38efb3b4a1fe0403eacab6873ddc34bfa1aa302cb02e7c64596793224165"
+            "sha256": "4c7ccdd68d3e7c1bb8c8d49ed733857736dbc0c60e46373c5a795b9676bc91db"
           },
           {
-            "bytes": 1543,
+            "bytes": 1558,
             "path": "raw/params.txt",
-            "sha256": "b1fe2c70311c15abf37dbd88691ee44f40e4be8f0845bacefcb3d695cb89b636"
+            "sha256": "9ec560c2721e0af62426a5ba8f14d1922cba765214795f3f06daa7a47258ad05"
           },
           {
             "bytes": 0,
@@ -1313,14 +1313,14 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 3314,
+            "bytes": 3389,
             "path": "raw/run_spades.sh",
-            "sha256": "1884534edf991211e9db89c1ba86717545ff72dd20e99d323764601ee5afca77"
+            "sha256": "0dfd1cb1bd1249231b15a0b729f7099353cb495b5b040ce7b81d7ed23ae79475"
           },
           {
-            "bytes": 4475,
+            "bytes": 4550,
             "path": "raw/run_spades.yaml",
-            "sha256": "c47fb86f0b9995ca955ac2c8b4a1ff507096cb9cdc71f2503c047e0efe0bb9be"
+            "sha256": "0b5d095f188aec969fe68f6e1f19d7ceabbee4120826ab34a7c3de49b9e8ba53"
           },
           {
             "bytes": 2607,
@@ -1333,9 +1333,9 @@
             "sha256": "7880641ad7b1f7d85528430190a35a3e41254c03011b5fdfa987ab82e0c2137d"
           },
           {
-            "bytes": 100393,
+            "bytes": 100567,
             "path": "raw/spades.log",
-            "sha256": "f2c7b231c228185bd7d18e6deb97d5a72875db9a6b9a9c6e200d4f52c5936529"
+            "sha256": "e2f3041375f6cd6c8e0df51d27042c89b624bac63cb391b42105e1b0ccde295e"
           },
           {
             "bytes": 0,
@@ -1343,9 +1343,9 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 100533,
+            "bytes": 100707,
             "path": "stdout.log",
-            "sha256": "3402f5b844f94b10cbe407d1f2d7d846bf475596ef30376b388a156e5fc5a8cb"
+            "sha256": "5b4936bf81443d52b2047176009ec2fd6e86a7aa0dbbcde6e0894400d0fffbbe"
           }
         ],
         "raw_output_files": [
@@ -1475,9 +1475,9 @@
           "tail": ""
         },
         "stdout.log": {
-          "bytes": 100533,
-          "sha256": "3402f5b844f94b10cbe407d1f2d7d846bf475596ef30376b388a156e5fc5a8cb",
-          "tail": "stages/m6_m2502/assembly/raw/contigs.paths\n\n\n===== Copy files finished. \n\n\n===== Assembling finished. \n\n\n===== Breaking scaffolds started. \n\n\n== Running: /nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/bin/python3 /nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished.\n\nSPAdes log can be found here: /tmp/m28-m25-baseline/development/development-m25-02/stages/m6_m2502/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
+          "bytes": 100707,
+          "sha256": "5b4936bf81443d52b2047176009ec2fd6e86a7aa0dbbcde6e0894400d0fffbbe",
+          "tail": "w/contigs.paths\n\n\n===== Copy files finished. \n\n\n===== Assembling finished. \n\n\n===== Breaking scaffolds started. \n\n\n== Running: /nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/bin/python3 /nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished.\n\nSPAdes log can be found here: /tmp/m28-baseline-replay/development/development-m25-02/stages/m6_m2502/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
         },
         "threads": 1
       },
@@ -1903,7 +1903,7 @@
       "assembly_execution": {
         "assembler": "spades",
         "contigs_fasta_present": true,
-        "duration_seconds": 1.1966189809999719,
+        "duration_seconds": 1.2454425919999608,
         "error": null,
         "error_type": null,
         "executable": {
@@ -1925,9 +1925,9 @@
         "memory_mb": 2048,
         "output_inventory": [
           {
-            "bytes": 30225,
+            "bytes": 30229,
             "path": "assembly_manifest.json",
-            "sha256": "aeb7622e1429ba05387c3cd61687b2d13bd7f2359326b76ed5a20f102f920bd2"
+            "sha256": "27034569c630b0bcb7f913c55d59790c81bc5f2ac5beb9a72f67ff2856ccd20c"
           },
           {
             "bytes": 935,
@@ -1945,9 +1945,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5200,
+            "bytes": 5212,
             "path": "raw/K21/configs/config.info",
-            "sha256": "00ab655971bbdafc1849f0b07ff247664266b77ce2d13ce2a3d0c00982829237"
+            "sha256": "fb7f0d197f24ad441ce0d073c2c757ffb7ff58d327abeaf74f24b82d2f5f30e9"
           },
           {
             "bytes": 645,
@@ -2035,9 +2035,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1295,
+            "bytes": 1310,
             "path": "raw/K21/final.lib_data",
-            "sha256": "323cb59557355ba21309ca84d5cc506542f4d6df9c6826a0817a144693912d07"
+            "sha256": "e91123e8a2c139af838bca1f2b2d8ac269c3de348748727cb0694fb7e0fa79a5"
           },
           {
             "bytes": 8,
@@ -2065,9 +2065,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5276,
+            "bytes": 5291,
             "path": "raw/K33/configs/config.info",
-            "sha256": "66564b6398dc4419185f1847efaedf28cb53e0b1fdfde40f42dc6d4309f036b3"
+            "sha256": "ef5891b7e8db72e5fe2a1ee9548c2a398a6f2594cdd744c14bae489305539cfd"
           },
           {
             "bytes": 645,
@@ -2155,9 +2155,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1295,
+            "bytes": 1310,
             "path": "raw/K33/final.lib_data",
-            "sha256": "b752ddb09037ae6585c82d55638d1f70bac1c568d88b3e8589be6d07af9c91a5"
+            "sha256": "5f2def94cfa8f4adef14b1ded59242c78f8736b6710c974b29d3e552024a06da"
           },
           {
             "bytes": 8,
@@ -2205,9 +2205,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5281,
+            "bytes": 5296,
             "path": "raw/K55/configs/config.info",
-            "sha256": "2b7988ce1fa53cca660348a3d82ae07e8486f49b1a8f3c02a770c24e79c51e95"
+            "sha256": "52921dfb6618739c72577e5856383a71beb4f95dc31b6695a80e2c308051bf9a"
           },
           {
             "bytes": 645,
@@ -2295,9 +2295,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1294,
+            "bytes": 1309,
             "path": "raw/K55/final.lib_data",
-            "sha256": "62e04f7841fc050cca0fb2b47608ef0a1806892259eff7b1f24036a6262cb2a1"
+            "sha256": "702fde484be7010100175ea6c0f4bcfd0e5e280b77e38d016cf2f35ac5a3f0e0"
           },
           {
             "bytes": 935,
@@ -2350,19 +2350,19 @@
             "sha256": "61a9d46dc49d81d51808449e843a6fb0418a361a2206c47e6dc4d7b73b666c5e"
           },
           {
-            "bytes": 97,
+            "bytes": 100,
             "path": "raw/dataset.info",
-            "sha256": "67b9f6b27cddae42e0785dcbd7c8588ad6aba3fccf468dc5618d30f054e7cbe8"
+            "sha256": "f3ea67ed89011460a040725c7a14162807e030a91f996a275e0e19c73cbb2b61"
           },
           {
-            "bytes": 164,
+            "bytes": 167,
             "path": "raw/input_dataset.yaml",
-            "sha256": "860f459a0b415611f9c1ff82b07ef4793f87b6ddcad92cde5d3fc2a5c7acf006"
+            "sha256": "ea917ddc5a0af76e78e9f9cdcfbc56a868b25de7b9e69f1f5b4a764d7390b0b4"
           },
           {
-            "bytes": 1493,
+            "bytes": 1508,
             "path": "raw/params.txt",
-            "sha256": "d25d614f2c6ec88cce3484222bd5645186cba47ad55ec080986ca029c7dc7818"
+            "sha256": "e4f934d9b2bab7729bca3eff0f2d63fe6cf6ec1ce2bb288dbb0baa6c957d5dcd"
           },
           {
             "bytes": 0,
@@ -2410,14 +2410,14 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 3064,
+            "bytes": 3139,
             "path": "raw/run_spades.sh",
-            "sha256": "508ec6df7e11ee234d00ae2ddc77b3a20b1d6f0b13a5b521249fde09acb4057f"
+            "sha256": "adb0531e07ec45373ececc0caac8161e517f940af5f981cedd3a52e38bb1c6f3"
           },
           {
-            "bytes": 4225,
+            "bytes": 4300,
             "path": "raw/run_spades.yaml",
-            "sha256": "e7801c4249fa2f459d7a96025f0cfd61f4e5d1ca401451ce3eb0a5e32c71df99"
+            "sha256": "3a6168b08e3c8e6a570d05bb543ea6ccf2c951215110d8312e2f6582412af86d"
           },
           {
             "bytes": 935,
@@ -2430,9 +2430,9 @@
             "sha256": "61a9d46dc49d81d51808449e843a6fb0418a361a2206c47e6dc4d7b73b666c5e"
           },
           {
-            "bytes": 97111,
+            "bytes": 97285,
             "path": "raw/spades.log",
-            "sha256": "3c2b4e12fe7a74c01e3bd5c683cbdd3d01f93e09f217e2eca04e0532ff8822ac"
+            "sha256": "ab134659c1f076c7e884ea68629ee361ce8184ac738a650c8f4c084037e06a89"
           },
           {
             "bytes": 0,
@@ -2440,9 +2440,9 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 97251,
+            "bytes": 97425,
             "path": "stdout.log",
-            "sha256": "b4a6cadbab553831ae734e9bcebc8d8b63bdd2e19613ea5cf7f0741cad010ec5"
+            "sha256": "e10eb8ba71e66e8d52b2f23dc6800be7118e8119f1cece3d47fe654935d49bca"
           }
         ],
         "raw_output_files": [
@@ -2572,9 +2572,9 @@
           "tail": ""
         },
         "stdout.log": {
-          "bytes": 97251,
-          "sha256": "b4a6cadbab553831ae734e9bcebc8d8b63bdd2e19613ea5cf7f0741cad010ec5",
-          "tail": "/m6_m2501/assembly/raw/K55/final_contigs.paths /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/contigs.paths\n\n\n===== Copy files finished. \n\n\n===== Assembling finished. \n\n\n===== Breaking scaffolds started. \n\n\n== Running: /nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/bin/python3 /nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished.\n\nSPAdes log can be found here: /tmp/m28-m25-baseline/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
+          "bytes": 97425,
+          "sha256": "e10eb8ba71e66e8d52b2f23dc6800be7118e8119f1cece3d47fe654935d49bca",
+          "tail": "al_contigs.paths /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/contigs.paths\n\n\n===== Copy files finished. \n\n\n===== Assembling finished. \n\n\n===== Breaking scaffolds started. \n\n\n== Running: /nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/bin/python3 /nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished.\n\nSPAdes log can be found here: /tmp/m28-baseline-replay/tuning/tuning-m25-01/stages/m6_m2501/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
         },
         "threads": 1
       },
@@ -2677,7 +2677,7 @@
       "assembly_execution": {
         "assembler": "spades",
         "contigs_fasta_present": true,
-        "duration_seconds": 0.6205960940000068,
+        "duration_seconds": 0.6390644630000111,
         "error": null,
         "error_type": null,
         "executable": {
@@ -2699,9 +2699,9 @@
         "memory_mb": 2048,
         "output_inventory": [
           {
-            "bytes": 30487,
+            "bytes": 30491,
             "path": "assembly_manifest.json",
-            "sha256": "1cb319036cddc96013e1ec68210b1097ea09121dad1b4510d56ce0e0e7f1add4"
+            "sha256": "547adfb88461bdf09d694fe8cfca1a330bbed25cc3d9f0e44040a5f70264c5c6"
           },
           {
             "bytes": 2371,
@@ -2719,9 +2719,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5200,
+            "bytes": 5212,
             "path": "raw/K21/configs/config.info",
-            "sha256": "2d8993716206f33099fa2b222dc88c3f9e87088dc38937d7e0a5e91809847fbb"
+            "sha256": "6aa5f57e58ce01a68858f21b822a716b7d61f17bc388122f5b1372ba445217c0"
           },
           {
             "bytes": 645,
@@ -2809,9 +2809,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1299,
+            "bytes": 1314,
             "path": "raw/K21/final.lib_data",
-            "sha256": "a490dc4c05260a3a57c78e38a0470175b634e897afaef90ad21cc714052e0bd8"
+            "sha256": "7c5617105b29dc27d299a2c1d7f069539187cf96895309a20f9b0ba6d499f7c4"
           },
           {
             "bytes": 8,
@@ -2839,9 +2839,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5276,
+            "bytes": 5291,
             "path": "raw/K33/configs/config.info",
-            "sha256": "9b588f911bdf8ab330106c7f22f08663c50984c3499202fa9a39c60b93d0a6a5"
+            "sha256": "3d95dbad490da5ab80c5a445ddb7e05886cad8e6f0ed8f006a338f40450055ec"
           },
           {
             "bytes": 645,
@@ -2929,9 +2929,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1299,
+            "bytes": 1314,
             "path": "raw/K33/final.lib_data",
-            "sha256": "dfbb091176209a03746ff0aff247d15149e08aaa77a5c1395b308669f0b42a0d"
+            "sha256": "bbcd21878ec24326cc77b6051ecab74a2bb9eeb697304be8b3c0058d2e52e9fa"
           },
           {
             "bytes": 8,
@@ -2979,9 +2979,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5281,
+            "bytes": 5296,
             "path": "raw/K55/configs/config.info",
-            "sha256": "75780c7e1f1ca33e2e2e62aa251c809df663bcb07d6119e0f597d44b78752b59"
+            "sha256": "12a70e0e012da9f7f4784f0b41ed54afb431b55821a629097c54c1f7d53b56b5"
           },
           {
             "bytes": 645,
@@ -3069,9 +3069,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1298,
+            "bytes": 1313,
             "path": "raw/K55/final.lib_data",
-            "sha256": "7415d99207f38a68b1cf4ac8747007ec94bcf5755b8d646acc4031c92f591b64"
+            "sha256": "ff944ff2e2386823a6eefcf426d9b8d3bdb3b592cccf1ae71f9b80ce482a901c"
           },
           {
             "bytes": 2371,
@@ -3124,19 +3124,19 @@
             "sha256": "cb6e43391776ce39c1f95b9c12a51c71530e044e956f764cdf83347c07f956d5"
           },
           {
-            "bytes": 97,
+            "bytes": 100,
             "path": "raw/dataset.info",
-            "sha256": "ad328a2b7635600c58b0e6987ce70411e9424b900c95f2cca9b6e3168b35eeb3"
+            "sha256": "303f72db443bd9401fb16612945ff70192f9403a1f0993fe62d988238dfcae26"
           },
           {
-            "bytes": 164,
+            "bytes": 167,
             "path": "raw/input_dataset.yaml",
-            "sha256": "14b4abc45099a4b9af34b22ce536a51123601e7a9c928b5735a204534e8f678f"
+            "sha256": "a0918d9d40dceba42514a4914afb8a57cc0b55a07a7541dc7ea3bc06aa0ab165"
           },
           {
-            "bytes": 1493,
+            "bytes": 1508,
             "path": "raw/params.txt",
-            "sha256": "e440192abe1776dbdc52fea8d0efffa4b6b5cd0c42e005793ba3d4fa06c0f274"
+            "sha256": "3102c03e7126a809541ddb61475a8260ee74e98c48efd81e4f98e818a0dbb6c9"
           },
           {
             "bytes": 0,
@@ -3184,14 +3184,14 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 3064,
+            "bytes": 3139,
             "path": "raw/run_spades.sh",
-            "sha256": "812ed526997f192eeb2cb36f059fa062f398fdd47d7711a433ab6d08065eaf05"
+            "sha256": "616306529063e5bc0d263da9d563adf9e94be4e3a08d0e4d50e8ab6800af5982"
           },
           {
-            "bytes": 4225,
+            "bytes": 4300,
             "path": "raw/run_spades.yaml",
-            "sha256": "effce8a9ba53876971f667121438961dcbad6e97f5672874ae4a7285cad0e8d5"
+            "sha256": "1ecd3b4345605f586b095cd0cad3fea02ad5567edda36ef4366db8d546d5a71d"
           },
           {
             "bytes": 2371,
@@ -3204,14 +3204,14 @@
             "sha256": "cb6e43391776ce39c1f95b9c12a51c71530e044e956f764cdf83347c07f956d5"
           },
           {
-            "bytes": 99401,
+            "bytes": 99578,
             "path": "raw/spades.log",
-            "sha256": "a8ec80a6013d8ceac9ca2277aae37c024b9746e8b87caaa2bf2c0be36bd85d33"
+            "sha256": "c43c9c17aac5d4464e48f010f1deb6675336bfaa0a43663e36a63b247e30c6ef"
           },
           {
-            "bytes": 316,
+            "bytes": 319,
             "path": "raw/warnings.log",
-            "sha256": "abe9381fe2bdae07a99a8467acfbe4fdd4573101059dc7d7b2d573a2dcf36f49"
+            "sha256": "f5612c97c4c82ed381d119bb513954bf252b423e1193186180eca7fb3e15c95f"
           },
           {
             "bytes": 0,
@@ -3219,9 +3219,9 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 99541,
+            "bytes": 99718,
             "path": "stdout.log",
-            "sha256": "42f72f9a2c94682b4f929f6b6d04298607227a2acbf4f201afb0be64d54e9267"
+            "sha256": "0863271fa007ea6b28ec191a63ab082f83d177f0e77ca5f89d559c34f048dc7a"
           }
         ],
         "raw_output_files": [
@@ -3352,9 +3352,9 @@
           "tail": ""
         },
         "stdout.log": {
-          "bytes": 99541,
-          "sha256": "42f72f9a2c94682b4f929f6b6d04298607227a2acbf4f201afb0be64d54e9267",
-          "tail": "kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished WITH WARNINGS!\n\n=== Error correction and assembling warnings:\n * 0:00:00.025     1M / 22M   WARN    General                 (kmer_coverage_model.cpp   : 219)   Too many erroneous kmers, the estimates might be unreliable\n======= Warnings saved to /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/warnings.log\n\nSPAdes log can be found here: /tmp/m28-m25-baseline/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
+          "bytes": 99718,
+          "sha256": "0863271fa007ea6b28ec191a63ab082f83d177f0e77ca5f89d559c34f048dc7a",
+          "tail": "spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished WITH WARNINGS!\n\n=== Error correction and assembling warnings:\n * 0:00:00.028     1M / 22M   WARN    General                 (kmer_coverage_model.cpp   : 219)   Too many erroneous kmers, the estimates might be unreliable\n======= Warnings saved to /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/warnings.log\n\nSPAdes log can be found here: /tmp/m28-baseline-replay/tuning/tuning-m25-02/stages/m6_m2502/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
         },
         "threads": 1
       },
@@ -3773,7 +3773,7 @@
       "assembly_execution": {
         "assembler": "spades",
         "contigs_fasta_present": true,
-        "duration_seconds": 1.2964477059999808,
+        "duration_seconds": 1.3985492770000292,
         "error": null,
         "error_type": null,
         "executable": {
@@ -3795,9 +3795,9 @@
         "memory_mb": 2048,
         "output_inventory": [
           {
-            "bytes": 30472,
+            "bytes": 30475,
             "path": "assembly_manifest.json",
-            "sha256": "13024c31b8663e6e78c598f1bd4421c45242a1e118d8c36442d8aa50f066e092"
+            "sha256": "5be6eb92be4683c17f2c99fae8e81ae80d223ed1734d9e2aa9b443e5ec0f26bd"
           },
           {
             "bytes": 526,
@@ -3815,9 +3815,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5216,
+            "bytes": 5228,
             "path": "raw/K21/configs/config.info",
-            "sha256": "fffdcfa9acf1bf66cf1199fe71552aa5a60a6e439ba1e8aad5f5c14bf9e457fc"
+            "sha256": "52298bee84fc8686590bb9b655a12d98c439c7aae8bcd55c89c8ef1786269980"
           },
           {
             "bytes": 645,
@@ -3905,9 +3905,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1314,
+            "bytes": 1329,
             "path": "raw/K21/final.lib_data",
-            "sha256": "0422743955fe8eafe8e27142bcc44c314d9a2a13a4fecd31aeb9d6a98d4e1cba"
+            "sha256": "72bbd43474cc85b3c308890db4acfb9fb72fdbf9decf6f494fe4446ae6064ba0"
           },
           {
             "bytes": 8,
@@ -3935,9 +3935,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5296,
+            "bytes": 5311,
             "path": "raw/K33/configs/config.info",
-            "sha256": "9f5e64bd83ea960ff7502121ab1e9c736e670952c3410b6289007cba6d9732be"
+            "sha256": "9a7e66cbb8bfed9ee1f8a41466cb427c6bac3b0838810fba646c39d552bc0cbb"
           },
           {
             "bytes": 645,
@@ -4025,9 +4025,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1314,
+            "bytes": 1329,
             "path": "raw/K33/final.lib_data",
-            "sha256": "d0b0990e91e31b6c1ae4fc60ad4a71c62f9ca1c5e121b2cde2c9205e19bb706f"
+            "sha256": "52d0812654c5c9dc795d33a96b0fe52d5c5a80b375b9ac45ab10f50e5ea9e316"
           },
           {
             "bytes": 8,
@@ -4075,9 +4075,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5301,
+            "bytes": 5316,
             "path": "raw/K55/configs/config.info",
-            "sha256": "8515da150b58c57f27c189c6b90b425f105d6fea99b3e42817a82f3ce98c465e"
+            "sha256": "0aa6a38e75d1df1d421372c121366662adaa1488a467581614983b1e7588cd0d"
           },
           {
             "bytes": 645,
@@ -4165,9 +4165,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1313,
+            "bytes": 1328,
             "path": "raw/K55/final.lib_data",
-            "sha256": "d45cd141a992d4b3d728ba5333028d147950922d8cad9a67c7f4b674e5baaae5"
+            "sha256": "e72544be90e125254f0e5a7fa9f8f721062d7e69f4ed9f1b2a03dfca6c4fe04c"
           },
           {
             "bytes": 526,
@@ -4220,19 +4220,19 @@
             "sha256": "856f4e9312322b60f71ed7a30ff61a809e8f50780e9704e97f26bfc225554153"
           },
           {
-            "bytes": 101,
+            "bytes": 104,
             "path": "raw/dataset.info",
-            "sha256": "2a1824f8621621c9e6c866e9f88326a4a7901c807d0aa41bb85f1cf95dd4cd83"
+            "sha256": "0dd4868b037aaf0d276c8d08b90b308619efb79d5202db0c7fdef3a353b30940"
           },
           {
-            "bytes": 168,
+            "bytes": 171,
             "path": "raw/input_dataset.yaml",
-            "sha256": "8ad83d0b97a4c7d991c335a8501239d2a8e85fc53db3e25ec2762d444f6e5712"
+            "sha256": "e0f4dc3764b2191bc5e347251ee393482e209103ec86f99a1120c2296bbde054"
           },
           {
-            "bytes": 1513,
+            "bytes": 1528,
             "path": "raw/params.txt",
-            "sha256": "49734797e4bb828c534585660a89ad87edf9e78009ea275318f076049a2c68ef"
+            "sha256": "a023ef0a9b40a315077a3ff04e98b71aa545ac6b77d219187ce06d0d5498ca2f"
           },
           {
             "bytes": 0,
@@ -4280,14 +4280,14 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 3164,
+            "bytes": 3239,
             "path": "raw/run_spades.sh",
-            "sha256": "696b607d0ad7e159b41eb5b65a0dbe6ee3e93973f548d9d920900157a6b964c9"
+            "sha256": "5f834a5bb2fc1dba66896c15e3b18f1eee37d087d92a984a0823f1e2e1fe11d4"
           },
           {
-            "bytes": 4325,
+            "bytes": 4400,
             "path": "raw/run_spades.yaml",
-            "sha256": "3b9cac70979c2b31f67f5535ab1c84d9ff1dc714fc3e6246d2f303b9a58a447d"
+            "sha256": "eb009a5fbb33eab9a7446245c424ca42c3639b654f9b363da85d26a1e130ec56"
           },
           {
             "bytes": 526,
@@ -4300,14 +4300,14 @@
             "sha256": "856f4e9312322b60f71ed7a30ff61a809e8f50780e9704e97f26bfc225554153"
           },
           {
-            "bytes": 98440,
+            "bytes": 98617,
             "path": "raw/spades.log",
-            "sha256": "93d52c4ab0d08716701686a5eb01be0a00e5bcdb1dbc437ddb9b047b4d774a1b"
+            "sha256": "68ee922a01c88cf0a4a538ea2175dc2b16a3cadd63d9fb73a35a004b1630f211"
           },
           {
-            "bytes": 326,
+            "bytes": 329,
             "path": "raw/warnings.log",
-            "sha256": "f864cb7f564360c53966423ccb04d73981e16c1106170842eaa92896c9371d97"
+            "sha256": "76157f1bd3db817061637b3e7422796bfc13f789e1c77fcce477a6a93f36ee7b"
           },
           {
             "bytes": 0,
@@ -4315,9 +4315,9 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 98580,
+            "bytes": 98757,
             "path": "stdout.log",
-            "sha256": "7656f594311610d8969803f12e7669af4db9ec016ab88f64badeb2177919ebdd"
+            "sha256": "5abade0a4d67266a4c957200263543dd2c9bf8ab22934909c39b7b7220ff6762"
           }
         ],
         "raw_output_files": [
@@ -4448,9 +4448,9 @@
           "tail": ""
         },
         "stdout.log": {
-          "bytes": 98580,
-          "sha256": "7656f594311610d8969803f12e7669af4db9ec016ab88f64badeb2177919ebdd",
-          "tail": "re/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished WITH WARNINGS!\n\n=== Error correction and assembling warnings:\n * 0:00:00.462     1M / 23M   WARN    General                 (kmer_coverage_model.cpp   : 367)   Failed to determine erroneous kmer threshold. Threshold set to: 0\n======= Warnings saved to /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/warnings.log\n\nSPAdes log can be found here: /tmp/m28-m25-baseline/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
+          "bytes": 98757,
+          "sha256": "5abade0a4d67266a4c957200263543dd2c9bf8ab22934909c39b7b7220ff6762",
+          "tail": "pts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished WITH WARNINGS!\n\n=== Error correction and assembling warnings:\n * 0:00:00.522     1M / 23M   WARN    General                 (kmer_coverage_model.cpp   : 367)   Failed to determine erroneous kmer threshold. Threshold set to: 0\n======= Warnings saved to /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/warnings.log\n\nSPAdes log can be found here: /tmp/m28-baseline-replay/held_out/held_out-m25-01/stages/m6_m2501/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
         },
         "threads": 1
       },
@@ -4553,7 +4553,7 @@
       "assembly_execution": {
         "assembler": "spades",
         "contigs_fasta_present": true,
-        "duration_seconds": 1.7238046699999927,
+        "duration_seconds": 1.814571645000001,
         "error": null,
         "error_type": null,
         "executable": {
@@ -4575,9 +4575,9 @@
         "memory_mb": 2048,
         "output_inventory": [
           {
-            "bytes": 30252,
+            "bytes": 30254,
             "path": "assembly_manifest.json",
-            "sha256": "de08433cb9a9c0b9e9a8231a58fd417396343222767e49c49820b525d7a5cdf2"
+            "sha256": "555d26b909a623c9332ccc11ffebe3ef99effa69a7dbc6450870464042f67c3d"
           },
           {
             "bytes": 2371,
@@ -4595,9 +4595,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5216,
+            "bytes": 5228,
             "path": "raw/K21/configs/config.info",
-            "sha256": "8eaad3ebc6d99efed7dcec63494548b8c36245a6c841df001a01b2e4bf751174"
+            "sha256": "2597957dfca96549ade8fd4d38927a31362a4af43e454a104a047b95cef64ba3"
           },
           {
             "bytes": 645,
@@ -4685,9 +4685,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1319,
+            "bytes": 1334,
             "path": "raw/K21/final.lib_data",
-            "sha256": "3ededc46113f3f5143182811f5c655bbf536d3b065939dba5803b117d24f97bd"
+            "sha256": "b9d8508804ed44112724cacdd20bf0b40059cf00bedd9aea13f47ccbc2075094"
           },
           {
             "bytes": 8,
@@ -4715,9 +4715,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5296,
+            "bytes": 5311,
             "path": "raw/K33/configs/config.info",
-            "sha256": "7516528aa48f7df9ea3089828e775e06ad2da0c5126ddcbde66eadcd2d00fc57"
+            "sha256": "b245718ef717e207474f6fc6d245d79a83fd32c8a65e20d564f35abffd984810"
           },
           {
             "bytes": 645,
@@ -4805,9 +4805,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1319,
+            "bytes": 1334,
             "path": "raw/K33/final.lib_data",
-            "sha256": "a0dddb5cce94ac33dbc9873bdd271ac9d96b9a063b9f1a4623a24bc8b947126b"
+            "sha256": "37d76ff6884823dc70cd232a9f1c33122e93084c966871808accf1629c3ddd6c"
           },
           {
             "bytes": 8,
@@ -4855,9 +4855,9 @@
             "sha256": "3cd0b587997f9fcdce311f6790f6fd4a77c51cf9e55cb530226275487c8df1c0"
           },
           {
-            "bytes": 5301,
+            "bytes": 5316,
             "path": "raw/K55/configs/config.info",
-            "sha256": "9cb6e8e856ffac1a1b7f663d8e219170b687997ba3b00afb517fb8c9c7d00c20"
+            "sha256": "ba8825b8578ee91d6e677d0baec1191b8f2999fb11875ab9215b975f9937e06b"
           },
           {
             "bytes": 645,
@@ -4945,9 +4945,9 @@
             "sha256": "e30674b51b1f31f5873bed0973cde82b010c81ceab0287789be92d11cd847b67"
           },
           {
-            "bytes": 1318,
+            "bytes": 1333,
             "path": "raw/K55/final.lib_data",
-            "sha256": "5f8036ab1712d23c44f87ff453c9b8650196c23e991df2533dcc022b7c6c8047"
+            "sha256": "6b1552b29f62736c0db7686e8c6bf6559965cd193bbb2bd0efa35cd78c206bfa"
           },
           {
             "bytes": 2371,
@@ -5000,19 +5000,19 @@
             "sha256": "6caa559694d1ea72736dfb8376231a6739d9d3e07c16d265ffdf5635ee407901"
           },
           {
-            "bytes": 101,
+            "bytes": 104,
             "path": "raw/dataset.info",
-            "sha256": "bc5edd62129d5f3aca2d82a1f0f12d5eb593abb12a2042e961086a7fa73ad336"
+            "sha256": "95d0ebf773f5e3adf27a0765c83e8645f9bf606d28bb9512f2e9727ed3459303"
           },
           {
-            "bytes": 168,
+            "bytes": 171,
             "path": "raw/input_dataset.yaml",
-            "sha256": "d3456ee8a73f2fe732938aef34c1445a8c8ad710672bc5d6d8fca88a0c879188"
+            "sha256": "29572a75fe2b2e240437818115ed7254388695aafda2b71c12c369bec75efd7f"
           },
           {
-            "bytes": 1513,
+            "bytes": 1528,
             "path": "raw/params.txt",
-            "sha256": "3e070da0c3970edfc5866dec738c3e147b97117928f04cd00ba6a502560129cf"
+            "sha256": "dd0b4be3e148d8585fac4028d8637c847b36b8d2176ddac49171aba08dc78256"
           },
           {
             "bytes": 0,
@@ -5060,14 +5060,14 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 3164,
+            "bytes": 3239,
             "path": "raw/run_spades.sh",
-            "sha256": "2aa278dc353a2bb93c81d2bd237582352353e37e0511533a6d90e01598f23671"
+            "sha256": "c3c9c26ff657585ae50c34c0d27da9dfff65230fa9ff380befb66f3e9cc28037"
           },
           {
-            "bytes": 4325,
+            "bytes": 4400,
             "path": "raw/run_spades.yaml",
-            "sha256": "656cb2be829ebbe22adfd5a322a63de6c91f3c037538709c4ec3aeece085452a"
+            "sha256": "bda4571822fb58b3d646a19c366a15528c570660ba016e3b80b624af4bc3171b"
           },
           {
             "bytes": 2371,
@@ -5080,9 +5080,9 @@
             "sha256": "6caa559694d1ea72736dfb8376231a6739d9d3e07c16d265ffdf5635ee407901"
           },
           {
-            "bytes": 100146,
+            "bytes": 100320,
             "path": "raw/spades.log",
-            "sha256": "87ff6e565da7e5ef604fcfa62d9f3723c2b842e0d2b6455c5bb6303eef418bb0"
+            "sha256": "342ae316e8be8bdd1ced1b3f676837c1c3994563597324430b60d26582d7bc63"
           },
           {
             "bytes": 0,
@@ -5090,9 +5090,9 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 100286,
+            "bytes": 100460,
             "path": "stdout.log",
-            "sha256": "a0cdf3ca63cd0a33fc6731f3b89bf8314ba11586ee2d2b856fa3fa3c634bc77e"
+            "sha256": "8056ada33c165abbe3b8e4dc95de4e70ffa88f25e6d28d244c637fbd178607a5"
           }
         ],
         "raw_output_files": [
@@ -5222,9 +5222,9 @@
           "tail": ""
         },
         "stdout.log": {
-          "bytes": 100286,
-          "sha256": "a0cdf3ca63cd0a33fc6731f3b89bf8314ba11586ee2d2b856fa3fa3c634bc77e",
-          "tail": ".paths /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n\n\n===== Copy files finished. \n\n\n===== Assembling finished. \n\n\n===== Breaking scaffolds started. \n\n\n== Running: /nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/bin/python3 /nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished.\n\nSPAdes log can be found here: /tmp/m28-m25-baseline/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
+          "bytes": 100460,
+          "sha256": "8056ada33c165abbe3b8e4dc95de4e70ffa88f25e6d28d244c637fbd178607a5",
+          "tail": "y/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n\n\n===== Copy files finished. \n\n\n===== Assembling finished. \n\n\n===== Breaking scaffolds started. \n\n\n== Running: /nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/bin/python3 /nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/share/spades/spades_pipeline/scripts/breaking_scaffolds_script.py --result_scaffolds_filename /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta --misc_dir /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/misc --threshold_for_breaking_scaffolds 3\n\n\n===== Breaking scaffolds finished. \n\n\n===== Terminate started. \n\n\n===== Terminate finished. \n\n * Assembled contigs are in /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/contigs.fasta\n * Assembled scaffolds are in /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/scaffolds.fasta\n * Paths in the assembly graph corresponding to the contigs are in /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/contigs.paths\n * Paths in the assembly graph corresponding to the scaffolds are in /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/scaffolds.paths\n * Assembly graph is in /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/assembly_graph.fastg\n * Assembly graph in GFA format is in /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/assembly_graph_with_scaffolds.gfa\n\n======= SPAdes pipeline finished.\n\nSPAdes log can be found here: /tmp/m28-baseline-replay/held_out/held_out-m25-02/stages/m6_m2502/assembly/raw/spades.log\n\nThank you for using SPAdes! If you use it in your research, please cite:\n\n  Prjibelski, A., Antipov, D., Meleshko, D., Lapidus, A. and Korobeynikov, A., 2020. Using SPAdes de novo assembler. Current protocols in bioinformatics, 70(1), p.e102.\n  doi.org/10.1002/cpbi.102\n\n"
         },
         "threads": 1
       },
@@ -5641,9 +5641,29 @@
   "controlled_experiment": {
     "complete_partition_count": 3,
     "design": "Paired same-input comparisons across frozen development, tuning and held-out partitions.",
-    "interpretation_limit": "Truth was used only after assembly. No read-support threshold or production default changed; read-back support was not evaluated for the standalone alternatives.",
+    "interpretation_limit": "Truth was used only after assembly. Read-back status applies the M6 thresholds recorded for the matching frozen baseline case; no production threshold or default changed.",
     "runs": [
       {
+        "assembler_execution": {
+          "command_parameters": [
+            "--only-assembler",
+            "-t",
+            "1",
+            "-m",
+            "2",
+            "-k",
+            "21,33"
+          ],
+          "duration_seconds": 1.1740112410000165,
+          "output": {
+            "artifact_name": "contigs.fasta",
+            "bytes": 1711,
+            "record_count": 20,
+            "sha256": "53462b3585699a2710dedec6646716a871262565f8d7c48a70495caba9727eea"
+          },
+          "return_code": 0,
+          "status": "COMPLETED"
+        },
         "case_id": "development-m25-02",
         "configuration_A": {
           "candidates": [
@@ -5833,6 +5853,8 @@
           }
         },
         "eligible_reads_sha256": "c8d94e0582de1816d5ed02aace5cd5261d754cd8b53f4bc950f4b7b222c3f1c9",
+        "execution_reason": null,
+        "execution_status": "COMPLETED",
         "experimental_configuration_B": {
           "assembly_graph": {
             "branch_segment_count": 20,
@@ -5852,6 +5874,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "734b904896c4f0f509911d2f2c3adfa736ab6e077b63aaea4778fc468fcd9349",
               "target_coverage": 0.07444444444444444
             },
@@ -5860,6 +5890,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "ea2154d63ae578ea318f6a5589553e1e5b673a504465e1cd76b061629ee04717",
               "target_coverage": 0.07444444444444444
             },
@@ -5868,6 +5906,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "2b45344df1b9ccf2d7ab1ea08189f64996c95c3d681102e282a2401b2ad9ec43",
               "target_coverage": 0.07444444444444444
             },
@@ -5876,6 +5922,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "4d5ca7af59fff45b27f702dd36fc1b433155d71b7d9ee37c89638ee5fe829c99",
               "target_coverage": 0.07444444444444444
             },
@@ -5884,6 +5938,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "2dd9074cd7cdd6513616d1cf574a8f2a0354eb4df17d3145631bd29c0759f2bd",
               "target_coverage": 0.07444444444444444
             },
@@ -5892,6 +5954,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "60eff021808753ac71f799f3e5f1e60f900969f4950813a4bcb675935cf7f404",
               "target_coverage": 0.07444444444444444
             },
@@ -5900,6 +5970,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "0f24a9cc094eb2f0b38943f8148bc193b4cd4ebaccb078eec565485b989a138d",
               "target_coverage": 0.07444444444444444
             },
@@ -5908,6 +5986,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "5a206070c516d305099ccd6b8861344e44705df1c56e9154a7773abee097271b",
               "target_coverage": 0.07444444444444444
             },
@@ -5916,6 +6002,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "15e93f25d118705c1547bcf30e36694b70a1cfc4a1579c43659bf28169f4acde",
               "target_coverage": 0.07444444444444444
             },
@@ -5924,6 +6018,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "ed71a20bdb7dc522ee310d76685bb11a5dcbcaaf17f1e35738556e3e1de92be3",
               "target_coverage": 0.07444444444444444
             },
@@ -5932,6 +6034,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "1816ec9a1c2fbfeb729369bf8e9913dc25da4ba1ef45e6643202ca7a99720e3f",
               "target_coverage": 0.03777777777777778
             },
@@ -5940,6 +6050,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "7e831e16daf8be88b3bd7889eda362abb45c49b7d21a2b0b3f116a0dbca721e0",
               "target_coverage": 0.03777777777777778
             },
@@ -5948,6 +6066,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "f31750ce63166345684e46b22aa785953b62482cdbe8fd2ff9364147498fd54d",
               "target_coverage": 0.03777777777777778
             },
@@ -5956,6 +6082,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "b2ab88320238ec4c1d8ae07ad7087b8dba9eea141b60a69a342dd00873d45e89",
               "target_coverage": 0.03777777777777778
             },
@@ -5964,6 +6098,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "9a18531bbcb93ec18eb6c6929f79a4120c4798b792ab8096e1232ca41a37c3f1",
               "target_coverage": 0.03777777777777778
             },
@@ -5972,6 +6114,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "723b6c3aa3650d17511c8e497b151bd6ec382ce834f22978cd729406c1177b2c",
               "target_coverage": 0.03777777777777778
             },
@@ -5980,6 +6130,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "cbd44bf0abaf500ff80d36d37a62d82a6fa460b722d5d4b2cc1b6ebada2b443f",
               "target_coverage": 0.03777777777777778
             },
@@ -5988,6 +6146,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "e821a0f44887a50b93588fb853c66aab6617b8c0c30768fbafe2add244aed9aa",
               "target_coverage": 0.03777777777777778
             },
@@ -5996,6 +6162,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "729972b7baabd28b993f630a1adca6ea1e902bba4dc952ded6dde9dc5b37689c",
               "target_coverage": 0.03777777777777778
             },
@@ -6004,10 +6178,190 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "3a7156d4b136bdaf39f91cc01a5361d7dbc87406c9588cf771d594662143c437",
               "target_coverage": 0.03777777777777778
             }
           ],
+          "execution_status": "COMPLETED",
+          "label": "experimental only; explicit k=21,33",
+          "output_sha256": "53462b3585699a2710dedec6646716a871262565f8d7c48a70495caba9727eea",
+          "parameters": [
+            "--only-assembler",
+            "-t",
+            "1",
+            "-m",
+            "2",
+            "-k",
+            "21,33"
+          ],
+          "read_support": {
+            "aggregate_status": "NO_SUPPORTED_ASSEMBLY",
+            "candidates_by_support": {
+              "low_support": [],
+              "supported": [],
+              "unsupported": [
+                {
+                  "contig_id": "NODE_1_length_67_cov_47.470588",
+                  "length": 67,
+                  "sequence_sha256": "734b904896c4f0f509911d2f2c3adfa736ab6e077b63aaea4778fc468fcd9349",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_2_length_67_cov_44.000000",
+                  "length": 67,
+                  "sequence_sha256": "ea2154d63ae578ea318f6a5589553e1e5b673a504465e1cd76b061629ee04717",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_3_length_67_cov_41.500000",
+                  "length": 67,
+                  "sequence_sha256": "2b45344df1b9ccf2d7ab1ea08189f64996c95c3d681102e282a2401b2ad9ec43",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_4_length_67_cov_39.882353",
+                  "length": 67,
+                  "sequence_sha256": "4d5ca7af59fff45b27f702dd36fc1b433155d71b7d9ee37c89638ee5fe829c99",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_5_length_67_cov_39.441176",
+                  "length": 67,
+                  "sequence_sha256": "2dd9074cd7cdd6513616d1cf574a8f2a0354eb4df17d3145631bd29c0759f2bd",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_6_length_67_cov_38.323529",
+                  "length": 67,
+                  "sequence_sha256": "60eff021808753ac71f799f3e5f1e60f900969f4950813a4bcb675935cf7f404",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_7_length_67_cov_37.852941",
+                  "length": 67,
+                  "sequence_sha256": "0f24a9cc094eb2f0b38943f8148bc193b4cd4ebaccb078eec565485b989a138d",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_8_length_67_cov_35.794118",
+                  "length": 67,
+                  "sequence_sha256": "5a206070c516d305099ccd6b8861344e44705df1c56e9154a7773abee097271b",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_9_length_67_cov_35.588235",
+                  "length": 67,
+                  "sequence_sha256": "15e93f25d118705c1547bcf30e36694b70a1cfc4a1579c43659bf28169f4acde",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_10_length_67_cov_34.441176",
+                  "length": 67,
+                  "sequence_sha256": "ed71a20bdb7dc522ee310d76685bb11a5dcbcaaf17f1e35738556e3e1de92be3",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_11_length_34_cov_1245.000000",
+                  "length": 34,
+                  "sequence_sha256": "1816ec9a1c2fbfeb729369bf8e9913dc25da4ba1ef45e6643202ca7a99720e3f",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_12_length_34_cov_1243.000000",
+                  "length": 34,
+                  "sequence_sha256": "7e831e16daf8be88b3bd7889eda362abb45c49b7d21a2b0b3f116a0dbca721e0",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_13_length_34_cov_1242.000000",
+                  "length": 34,
+                  "sequence_sha256": "f31750ce63166345684e46b22aa785953b62482cdbe8fd2ff9364147498fd54d",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_14_length_34_cov_1242.000000",
+                  "length": 34,
+                  "sequence_sha256": "b2ab88320238ec4c1d8ae07ad7087b8dba9eea141b60a69a342dd00873d45e89",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_15_length_34_cov_1241.000000",
+                  "length": 34,
+                  "sequence_sha256": "9a18531bbcb93ec18eb6c6929f79a4120c4798b792ab8096e1232ca41a37c3f1",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_16_length_34_cov_1241.000000",
+                  "length": 34,
+                  "sequence_sha256": "723b6c3aa3650d17511c8e497b151bd6ec382ce834f22978cd729406c1177b2c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_17_length_34_cov_1240.000000",
+                  "length": 34,
+                  "sequence_sha256": "cbd44bf0abaf500ff80d36d37a62d82a6fa460b722d5d4b2cc1b6ebada2b443f",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_18_length_34_cov_1236.000000",
+                  "length": 34,
+                  "sequence_sha256": "e821a0f44887a50b93588fb853c66aab6617b8c0c30768fbafe2add244aed9aa",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_19_length_34_cov_1229.000000",
+                  "length": 34,
+                  "sequence_sha256": "729972b7baabd28b993f630a1adca6ea1e902bba4dc952ded6dde9dc5b37689c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_20_length_34_cov_1228.000000",
+                  "length": 34,
+                  "sequence_sha256": "3a7156d4b136bdaf39f91cc01a5361d7dbc87406c9588cf771d594662143c437",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                }
+              ]
+            },
+            "contig_status_counts": {
+              "UNSUPPORTED_ASSEMBLY": 20
+            },
+            "mapper_execution": {
+              "contigs_sha256": "53462b3585699a2710dedec6646716a871262565f8d7c48a70495caba9727eea",
+              "duration_seconds": 0.13741018600001098,
+              "executable": "/nix/store/3x61hwiabb2qbxpkfgc0mjsmmm4wpi20-minimap2-2.29/bin/minimap2",
+              "input_reads_sha256": "c8d94e0582de1816d5ed02aace5cd5261d754cd8b53f4bc950f4b7b222c3f1c9",
+              "query_count": 432,
+              "return_code": 0,
+              "sam_sha256": "82961fdee5dd260efdf60ae9db6e74f83ca3047e5c50a07c283a1bcb7fe3257f",
+              "stderr_sha256": "250294dbbc04ebd8844e7bc6f6d2e43c46d899efcd0a30a8fb8fa72b5bf55c40",
+              "thresholds": {
+                "coverage_window_size": 100,
+                "min_alignment_fraction": 0.8,
+                "min_coverage_breadth": 0.8,
+                "min_distinct_fragments": 2,
+                "min_mapq": 20,
+                "min_mean_depth": 2,
+                "min_sequence_identity": 0.95
+              }
+            },
+            "status": "EVALUATED"
+          },
+          "return_code": 0
+        },
+        "input_manifest_sha256": "0dac74b416d8dd497a1c01a8b8afa343c1ff6a2c46f6222375c766048fd70718",
+        "split": "development",
+        "status": "COMPLETE"
+      },
+      {
+        "assembler_execution": {
           "command_parameters": [
             "--only-assembler",
             "-t",
@@ -6017,25 +6371,16 @@
             "-k",
             "21,33"
           ],
-          "contigs_sha256": "53462b3585699a2710dedec6646716a871262565f8d7c48a70495caba9727eea",
-          "explicit_kmer_values": [
-            21,
-            33
-          ],
-          "label": "experimental only; explicit k=21,33",
-          "memory_mb": 2048,
-          "params_txt_sha256": "10957028d67d2ae63a17867b7ac02c70d4d47abea346be794279e33dd92eed45",
-          "read_back_support_evaluation": "NOT_PERFORMED",
+          "duration_seconds": 0.5154174309999462,
+          "output": {
+            "artifact_name": "contigs.fasta",
+            "bytes": 1711,
+            "record_count": 20,
+            "sha256": "eea91791522f1d1b7f64c1c3781ef7b3a83f08063ca690522fc855953fe29eb2"
+          },
           "return_code": 0,
-          "spades_log_sha256": "aec4e4b10f82f194df2a181d06fccb401097264e38f83cc3545dd0eb5a4047f8",
-          "spades_version": "4.1.0",
-          "threads": 1
+          "status": "COMPLETED"
         },
-        "input_manifest_sha256": "0dac74b416d8dd497a1c01a8b8afa343c1ff6a2c46f6222375c766048fd70718",
-        "split": "development",
-        "status": "COMPLETE"
-      },
-      {
         "case_id": "tuning-m25-02",
         "configuration_A": {
           "candidates": [
@@ -6209,6 +6554,8 @@
           }
         },
         "eligible_reads_sha256": "8c99bd5ed7ed5c25971181082c7f1d92a8999d0dabfdc0e4b8fd90871967b87f",
+        "execution_reason": null,
+        "execution_status": "COMPLETED",
         "experimental_configuration_B": {
           "assembly_graph": {
             "branch_segment_count": 20,
@@ -6228,6 +6575,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "9d3088ba6349605047d9a55b82342d27ade8b5ff22eecf31b11aa482f44bcb1b",
               "target_coverage": 0.047857142857142855
             },
@@ -6236,6 +6591,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "4f97c90d8b7af89c60f4b52675bdf04a1bcaf36755a709c99558cc3e3407e0ae",
               "target_coverage": 0.047857142857142855
             },
@@ -6244,6 +6607,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "caca64641959e9a5cc4d4149029bb6d30e1627ff76dd720c0657a7d01351e794",
               "target_coverage": 0.047857142857142855
             },
@@ -6252,6 +6623,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "15e93f25d118705c1547bcf30e36694b70a1cfc4a1579c43659bf28169f4acde",
               "target_coverage": 0.047857142857142855
             },
@@ -6260,6 +6639,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "734b904896c4f0f509911d2f2c3adfa736ab6e077b63aaea4778fc468fcd9349",
               "target_coverage": 0.047857142857142855
             },
@@ -6268,6 +6655,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "14af4f4b9d0884dcf09ba06b1a7fed44737bf6f51f6dccc89cef2e3e0e272862",
               "target_coverage": 0.047857142857142855
             },
@@ -6276,6 +6671,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "60eff021808753ac71f799f3e5f1e60f900969f4950813a4bcb675935cf7f404",
               "target_coverage": 0.047857142857142855
             },
@@ -6284,6 +6687,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "5adf23786724efb510a5d3074d8bd8f5c564dbbe85b86172205bed638ff9bc79",
               "target_coverage": 0.047857142857142855
             },
@@ -6292,6 +6703,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "0f24a9cc094eb2f0b38943f8148bc193b4cd4ebaccb078eec565485b989a138d",
               "target_coverage": 0.047857142857142855
             },
@@ -6300,6 +6719,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.047857142857142855,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "5a206070c516d305099ccd6b8861344e44705df1c56e9154a7773abee097271b",
               "target_coverage": 0.047857142857142855
             },
@@ -6308,6 +6735,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "723b6c3aa3650d17511c8e497b151bd6ec382ce834f22978cd729406c1177b2c",
               "target_coverage": 0.024285714285714285
             },
@@ -6316,6 +6751,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "cbd44bf0abaf500ff80d36d37a62d82a6fa460b722d5d4b2cc1b6ebada2b443f",
               "target_coverage": 0.024285714285714285
             },
@@ -6324,6 +6767,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "1816ec9a1c2fbfeb729369bf8e9913dc25da4ba1ef45e6643202ca7a99720e3f",
               "target_coverage": 0.024285714285714285
             },
@@ -6332,6 +6783,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "f31750ce63166345684e46b22aa785953b62482cdbe8fd2ff9364147498fd54d",
               "target_coverage": 0.024285714285714285
             },
@@ -6340,6 +6799,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "b2ab88320238ec4c1d8ae07ad7087b8dba9eea141b60a69a342dd00873d45e89",
               "target_coverage": 0.024285714285714285
             },
@@ -6348,6 +6815,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "3a7156d4b136bdaf39f91cc01a5361d7dbc87406c9588cf771d594662143c437",
               "target_coverage": 0.024285714285714285
             },
@@ -6356,6 +6831,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "e821a0f44887a50b93588fb853c66aab6617b8c0c30768fbafe2add244aed9aa",
               "target_coverage": 0.024285714285714285
             },
@@ -6364,6 +6847,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "729972b7baabd28b993f630a1adca6ea1e902bba4dc952ded6dde9dc5b37689c",
               "target_coverage": 0.024285714285714285
             },
@@ -6372,6 +6863,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "9a18531bbcb93ec18eb6c6929f79a4120c4798b792ab8096e1232ca41a37c3f1",
               "target_coverage": 0.024285714285714285
             },
@@ -6380,10 +6879,190 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.024285714285714285,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "7e831e16daf8be88b3bd7889eda362abb45c49b7d21a2b0b3f116a0dbca721e0",
               "target_coverage": 0.024285714285714285
             }
           ],
+          "execution_status": "COMPLETED",
+          "label": "experimental only; explicit k=21,33",
+          "output_sha256": "eea91791522f1d1b7f64c1c3781ef7b3a83f08063ca690522fc855953fe29eb2",
+          "parameters": [
+            "--only-assembler",
+            "-t",
+            "1",
+            "-m",
+            "2",
+            "-k",
+            "21,33"
+          ],
+          "read_support": {
+            "aggregate_status": "NO_SUPPORTED_ASSEMBLY",
+            "candidates_by_support": {
+              "low_support": [],
+              "supported": [],
+              "unsupported": [
+                {
+                  "contig_id": "NODE_1_length_67_cov_66.558824",
+                  "length": 67,
+                  "sequence_sha256": "9d3088ba6349605047d9a55b82342d27ade8b5ff22eecf31b11aa482f44bcb1b",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_2_length_67_cov_65.235294",
+                  "length": 67,
+                  "sequence_sha256": "4f97c90d8b7af89c60f4b52675bdf04a1bcaf36755a709c99558cc3e3407e0ae",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_3_length_67_cov_62.705882",
+                  "length": 67,
+                  "sequence_sha256": "caca64641959e9a5cc4d4149029bb6d30e1627ff76dd720c0657a7d01351e794",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_4_length_67_cov_61.705882",
+                  "length": 67,
+                  "sequence_sha256": "15e93f25d118705c1547bcf30e36694b70a1cfc4a1579c43659bf28169f4acde",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_5_length_67_cov_59.500000",
+                  "length": 67,
+                  "sequence_sha256": "734b904896c4f0f509911d2f2c3adfa736ab6e077b63aaea4778fc468fcd9349",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_6_length_67_cov_56.764706",
+                  "length": 67,
+                  "sequence_sha256": "14af4f4b9d0884dcf09ba06b1a7fed44737bf6f51f6dccc89cef2e3e0e272862",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_7_length_67_cov_55.176471",
+                  "length": 67,
+                  "sequence_sha256": "60eff021808753ac71f799f3e5f1e60f900969f4950813a4bcb675935cf7f404",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_8_length_67_cov_53.205882",
+                  "length": 67,
+                  "sequence_sha256": "5adf23786724efb510a5d3074d8bd8f5c564dbbe85b86172205bed638ff9bc79",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_9_length_67_cov_51.676471",
+                  "length": 67,
+                  "sequence_sha256": "0f24a9cc094eb2f0b38943f8148bc193b4cd4ebaccb078eec565485b989a138d",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_10_length_67_cov_50.647059",
+                  "length": 67,
+                  "sequence_sha256": "5a206070c516d305099ccd6b8861344e44705df1c56e9154a7773abee097271b",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_11_length_34_cov_1989.000000",
+                  "length": 34,
+                  "sequence_sha256": "723b6c3aa3650d17511c8e497b151bd6ec382ce834f22978cd729406c1177b2c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_12_length_34_cov_1985.000000",
+                  "length": 34,
+                  "sequence_sha256": "cbd44bf0abaf500ff80d36d37a62d82a6fa460b722d5d4b2cc1b6ebada2b443f",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_13_length_34_cov_1982.000000",
+                  "length": 34,
+                  "sequence_sha256": "1816ec9a1c2fbfeb729369bf8e9913dc25da4ba1ef45e6643202ca7a99720e3f",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_14_length_34_cov_1979.000000",
+                  "length": 34,
+                  "sequence_sha256": "f31750ce63166345684e46b22aa785953b62482cdbe8fd2ff9364147498fd54d",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_15_length_34_cov_1977.000000",
+                  "length": 34,
+                  "sequence_sha256": "b2ab88320238ec4c1d8ae07ad7087b8dba9eea141b60a69a342dd00873d45e89",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_16_length_34_cov_1976.000000",
+                  "length": 34,
+                  "sequence_sha256": "3a7156d4b136bdaf39f91cc01a5361d7dbc87406c9588cf771d594662143c437",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_17_length_34_cov_1973.000000",
+                  "length": 34,
+                  "sequence_sha256": "e821a0f44887a50b93588fb853c66aab6617b8c0c30768fbafe2add244aed9aa",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_18_length_34_cov_1972.000000",
+                  "length": 34,
+                  "sequence_sha256": "729972b7baabd28b993f630a1adca6ea1e902bba4dc952ded6dde9dc5b37689c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_19_length_34_cov_1971.000000",
+                  "length": 34,
+                  "sequence_sha256": "9a18531bbcb93ec18eb6c6929f79a4120c4798b792ab8096e1232ca41a37c3f1",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_20_length_34_cov_1971.000000",
+                  "length": 34,
+                  "sequence_sha256": "7e831e16daf8be88b3bd7889eda362abb45c49b7d21a2b0b3f116a0dbca721e0",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                }
+              ]
+            },
+            "contig_status_counts": {
+              "UNSUPPORTED_ASSEMBLY": 20
+            },
+            "mapper_execution": {
+              "contigs_sha256": "eea91791522f1d1b7f64c1c3781ef7b3a83f08063ca690522fc855953fe29eb2",
+              "duration_seconds": 0.08205969700009064,
+              "executable": "/nix/store/3x61hwiabb2qbxpkfgc0mjsmmm4wpi20-minimap2-2.29/bin/minimap2",
+              "input_reads_sha256": "8c99bd5ed7ed5c25971181082c7f1d92a8999d0dabfdc0e4b8fd90871967b87f",
+              "query_count": 671,
+              "return_code": 0,
+              "sam_sha256": "118404d401f7128c99a2ee4265c3cc0681c497a409086013cc30bc63b6b37a47",
+              "stderr_sha256": "e906d15d24cad108428305d46af7efb041654ce3fdbdfd6bc70273bf934138c6",
+              "thresholds": {
+                "coverage_window_size": 100,
+                "min_alignment_fraction": 0.8,
+                "min_coverage_breadth": 0.8,
+                "min_distinct_fragments": 2,
+                "min_mapq": 20,
+                "min_mean_depth": 2,
+                "min_sequence_identity": 0.95
+              }
+            },
+            "status": "EVALUATED"
+          },
+          "return_code": 0
+        },
+        "input_manifest_sha256": "71db2dfa93bbb36998aa1faebf8af172d9e3275c2e157da15c60f69b994a6bc2",
+        "split": "tuning",
+        "status": "COMPLETE"
+      },
+      {
+        "assembler_execution": {
           "command_parameters": [
             "--only-assembler",
             "-t",
@@ -6393,25 +7072,16 @@
             "-k",
             "21,33"
           ],
-          "contigs_sha256": "eea91791522f1d1b7f64c1c3781ef7b3a83f08063ca690522fc855953fe29eb2",
-          "explicit_kmer_values": [
-            21,
-            33
-          ],
-          "label": "experimental only; explicit k=21,33",
-          "memory_mb": 2048,
-          "params_txt_sha256": "8e97db5172c3896846922eb53a13052e03540360d88645fdf15d74cd698d025c",
-          "read_back_support_evaluation": "NOT_PERFORMED",
+          "duration_seconds": 0.5687672909999719,
+          "output": {
+            "artifact_name": "contigs.fasta",
+            "bytes": 1711,
+            "record_count": 20,
+            "sha256": "eb82fbc4d577dbe405c68f5160ebb0e70790bf7437f669c8ea0ad79f6da3ddbf"
+          },
           "return_code": 0,
-          "spades_log_sha256": "b263e3cd8bb19fc1305bbb78aecdf124bc7f777d54f4f6ef030ebe3ea63b84ca",
-          "spades_version": "4.1.0",
-          "threads": 1
+          "status": "COMPLETED"
         },
-        "input_manifest_sha256": "71db2dfa93bbb36998aa1faebf8af172d9e3275c2e157da15c60f69b994a6bc2",
-        "split": "tuning",
-        "status": "COMPLETE"
-      },
-      {
         "case_id": "held_out-m25-02",
         "configuration_A": {
           "candidates": [
@@ -6585,6 +7255,8 @@
           }
         },
         "eligible_reads_sha256": "0d146c022dfbef70591898268347bf0c2f4acfc765e8e8a32a65873d28db3c9e",
+        "execution_reason": null,
+        "execution_status": "COMPLETED",
         "experimental_configuration_B": {
           "assembly_graph": {
             "branch_segment_count": 20,
@@ -6604,6 +7276,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "59997690ea698fa2b9dc18a26c53bd62f22adc58be440c0a34cb1f6b9d8e0122",
               "target_coverage": 0.07444444444444444
             },
@@ -6612,6 +7292,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "58a9919cafb99e460e461b63edc434cc815db0ba13c4d5d12e73760494b0d8dc",
               "target_coverage": 0.07444444444444444
             },
@@ -6620,6 +7308,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "de377e44c280f3cee5b98059780d61fc88f8caa536910df394dedadad971a8fa",
               "target_coverage": 0.07444444444444444
             },
@@ -6628,6 +7324,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "14af4f4b9d0884dcf09ba06b1a7fed44737bf6f51f6dccc89cef2e3e0e272862",
               "target_coverage": 0.07444444444444444
             },
@@ -6636,6 +7340,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "353d37eeb3d8fe017cfd9c03b94f945d7b728faf0dbcf292b566b820c4ea01a6",
               "target_coverage": 0.07444444444444444
             },
@@ -6644,6 +7356,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "95d08ad7390c0433212c8eca8acb8d6353c16400ba8a6f965d362b9f978edbe6",
               "target_coverage": 0.07444444444444444
             },
@@ -6652,6 +7372,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "5a206070c516d305099ccd6b8861344e44705df1c56e9154a7773abee097271b",
               "target_coverage": 0.07444444444444444
             },
@@ -6660,6 +7388,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "7bdf324e44b83c029465579ac7441ddb65a5c05aab5318ade24e676bc1b0d76c",
               "target_coverage": 0.07444444444444444
             },
@@ -6668,6 +7404,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "ac20d2f443c11d618ef23d308a2562b80878652f4329b8bbd31fc8b2b0d2ad85",
               "target_coverage": 0.07444444444444444
             },
@@ -6676,6 +7420,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.07444444444444444,
               "length": 67,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "ed71a20bdb7dc522ee310d76685bb11a5dcbcaaf17f1e35738556e3e1de92be3",
               "target_coverage": 0.07444444444444444
             },
@@ -6684,6 +7436,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "7e831e16daf8be88b3bd7889eda362abb45c49b7d21a2b0b3f116a0dbca721e0",
               "target_coverage": 0.03777777777777778
             },
@@ -6692,6 +7452,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "b2ab88320238ec4c1d8ae07ad7087b8dba9eea141b60a69a342dd00873d45e89",
               "target_coverage": 0.03777777777777778
             },
@@ -6700,6 +7468,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "9a18531bbcb93ec18eb6c6929f79a4120c4798b792ab8096e1232ca41a37c3f1",
               "target_coverage": 0.03777777777777778
             },
@@ -6708,6 +7484,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "e821a0f44887a50b93588fb853c66aab6617b8c0c30768fbafe2add244aed9aa",
               "target_coverage": 0.03777777777777778
             },
@@ -6716,6 +7500,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "3a7156d4b136bdaf39f91cc01a5361d7dbc87406c9588cf771d594662143c437",
               "target_coverage": 0.03777777777777778
             },
@@ -6724,6 +7516,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "1816ec9a1c2fbfeb729369bf8e9913dc25da4ba1ef45e6643202ca7a99720e3f",
               "target_coverage": 0.03777777777777778
             },
@@ -6732,6 +7532,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "723b6c3aa3650d17511c8e497b151bd6ec382ce834f22978cd729406c1177b2c",
               "target_coverage": 0.03777777777777778
             },
@@ -6740,6 +7548,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "729972b7baabd28b993f630a1adca6ea1e902bba4dc952ded6dde9dc5b37689c",
               "target_coverage": 0.03777777777777778
             },
@@ -6748,6 +7564,14 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "cbd44bf0abaf500ff80d36d37a62d82a6fa460b722d5d4b2cc1b6ebada2b443f",
               "target_coverage": 0.03777777777777778
             },
@@ -6756,11 +7580,22 @@
               "exact_recovery": false,
               "full_length_sequence_identity": 0.03777777777777778,
               "length": 34,
+              "read_support": {
+                "coverage_breadth": 0,
+                "distinct_fragment_count": 0,
+                "distinct_sequence_count": 0,
+                "mean_depth": 0,
+                "status": "UNSUPPORTED_ASSEMBLY",
+                "supporting_read_count": 0
+              },
               "sequence_sha256": "f31750ce63166345684e46b22aa785953b62482cdbe8fd2ff9364147498fd54d",
               "target_coverage": 0.03777777777777778
             }
           ],
-          "command_parameters": [
+          "execution_status": "COMPLETED",
+          "label": "experimental only; explicit k=21,33",
+          "output_sha256": "eb82fbc4d577dbe405c68f5160ebb0e70790bf7437f669c8ea0ad79f6da3ddbf",
+          "parameters": [
             "--only-assembler",
             "-t",
             "1",
@@ -6769,19 +7604,159 @@
             "-k",
             "21,33"
           ],
-          "contigs_sha256": "eb82fbc4d577dbe405c68f5160ebb0e70790bf7437f669c8ea0ad79f6da3ddbf",
-          "explicit_kmer_values": [
-            21,
-            33
-          ],
-          "label": "experimental only; explicit k=21,33",
-          "memory_mb": 2048,
-          "params_txt_sha256": "77cb02ad8411497ec6376e225bcf42202b22c885de807fc674730bbdadafebc0",
-          "read_back_support_evaluation": "NOT_PERFORMED",
-          "return_code": 0,
-          "spades_log_sha256": "d7438a706186892c898a2c3123436cf84e4ffcd3629f877537fd5361face3a65",
-          "spades_version": "4.1.0",
-          "threads": 1
+          "read_support": {
+            "aggregate_status": "NO_SUPPORTED_ASSEMBLY",
+            "candidates_by_support": {
+              "low_support": [],
+              "supported": [],
+              "unsupported": [
+                {
+                  "contig_id": "NODE_1_length_67_cov_46.088235",
+                  "length": 67,
+                  "sequence_sha256": "59997690ea698fa2b9dc18a26c53bd62f22adc58be440c0a34cb1f6b9d8e0122",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_2_length_67_cov_44.794118",
+                  "length": 67,
+                  "sequence_sha256": "58a9919cafb99e460e461b63edc434cc815db0ba13c4d5d12e73760494b0d8dc",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_3_length_67_cov_44.705882",
+                  "length": 67,
+                  "sequence_sha256": "de377e44c280f3cee5b98059780d61fc88f8caa536910df394dedadad971a8fa",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_4_length_67_cov_43.970588",
+                  "length": 67,
+                  "sequence_sha256": "14af4f4b9d0884dcf09ba06b1a7fed44737bf6f51f6dccc89cef2e3e0e272862",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_5_length_67_cov_39.617647",
+                  "length": 67,
+                  "sequence_sha256": "353d37eeb3d8fe017cfd9c03b94f945d7b728faf0dbcf292b566b820c4ea01a6",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_6_length_67_cov_39.176471",
+                  "length": 67,
+                  "sequence_sha256": "95d08ad7390c0433212c8eca8acb8d6353c16400ba8a6f965d362b9f978edbe6",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_7_length_67_cov_36.411765",
+                  "length": 67,
+                  "sequence_sha256": "5a206070c516d305099ccd6b8861344e44705df1c56e9154a7773abee097271b",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_8_length_67_cov_36.235294",
+                  "length": 67,
+                  "sequence_sha256": "7bdf324e44b83c029465579ac7441ddb65a5c05aab5318ade24e676bc1b0d76c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_9_length_67_cov_32.735294",
+                  "length": 67,
+                  "sequence_sha256": "ac20d2f443c11d618ef23d308a2562b80878652f4329b8bbd31fc8b2b0d2ad85",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_10_length_67_cov_32.088235",
+                  "length": 67,
+                  "sequence_sha256": "ed71a20bdb7dc522ee310d76685bb11a5dcbcaaf17f1e35738556e3e1de92be3",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_11_length_34_cov_1248.000000",
+                  "length": 34,
+                  "sequence_sha256": "7e831e16daf8be88b3bd7889eda362abb45c49b7d21a2b0b3f116a0dbca721e0",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_12_length_34_cov_1244.000000",
+                  "length": 34,
+                  "sequence_sha256": "b2ab88320238ec4c1d8ae07ad7087b8dba9eea141b60a69a342dd00873d45e89",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_13_length_34_cov_1241.000000",
+                  "length": 34,
+                  "sequence_sha256": "9a18531bbcb93ec18eb6c6929f79a4120c4798b792ab8096e1232ca41a37c3f1",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_14_length_34_cov_1239.000000",
+                  "length": 34,
+                  "sequence_sha256": "e821a0f44887a50b93588fb853c66aab6617b8c0c30768fbafe2add244aed9aa",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_15_length_34_cov_1231.000000",
+                  "length": 34,
+                  "sequence_sha256": "3a7156d4b136bdaf39f91cc01a5361d7dbc87406c9588cf771d594662143c437",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_16_length_34_cov_1229.000000",
+                  "length": 34,
+                  "sequence_sha256": "1816ec9a1c2fbfeb729369bf8e9913dc25da4ba1ef45e6643202ca7a99720e3f",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_17_length_34_cov_1229.000000",
+                  "length": 34,
+                  "sequence_sha256": "723b6c3aa3650d17511c8e497b151bd6ec382ce834f22978cd729406c1177b2c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_18_length_34_cov_1227.000000",
+                  "length": 34,
+                  "sequence_sha256": "729972b7baabd28b993f630a1adca6ea1e902bba4dc952ded6dde9dc5b37689c",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_19_length_34_cov_1222.000000",
+                  "length": 34,
+                  "sequence_sha256": "cbd44bf0abaf500ff80d36d37a62d82a6fa460b722d5d4b2cc1b6ebada2b443f",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                },
+                {
+                  "contig_id": "NODE_20_length_34_cov_1218.000000",
+                  "length": 34,
+                  "sequence_sha256": "f31750ce63166345684e46b22aa785953b62482cdbe8fd2ff9364147498fd54d",
+                  "status": "UNSUPPORTED_ASSEMBLY"
+                }
+              ]
+            },
+            "contig_status_counts": {
+              "UNSUPPORTED_ASSEMBLY": 20
+            },
+            "mapper_execution": {
+              "contigs_sha256": "eb82fbc4d577dbe405c68f5160ebb0e70790bf7437f669c8ea0ad79f6da3ddbf",
+              "duration_seconds": 0.04996032999997624,
+              "executable": "/nix/store/3x61hwiabb2qbxpkfgc0mjsmmm4wpi20-minimap2-2.29/bin/minimap2",
+              "input_reads_sha256": "0d146c022dfbef70591898268347bf0c2f4acfc765e8e8a32a65873d28db3c9e",
+              "query_count": 427,
+              "return_code": 0,
+              "sam_sha256": "0e1337080522ca80c0bc97f97b5b9583680ae87bf5823f95549a44eb97c64b7f",
+              "stderr_sha256": "f2013ece92f949d7b0c292e9e71aa535a7a961f9a49107bef199d5b63e2f21e3",
+              "thresholds": {
+                "coverage_window_size": 100,
+                "min_alignment_fraction": 0.8,
+                "min_coverage_breadth": 0.8,
+                "min_distinct_fragments": 2,
+                "min_mapq": 20,
+                "min_mean_depth": 2,
+                "min_sequence_identity": 0.95
+              }
+            },
+            "status": "EVALUATED"
+          },
+          "return_code": 0
         },
         "input_manifest_sha256": "ec7fb8388b9559e2f73bf5116b14f6200744650e3fda6a2321f6c46b0511d6f1",
         "split": "held_out",
@@ -6791,8 +7766,8 @@
     "status": "COMPLETE"
   },
   "controlled_experiments": {
-    "reason": "Standalone contigs were truth-scored retrospectively; read-back support was not evaluated.",
-    "status": "THREE_PARTITION_COMPARISON"
+    "reason": "Execution and read-back outcomes are derived from persisted partition-level evidence in controlled_experiment.",
+    "status": "COMPLETE"
   },
   "external_biological_references_used": false,
   "governance": {
@@ -6804,57 +7779,17 @@
     "basis": "Counts are parsed from preserved SPAdes GFA files; missing graph files remain unavailable, not inferred.",
     "status": "AVAILABLE_FOR_SOME_COMPLETED_ASSEMBLIES"
   },
-  "historical_crosschecks": {
-    "m25_positive_cases": 9,
-    "m25_target_absent_controls": 9,
-    "m26_sam_validation_failures_after_fix": 0,
-    "m27_lower_entropy_exact_or_partial_recoveries": 0,
+  "historical_evidence": {
+    "note": "Prior report claims are historical evidence; their original run outputs are not included in this checkout.",
     "source_documents": [
       "docs/M25_SYNTHETIC_READ_COVERAGE.md",
       "docs/M26_SAM_VALIDATION_CANDIDATE_EVIDENCE.md",
       "docs/M27_LOW_COMPLEXITY_TRIAGE_VALIDATION.md"
-    ]
+    ],
+    "status": "DOCUMENTED_NOT_INDEPENDENTLY_REVERIFIED"
   },
   "m20_integration": {
-    "stages": {
-      "phase2b": {
-        "biological_discovery_status": null,
-        "case_count": 10,
-        "decision": null,
-        "deterministic_semantic_outcomes_sha256": null,
-        "schema": "m20-phase2b-report-v2",
-        "software_integration_status": null,
-        "status": "COMPLETE"
-      },
-      "phase3": {
-        "biological_discovery_status": null,
-        "case_count": 10,
-        "decision": null,
-        "deterministic_semantic_outcomes_sha256": null,
-        "schema": "m20-phase3-report-v1",
-        "software_integration_status": null,
-        "status": "COMPLETE"
-      },
-      "phase4": {
-        "biological_discovery_status": null,
-        "case_count": 10,
-        "decision": null,
-        "deterministic_semantic_outcomes_sha256": "5d3e04b5d6f8265210635ea434b079e2e399c0e94b4f6a6d528666e5dce4c996",
-        "schema": "m20-phase4-report-v1",
-        "software_integration_status": null,
-        "status": "COMPLETE"
-      },
-      "phase5": {
-        "biological_discovery_status": "NOT_VALIDATED",
-        "case_count": 10,
-        "decision": "SOFTWARE_INTEGRATION_VALIDATED_BIOLOGICAL_DISCOVERY_NOT_VALIDATED",
-        "deterministic_semantic_outcomes_sha256": null,
-        "schema": "m20-phase5-release-readiness-v1",
-        "software_integration_status": "VALIDATED",
-        "status": null
-      }
-    },
-    "status": "COMPLETE"
+    "status": "NOT_SUPPLIED"
   },
   "promotion_decision": "RETAIN_EXISTING_PRODUCTION_DEFAULT",
   "schema": "m28-synthetic-assembly-diagnostics-v1",
@@ -6879,28 +7814,7 @@
   },
   "synthetic_only": true,
   "verification": {
-    "full_repository_discovery": {
-      "failed": 0,
-      "passed": 1090,
-      "run": 1111,
-      "skipped": 21,
-      "status": "PASSED"
-    },
-    "github_actions": {
-      "status": "RUNNING_AT_REPORT_GENERATION",
-      "tracking": "Draft PR checks are authoritative for the final pushed head."
-    },
-    "m20_phase2b_to_phase5_tests": {
-      "passed": 34,
-      "status": "PASSED"
-    },
-    "m25_m27_focused_regressions": {
-      "passed": 9,
-      "status": "PASSED"
-    },
-    "m28_focused_tests": {
-      "passed": 3,
-      "status": "PASSED"
-    }
+    "note": "Test and CI outcomes must be taken from current test output and final PR-head checks; no verification artifacts were supplied to this report generator.",
+    "status": "NOT_RECORDED_IN_REPORT_INPUTS"
   }
 }

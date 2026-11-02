@@ -7,8 +7,12 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
+import shutil
+import subprocess
+import time
 
-from . import assembly_adapters
+from . import artifact_contracts, assembly_adapters, read_support
 from . import m25_read_coverage
 
 SCHEMA = "m28-synthetic-assembly-diagnostics-v1"
@@ -156,6 +160,241 @@ def _graph_summary(stage):
     }
 
 
+def _sha_file(path):
+    return _sha(Path(path).read_bytes())
+
+
+def _fastq_with_metadata(path):
+    opener = gzip.open if str(path).endswith(".gz") else open
+    records, metadata = [], {}
+    with opener(path, "rt", encoding="ascii", newline="") as stream:
+        while True:
+            header = stream.readline()
+            if not header:
+                break
+            sequence, plus, quality = (stream.readline() for _ in range(3))
+            header, sequence, plus, quality = (
+                header.rstrip("\r\n"), sequence.rstrip("\r\n"),
+                plus.rstrip("\r\n"), quality.rstrip("\r\n"),
+            )
+            if (not header.startswith("@") or not plus.startswith("+")
+                    or len(sequence) != len(quality) or not sequence):
+                raise ValueError("Malformed FASTQ input for read-support evaluation")
+            query_id = header[1:].split()[0]
+            if query_id in metadata:
+                raise ValueError("Duplicate FASTQ query ID in read-support input")
+            sequence = sequence.upper()
+            metadata[(query_id, 0)] = {
+                "query_length": len(sequence),
+                "sequence_sha256": _sha(sequence.encode("ascii")),
+                "mean_phred": sum(ord(char) - 33 for char in quality) / len(quality),
+                "ambiguous_fraction": sum(char not in "ACGT" for char in sequence) / len(sequence),
+            }
+            records.append(query_id)
+    if not records:
+        raise ValueError("Read-support evaluation requires non-empty FASTQ input")
+    return records, metadata
+
+
+def _evaluate_experimental_read_support(experiment_dir, reads_path, contigs_path, thresholds):
+    experiment_dir = Path(experiment_dir)
+    mapper = shutil.which("minimap2")
+    result_path = experiment_dir / "read_support.json"
+    if not mapper:
+        result = {"status": "NOT_EVALUATED", "reason": "minimap2 is unavailable"}
+        result_path.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
+        return result
+    records, metadata = _fastq_with_metadata(reads_path)
+    sam_path = experiment_dir / "support_alignments.sam"
+    stderr_path = experiment_dir / "support_mapper.stderr.log"
+    command = [mapper, "-a", "-x", "sr", "-t", "1", str(contigs_path), str(reads_path)]
+    started = time.monotonic()
+    with sam_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+        process = subprocess.run(command, stdout=stdout, stderr=stderr, check=False)
+    mapper_run = {
+        "executable": mapper,
+        "return_code": process.returncode,
+        "duration_seconds": time.monotonic() - started,
+        "sam_sha256": _sha_file(sam_path),
+        "stderr_sha256": _sha_file(stderr_path),
+        "input_reads_sha256": _sha_file(reads_path),
+        "contigs_sha256": _sha_file(contigs_path),
+        "query_count": len(records),
+        "thresholds": thresholds,
+    }
+    if process.returncode != 0:
+        result = {
+            "status": "FAILED",
+            "reason": "minimap2 returned a non-zero exit status",
+            "mapper_execution": mapper_run,
+        }
+    else:
+        try:
+            assessed = read_support.assess_read_support(
+                sam_path, contigs_path, metadata, paired=False, thresholds=thresholds,
+            )
+            counts = Counter(row["status"] for row in assessed["contigs"])
+            result = {
+                "schema": "m28-experimental-read-support-v1",
+                "status": "EVALUATED",
+                "aggregate_status": assessed["status"],
+                "contig_count": len(assessed["contigs"]),
+                "contig_status_counts": dict(sorted(counts.items())),
+                "contigs": assessed["contigs"],
+                "mapper_execution": mapper_run,
+            }
+        except (OSError, ValueError) as error:
+            result = {
+                "status": "INCOMPLETE",
+                "reason": f"read-support SAM validation failed: {error}",
+                "mapper_execution": mapper_run,
+            }
+    result_path.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
+    return result
+
+
+def execute_experimental_assemblies(baseline_root, output_root):
+    """Run the fixed experimental setting and preserve execution/support evidence."""
+    baseline_root, output_root = Path(baseline_root), Path(output_root)
+    report = _json(baseline_root / "m25-read-coverage.json")
+    cases = {row["case_id"]: row for row in report.get("cases", [])}
+    spades = shutil.which("spades.py")
+    outputs = []
+    for split in ("development", "tuning", "held_out"):
+        case_id = f"{split}-m25-02"
+        case_root = baseline_root / split / case_id
+        stage = case_root / "stages/m6_m2502"
+        reads_path = stage / "eligible_read1.fastq.gz"
+        target = output_root / split
+        if target.exists():
+            raise FileExistsError(f"Refusing to overwrite experimental evidence: {target}")
+        target.mkdir(parents=True)
+        expected_input = _sha_file(reads_path)
+        thresholds_doc = _json(stage / "read_support.json")
+        thresholds = thresholds_doc.get("configuration")
+        if not isinstance(thresholds, dict):
+            thresholds = {}
+        execution = {
+            "schema": "m28-experimental-assembly-execution-v1",
+            "case_id": case_id,
+            "split": split,
+            "input_manifest_sha256": cases.get(case_id, {}).get("input_manifest_sha256"),
+            "input": {"artifact_name": reads_path.name, "bytes": reads_path.stat().st_size,
+                      "sha256": expected_input},
+            "command_parameters": ["--only-assembler", "-t", "1", "-m", "2", "-k", "21,33"],
+            "thread_count": 1,
+            "memory_mb": 2,
+            "k_values": [21, 33],
+            "return_code": None,
+            "status": "NOT_EVALUATED",
+            "output": None,
+        }
+        if not spades:
+            execution["reason"] = "spades.py is unavailable"
+        else:
+            command = [
+                spades, "--only-assembler", "-t", "1", "-m", "2", "-k", "21,33",
+                "-s", str(reads_path), "-o", str(target),
+            ]
+            execution["executable"] = spades
+            execution["command"] = command
+            started = time.monotonic()
+            log_root = output_root / "logs"
+            log_root.mkdir(parents=True, exist_ok=True)
+            try:
+                with (log_root / f"{split}.stdout.log").open("wb") as stdout, (log_root / f"{split}.stderr.log").open("wb") as stderr:
+                    process = subprocess.run(
+                        command, stdout=stdout, stderr=stderr, check=False,
+                        timeout=assembly_adapters.DEFAULT_TIMEOUT_SECONDS,
+                    )
+                execution["duration_seconds"] = time.monotonic() - started
+                execution["return_code"] = process.returncode
+                if process.returncode != 0:
+                    execution.update(status="FAILED", reason="SPAdes exited non-zero")
+                else:
+                    contigs = target / "contigs.fasta"
+                    try:
+                        artifact_contracts.validate_artifact(contigs, "canonical_contig_fasta")
+                        output = {
+                            "artifact_name": contigs.name,
+                            "bytes": contigs.stat().st_size,
+                            "sha256": _sha_file(contigs),
+                            "record_count": len(m25_read_coverage._fasta(contigs)),
+                        }
+                        if output["record_count"] < 1:
+                            raise ValueError("SPAdes returned an empty contig FASTA")
+                        execution.update(status="COMPLETED", output=output)
+                    except (OSError, ValueError) as error:
+                        execution.update(status="INCOMPLETE", reason=f"invalid or missing contigs FASTA: {error}")
+            except subprocess.TimeoutExpired:
+                execution.update(
+                    status="TIMED_OUT",
+                    duration_seconds=time.monotonic() - started,
+                    reason="SPAdes exceeded its configured timeout",
+                )
+        if execution["status"] == "COMPLETED":
+            execution["read_support"] = _evaluate_experimental_read_support(
+                target, reads_path, target / "contigs.fasta", thresholds,
+            )
+        (target / "execution.json").write_text(
+            json.dumps(execution, sort_keys=True, indent=2) + "\n", encoding="utf-8",
+        )
+        outputs.append({"split": split, "status": execution["status"],
+                        "return_code": execution["return_code"]})
+    return outputs
+
+
+def _validate_experiment_execution(experiment_dir, expected_reads, expected_manifest_sha):
+    """Validate persisted execution evidence before accepting any assembly output."""
+    experiment_dir = Path(experiment_dir)
+    manifest_path = experiment_dir / "execution.json"
+    if not manifest_path.is_file():
+        return {"status": "NOT_EVALUATED", "reason": "execution.json is missing"}
+    try:
+        manifest = _json(manifest_path)
+    except (OSError, ValueError):
+        return {"status": "INCOMPLETE", "reason": "execution.json is malformed"}
+    required = {
+        "schema", "status", "return_code", "input_manifest_sha256",
+        "input", "command_parameters", "output",
+    }
+    if (not isinstance(manifest, dict) or not required.issubset(manifest)
+            or manifest.get("schema") != "m28-experimental-assembly-execution-v1"):
+        return {"status": "INCOMPLETE", "reason": "execution record is missing required fields"}
+    if not isinstance(manifest.get("input"), dict):
+        return {"status": "INCOMPLETE", "reason": "execution input identity is malformed"}
+    if manifest["status"] in {"FAILED", "TIMED_OUT"} or manifest["return_code"] not in (0, None):
+        return {"status": "FAILED", "reason": manifest.get("reason", "assembler did not complete"),
+                "return_code": manifest.get("return_code")}
+    if manifest["status"] != "COMPLETED" or manifest["return_code"] != 0:
+        return {"status": "INCOMPLETE", "reason": manifest.get("reason", "execution did not complete")}
+    try:
+        actual_input_sha = _sha_file(expected_reads)
+        actual_input_bytes = Path(expected_reads).stat().st_size
+    except OSError as error:
+        return {"status": "INCOMPLETE", "reason": f"paired baseline input is unavailable: {error}"}
+    if (manifest["input_manifest_sha256"] != expected_manifest_sha
+            or manifest["input"].get("sha256") != actual_input_sha
+            or manifest["input"].get("bytes") != actual_input_bytes):
+        return {"status": "INCOMPLETE", "reason": "paired input identity does not match frozen baseline"}
+    if manifest["command_parameters"] != ["--only-assembler", "-t", "1", "-m", "2", "-k", "21,33"]:
+        return {"status": "INCOMPLETE", "reason": "execution parameters do not match the declared comparison"}
+    output = manifest.get("output")
+    contigs = experiment_dir / "contigs.fasta"
+    if (not isinstance(output, dict) or output.get("artifact_name") != "contigs.fasta"
+            or not contigs.is_file()):
+        return {"status": "INCOMPLETE", "reason": "output FASTA is missing"}
+    try:
+        artifact_contracts.validate_artifact(contigs, "canonical_contig_fasta")
+        if (_sha_file(contigs) != output.get("sha256")
+                or contigs.stat().st_size != output.get("bytes")
+                or len(m25_read_coverage._fasta(contigs)) != output.get("record_count")):
+            raise ValueError("output FASTA provenance does not match execution record")
+    except (OSError, ValueError) as error:
+        return {"status": "INCOMPLETE", "reason": f"output FASTA failed validation: {error}"}
+    return {"status": "COMPLETED", "manifest": manifest, "contigs_path": contigs}
+
+
 def _assembly_execution(stage):
     root = stage / "assembly"
     manifest_path = root / "manifest.json"
@@ -275,40 +514,135 @@ def _experimental_comparison(baseline_root, experiment_root):
         exp = exp_root / split
         if not exp.is_dir() and split == "development":
             exp = exp_root
-        alternative_path = exp / "contigs.fasta"
-        if not alternative_path.is_file():
-            runs.append({"split": split, "case_id": case_id, "status": "NOT_AVAILABLE"})
+        reads = case_root / "stages/m6_m2502/eligible_read1.fastq.gz"
+        execution = _validate_experiment_execution(
+            exp, reads, input_digests.get(case_id),
+        )
+        if execution["status"] == "COMPLETED":
+            manifest = execution["manifest"]
+            if manifest.get("case_id") != case_id or manifest.get("split") != split:
+                execution = {
+                    "status": "INCOMPLETE",
+                    "reason": "execution record identifies a different case or partition",
+                }
+        row = {
+            "split": split,
+            "case_id": case_id,
+            "execution_status": execution["status"],
+            "execution_reason": execution.get("reason"),
+        }
+        if execution["status"] != "COMPLETED":
+            row["status"] = execution["status"]
+            runs.append(row)
+            continue
+        alternative_path = execution["contigs_path"]
+        support_path = exp / "read_support.json"
+        if not support_path.is_file():
+            row.update(
+                status="INCOMPLETE",
+                read_back_support={"status": "NOT_EVALUATED", "reason": "read_support.json is missing"},
+            )
+            runs.append(row)
+            continue
+        try:
+            support = _json(support_path)
+            support_contigs = support.get("contigs", [])
+            actual_contigs = m25_read_coverage._fasta(alternative_path)
+            mapper = support.get("mapper_execution", {})
+            frozen_thresholds = _json(case_root / "stages/m6_m2502/read_support.json").get("configuration")
+            sam_path = exp / "support_alignments.sam"
+            read_ids, read_metadata = _fastq_with_metadata(reads)
+            support_ids = {item.get("contig_id") for item in support_contigs}
+            actual_ids = {item[0] for item in actual_contigs}
+            if (support.get("schema") != "m28-experimental-read-support-v1"
+                    or support.get("status") != "EVALUATED"
+                    or mapper.get("return_code") != 0
+                    or mapper.get("input_reads_sha256") != _sha_file(reads)
+                    or mapper.get("contigs_sha256") != _sha_file(alternative_path)
+                    or mapper.get("query_count") != len(read_ids)
+                    or not sam_path.is_file()
+                    or mapper.get("sam_sha256") != _sha_file(sam_path)
+                    or mapper.get("thresholds") != frozen_thresholds
+                    or support_ids != actual_ids
+                    or len(support_contigs) != len(actual_contigs)
+                    or any(item.get("contig_length") != len(dict(actual_contigs)[item["contig_id"]])
+                           for item in support_contigs)):
+                raise ValueError("read-support evidence is missing, mismatched, or incomplete")
+            reassessed = read_support.assess_read_support(
+                sam_path, alternative_path, read_metadata, paired=False,
+                thresholds=frozen_thresholds,
+            )
+            if (reassessed["status"] != support.get("aggregate_status")
+                    or reassessed["contigs"] != support_contigs):
+                raise ValueError("read-support result does not match its SAM evidence")
+        except (OSError, ValueError, AttributeError, TypeError) as error:
+            row.update(
+                status="INCOMPLETE",
+                read_back_support={"status": "NOT_EVALUATED", "reason": str(error)},
+            )
+            runs.append(row)
             continue
         truth = _json(case_root / "heldout_truth.json")["cases"][0]["candidate_sequence"]
         default_stage = case_root / "stages/m6_m2502"
         default_candidates = m25_read_coverage._fasta(
             default_stage / "candidate_sequences.fasta"
         )
-        alternative_candidates = m25_read_coverage._fasta(alternative_path)
-
+        support_by_id = {item["contig_id"]: item for item in support_contigs}
         def compare(candidates):
             rows = []
             for name, sequence in candidates:
                 evidence = m25_read_coverage.diagnose_sequence(truth, sequence)
-                rows.append({
+                record = {
                     "candidate_id": name,
                     "length": len(sequence),
                     "sequence_sha256": _sha(sequence.encode("ascii")),
                     "exact_recovery": evidence["strand_exact_match"],
                     "target_coverage": evidence["target_coverage"],
                     "full_length_sequence_identity": evidence["full_length_sequence_identity"],
-                })
+                }
+                if name in support_by_id:
+                    sr = support_by_id[name]
+                    record["read_support"] = {
+                        "status": sr.get("status"),
+                        "supporting_read_count": sr.get("supporting_read_count"),
+                        "distinct_sequence_count": sr.get("distinct_sequence_count"),
+                        "distinct_fragment_count": sr.get("distinct_fragment_count"),
+                        "coverage_breadth": sr.get("coverage_breadth"),
+                        "mean_depth": sr.get("mean_depth"),
+                    }
+                rows.append(record)
             return rows
-
-        params_path = exp / "params.txt"
-        params = params_path.read_text(errors="replace") if params_path.is_file() else ""
-        reads = case_root / "stages/m6_m2502/eligible_read1.fastq.gz"
-        runs.append({
+        execution_manifest = execution["manifest"]
+        support_counts = Counter(item.get("status", "UNSPECIFIED") for item in support_contigs)
+        support_categories = {
+            "supported": {"READ_SUPPORTED_ASSEMBLY"},
+            "low_support": {"LOW_SUPPORT_ASSEMBLY", "AMBIGUOUS_ASSEMBLY"},
+            "unsupported": {"UNSUPPORTED_ASSEMBLY"},
+        }
+        candidate_sequences = dict(actual_contigs)
+        support_summary = {
+            category: [
+                {
+                    "contig_id": item["contig_id"],
+                    "length": item.get("contig_length"),
+                    "sequence_sha256": _sha(candidate_sequences[item["contig_id"]].encode("ascii")),
+                    "status": item.get("status"),
+                }
+                for item in support_contigs if item.get("status") in statuses
+            ]
+            for category, statuses in support_categories.items()
+        }
+        row.update({
             "status": "COMPLETE",
-            "split": split,
-            "case_id": case_id,
-            "input_manifest_sha256": input_digests[case_id],
-            "eligible_reads_sha256": _sha(reads.read_bytes()),
+            "input_manifest_sha256": execution_manifest["input_manifest_sha256"],
+            "eligible_reads_sha256": execution_manifest["input"]["sha256"],
+            "assembler_execution": {
+                "status": execution_manifest["status"],
+                "return_code": execution_manifest["return_code"],
+                "command_parameters": execution_manifest["command_parameters"],
+                "duration_seconds": execution_manifest.get("duration_seconds"),
+                "output": execution_manifest["output"],
+            },
             "configuration_A": {
                 "label": "unchanged production default",
                 "parameters": _json(default_stage / "assembly/assembly_manifest.json").get("parameters"),
@@ -316,28 +650,29 @@ def _experimental_comparison(baseline_root, experiment_root):
             },
             "experimental_configuration_B": {
                 "label": "experimental only; explicit k=21,33",
-                "command_parameters": ["--only-assembler", "-t", "1", "-m", "2", "-k", "21,33"],
-                "params_txt_sha256": _sha(params_path.read_bytes()) if params_path.is_file() else None,
-                "spades_version": "4.1.0" if "SPAdes version: 4.1.0" in params else None,
-                "explicit_kmer_values": [21, 33],
-                "return_code": 0,
-                "threads": 1,
-                "memory_mb": 2048,
-                "contigs_sha256": _sha(alternative_path.read_bytes()),
-                "candidates": compare(alternative_candidates),
+                "execution_status": "COMPLETED",
+                "return_code": execution_manifest["return_code"],
+                "parameters": execution_manifest["command_parameters"],
+                "output_sha256": execution_manifest["output"]["sha256"],
+                "candidates": compare(actual_contigs),
+                "read_support": {
+                    "status": support["status"],
+                    "aggregate_status": support["aggregate_status"],
+                    "contig_status_counts": dict(sorted(support_counts.items())),
+                    "candidates_by_support": support_summary,
+                    "mapper_execution": support["mapper_execution"],
+                },
                 "assembly_graph": _graph_summary(exp),
-                "spades_log_sha256": _sha((exp / "spades.log").read_bytes())
-                if (exp / "spades.log").is_file() else None,
-                "read_back_support_evaluation": "NOT_PERFORMED",
             },
         })
+        runs.append(row)
     complete = [run for run in runs if run["status"] == "COMPLETE"]
     return {
         "status": "COMPLETE" if len(complete) == 3 else "PARTIAL",
         "design": "Paired same-input comparisons across frozen development, tuning and held-out partitions.",
         "runs": runs,
         "complete_partition_count": len(complete),
-        "interpretation_limit": "Truth was used only after assembly. No read-support threshold or production default changed; read-back support was not evaluated for the standalone alternatives.",
+        "interpretation_limit": "Truth was used only after assembly. Read-back status applies the M6 thresholds recorded for the matching frozen baseline case; no production threshold or default changed.",
     }
 
 
@@ -432,6 +767,7 @@ def analyze(baseline_root, m20_root=None, experiment_root=None):
             for x in report.get("baseline", {}).values()
         ),
     }
+    controlled_experiment = _experimental_comparison(root, experiment_root)
     return {
         "schema": SCHEMA,
         "synthetic_only": True,
@@ -439,23 +775,19 @@ def analyze(baseline_root, m20_root=None, experiment_root=None):
         "external_biological_references_used": False,
         "baseline_commit": report.get("baseline_commit"),
         "source_report_sha256": _sha(report_path.read_bytes()),
-        "historical_crosschecks": {
-            "m25_positive_cases": 9,
-            "m25_target_absent_controls": 9,
-            "m26_sam_validation_failures_after_fix": 0,
-            "m27_lower_entropy_exact_or_partial_recoveries": 0,
+        "historical_evidence": {
+            "status": "DOCUMENTED_NOT_INDEPENDENTLY_REVERIFIED",
             "source_documents": [
                 "docs/M25_SYNTHETIC_READ_COVERAGE.md",
                 "docs/M26_SAM_VALIDATION_CANDIDATE_EVIDENCE.md",
                 "docs/M27_LOW_COMPLEXITY_TRIAGE_VALIDATION.md",
             ],
+            "note": "Prior report claims are historical evidence; their original run outputs are not included in this checkout.",
         },
         "summary": summary,
         "cases": cases,
         "m20_integration": _m20_summary(m20_root),
-        "controlled_experiment": _experimental_comparison(
-            root, experiment_root
-        ),
+        "controlled_experiment": controlled_experiment,
         "graph_diagnostics": {
             "status": (
                 "AVAILABLE_FOR_SOME_COMPLETED_ASSEMBLIES"
@@ -465,27 +797,12 @@ def analyze(baseline_root, m20_root=None, experiment_root=None):
             "basis": "Counts are parsed from preserved SPAdes GFA files; missing graph files remain unavailable, not inferred.",
         },
         "controlled_experiments": {
-            "status": (
-                "THREE_PARTITION_COMPARISON"
-                if experiment_root else "NOT_RUN"
-            ),
-            "reason": "Standalone contigs were truth-scored retrospectively; read-back support was not evaluated.",
+            "status": controlled_experiment["status"],
+            "reason": "Execution and read-back outcomes are derived from persisted partition-level evidence in controlled_experiment.",
         },
         "verification": {
-            "m28_focused_tests": {"status": "PASSED", "passed": 3},
-            "m25_m27_focused_regressions": {"status": "PASSED", "passed": 9},
-            "m20_phase2b_to_phase5_tests": {"status": "PASSED", "passed": 34},
-            "full_repository_discovery": {
-                "status": "PASSED",
-                "run": 1111,
-                "passed": 1090,
-                "skipped": 21,
-                "failed": 0,
-            },
-            "github_actions": {
-                "status": "RUNNING_AT_REPORT_GENERATION",
-                "tracking": "Draft PR checks are authoritative for the final pushed head.",
-            },
+            "status": "NOT_RECORDED_IN_REPORT_INPUTS",
+            "note": "Test and CI outcomes must be taken from current test output and final PR-head checks; no verification artifacts were supplied to this report generator.",
         },
         "promotion_decision": "RETAIN_EXISTING_PRODUCTION_DEFAULT",
         "governance": GOVERNANCE,
@@ -523,19 +840,12 @@ def render_markdown(result):
         "",
         f"Failure classes across all cases: `{json.dumps(s['failure_classes'], sort_keys=True)}`.",
         "",
-        "The single process failure was `development-m25-01`: 107 assembly-eligible single-end reads were present. "
-        "SPAdes 4.1.0 was found and version-checked; it exited with code 21 after `spades-core` reported an abnormal "
-        "system call involving `K55/configs/config.info`. Immediately before that, SPAdes logged: "
-        "`Invalid kmer coverage histogram, make sure that the coverage is indeed uniform`. The configuration file "
-        "existed as a regular file; captured stderr was empty. The report records input identity, command, runtime "
-        "settings, output inventory and log hashes. This is evidence of SPAdes' coverage-model failure on this input, "
-        "not proof of the lower-level OS error's cause. This was an actual assembler process failure, "
-        "not an upstream eligibility failure, and no contig FASTA was produced.",
+        "Failure attribution is derived from persisted M6 stage manifests and reconstruction evidence. A missing "
+        "output is not treated as proof of assembler failure; upstream failure and zero eligible reads remain "
+        "separate categories. Prior M25–M27 reports contain historical incident descriptions, but their original "
+        "run outputs are unavailable here and those details are not independently reverified by this report.",
         "",
-        "Twelve cases had zero assembly-eligible reads; these are not assembler failures. Five completed with "
-        "read-supported but incomplete assemblies. Invalid-input, missing-dependency, and completed-empty-contig "
-        "outcomes did not occur in the frozen replay. Configured timeout/output limits are cooperative, not hard "
-        "operating-system resource quotas.",
+        "Configured timeout/output limits are cooperative, not hard operating-system resource quotas.",
         "",
         "## Case-level assembly outcomes",
         "",
@@ -566,39 +876,36 @@ def render_markdown(result):
         "",
         (
             "Paired experiments used identical eligible reads within each frozen partition:\n\n"
-            "| Split | Default contigs | Experimental k=21,33 contigs | Default best breadth | Experimental best breadth | Exact recovery |\n"
-            "|---|---:|---:|---:|---:|---|\n"
+            "| Split | Default contigs | Experimental k=21,33 contigs | Default best breadth | Experimental best breadth | Exact recovery | Support (supported / low / unsupported) |\n"
+            "|---|---:|---:|---:|---:|---|---|\n"
             + "\n".join(
                 f"| {row['split']} | {len(row['configuration_A']['candidates'])} | "
                 f"{len(row['experimental_configuration_B']['candidates'])} | "
                 f"{max((x['target_coverage'] for x in row['configuration_A']['candidates']), default=0):.1%} | "
                 f"{max((x['target_coverage'] for x in row['experimental_configuration_B']['candidates']), default=0):.1%} | "
-                f"{any(x['exact_recovery'] for x in row['experimental_configuration_B']['candidates'])} |"
+                f"{any(x['exact_recovery'] for x in row['experimental_configuration_B']['candidates'])} | "
+                f"{len(row['experimental_configuration_B']['read_support']['candidates_by_support']['supported'])} / "
+                f"{len(row['experimental_configuration_B']['read_support']['candidates_by_support']['low_support'])} / "
+                f"{len(row['experimental_configuration_B']['read_support']['candidates_by_support']['unsupported'])} |"
                 for row in experiment_runs
             )
-            + "\n\nThe unchanged default was not modified. Alternative runs are experimental; their standalone contigs "
-            "were not passed through read-back support evaluation. These results do not justify promotion."
+            + "\n\nThe unchanged default was not modified. Experimental contigs were evaluated against matching "
+            "frozen M6 read-support thresholds. This synthetic comparison does not justify promotion."
             if experiment.get("status") == "COMPLETE"
             else "No paired experimental comparison was completed."
         ),
         "",
         "## M20 integration",
         "",
-        f"M20 execution summary: `{result['m20_integration']['status']}`. Per-phase schemas, statuses, decisions, "
-        "and deterministic Phase 4 digest are recorded in the companion JSON. Phase 2B, 3 and 4 completed; Phase 4 "
-        "replay digest was `5d3e04b5d6f8265210635ea434b079e2e399c0e94b4f6a6d528666e5dce4c996`. Phase 5 reported "
-        "`SOFTWARE_INTEGRATION_VALIDATED_BIOLOGICAL_DISCOVERY_NOT_VALIDATED`. M13/M14 inputs were absent, leaving "
-        "M15 dossier completeness partial. BLAST+ 2.16.0 did not satisfy the approved 2.17.0+ pin, so the nucleotide "
-        "search remained unavailable rather than a completed no-hit result.",
+        f"M20 execution summary: `{result['m20_integration']['status']}`. Available per-phase evidence is recorded "
+        "in the companion JSON; missing artifacts remain unavailable and are not inferred.",
         "",
         "## Testing and CI",
         "",
-        "M28 focused: 3 passed; M25/M27 regressions: 9 passed; M20 Phase 2B–5 focused suite: 34 passed. "
-        "Full repository discovery: 1,090 passed out of 1,111, 21 skipped, 0 failed. GitHub Actions was still running "
-        "when this report snapshot was generated; the final-head result is linked from the draft PR.",
+        "Test and CI outcomes are not embedded in this scientific report. Use current test output and final-head "
+        "GitHub Actions checks on the draft PR; historical test counts are not presented as current verification.",
         "",
-        "The discovery run exercised tests with placeholder accession identifiers, but retrieved no complete FASTQ "
-        "runs. All M28 analyses and assembly comparisons described here use artificial A/C/G/T fixtures.",
+        "All M28 analyses and assembly comparisons described here use artificial A/C/G/T fixtures.",
         "",
         "## Governance",
         "",
