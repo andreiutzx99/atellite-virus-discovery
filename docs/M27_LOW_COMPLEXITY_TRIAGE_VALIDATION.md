@@ -32,16 +32,34 @@ from target counts. Target placement against held-out synthetic truth was
 performed retrospectively for diagnostics only; truth was not supplied to the
 workflow.
 
-| Split | Target reads generated | Target reads after QC | Target reads after screen | Default assembly-eligible target reads | Truth coverage after QC → after screen |
-|---|---:|---:|---:|---:|---:|
-| Development | 747 | 747 | 2 | 0 | 11.0% → 10.8% |
-| Tuning | 267 | 267 | 265 | 0 | 30.8% → 30.8% |
-| Held out | 747 | 747 | 673 | 0 | 11.0% → 11.0% |
+| Split | Target reads generated | Target reads after QC | Target reads after reference screen | Default assembly-eligible target reads | M26 target-base coverage after screen | M26 target-base coverage among eligible reads |
+|---|---:|---:|---:|---:|---:|---:|
+| Development | 747 | 747 | 2 | 0 | 21.4% (300/1,400 bases) | 0% |
+| Tuning | 267 | 267 | 265 | 0 | 100.0% (500/500 bases) | 0% |
+| Held out | 747 | 747 | 673 | 0 | 99.6% (1,395/1,400 bases) | 0% |
 
 The remaining target reads in each split were excluded by low sequence
 complexity under the default rule. QC rejected no reads in these three cases.
 The resulting assembly eligibility was zero in all three. These are synthetic
 read-flow observations, not evidence about real sequencing quality.
+
+**Coverage is not a read-retention percentage.** The target-read counts above
+use exact full-match IDs (`m2503-r` plus five digits); reference-read IDs are
+excluded. M26 target coverage is genome breadth: the number of distinct
+synthetic target bases covered by retained target reads divided by the known
+target length (1,400 bases for development and held out; 500 for tuning).
+Because this synthetic generator retains read start coordinates, M26's
+post-screen values are the comparable target-coverage measurements. With zero
+assembly-eligible target reads, eligible-read target coverage is 0/target
+length in each split.
+
+The earlier M27 values of 10.8%, 30.8%, and 11.0% were produced by
+retrospectively placing read sequences on truth and breaking repeated-sequence
+ties at the leftmost position. That can stack identical/repetitive reads at one
+location and miss their known simulated positions. Those values are therefore
+labelled in the JSON as leftmost exact-sequence-match diagnostics, not
+target-coverage measurements, and must not be compared with M26's
+generator-position coverage.
 
 ## Paired triage experiments
 
@@ -88,9 +106,32 @@ recovered the full target exactly. Phase 3 completed its 10-case handoff. The
 M8 nucleotide search remained unavailable because the installed BLAST+ 2.16.0
 binary did not match the stage's approved 2.17.0+ executable pin; this is not a
 completed no-hit result. M9 BLASTP ran, and M10 reported partial aggregate
-results. All M20 inputs and reference panels were artificial.
+results. M20 Phase 4 and Phase 5 were **not executed or reported as executed
+during M27**. Their execution in the earlier M26 work is separate and is not
+part of M27's verification. All M20 inputs and reference panels used during
+M27 were artificial.
 
 The focused M27 tests passed (4 tests). The focused M20 Phase 1/2B/3 set passed
-(18 tests, including its live synthetic integrations). A broad test discovery
-run exceeded the five-minute command limit and was terminated before producing
-a suite summary, so the full repository suite is not reported as passing.
+(18 tests, including its live synthetic integrations). A local broad test
+discovery run exceeded the five-minute command limit and was terminated before
+producing a suite summary. This was the local command time limit, not evidence
+of a test failure. The final-head GitHub Actions run subsequently completed
+full repository discovery successfully in its offline test matrix and optional
+tools job; no tests were weakened.
+
+## Final-head CI and PR contents
+
+For final PR head `7a07576779452b581557db1222d4ad4756dddc0d`, GitHub Actions
+run [41051186116](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/41051186116)
+completed all 11 jobs successfully on 2026-10-30:
+
+- `phase7-schema-validation`
+- `phase7-acceptance-evidence`
+- `offline-tests` on Ubuntu and Windows with Python 3.11 and 3.12 (four jobs)
+- `m11-pinned-runtime` on Ubuntu and Windows with Python 3.11 and 3.12 (four jobs)
+- `optional-tools`
+
+The remote draft PR #94 contains all four intended deliverables: the M27
+Markdown report, compact JSON summary, diagnostic module, and regression tests.
+The nested local checkout still has those paths as untracked files; this local
+Git state does not mean they are absent from the remote PR.

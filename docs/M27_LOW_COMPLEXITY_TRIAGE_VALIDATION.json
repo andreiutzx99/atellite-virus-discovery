@@ -18,35 +18,55 @@
   "focus_case_read_flow": [
     {
       "case_id": "development-m25-03",
+      "target_length_bases": 1400,
       "target_reads_generated": 747,
       "target_reads_after_qc": 747,
       "target_reads_after_reference_screen": 2,
       "target_reads_default_assembly_eligible": 0,
-      "truth_coverage_after_qc": 0.11,
-      "truth_coverage_after_screen": 0.10785714285714286,
+      "m26_generator_position_target_coverage_after_screen": 0.21428571428571427,
+      "m26_generator_position_target_coverage_of_eligible_reads": 0.0,
+      "leftmost_exact_sequence_match_coverage_after_qc": 0.11,
+      "leftmost_exact_sequence_match_coverage_after_screen": 0.10785714285714286,
       "default_triage_exclusion": "LOW_SEQUENCE_COMPLEXITY"
     },
     {
       "case_id": "tuning-m25-03",
+      "target_length_bases": 500,
       "target_reads_generated": 267,
       "target_reads_after_qc": 267,
       "target_reads_after_reference_screen": 265,
       "target_reads_default_assembly_eligible": 0,
-      "truth_coverage_after_qc": 0.308,
-      "truth_coverage_after_screen": 0.308,
+      "m26_generator_position_target_coverage_after_screen": 1.0,
+      "m26_generator_position_target_coverage_of_eligible_reads": 0.0,
+      "leftmost_exact_sequence_match_coverage_after_qc": 0.308,
+      "leftmost_exact_sequence_match_coverage_after_screen": 0.308,
       "default_triage_exclusion": "LOW_SEQUENCE_COMPLEXITY"
     },
     {
       "case_id": "held_out-m25-03",
+      "target_length_bases": 1400,
       "target_reads_generated": 747,
       "target_reads_after_qc": 747,
       "target_reads_after_reference_screen": 673,
       "target_reads_default_assembly_eligible": 0,
-      "truth_coverage_after_qc": 0.11,
-      "truth_coverage_after_screen": 0.11,
+      "m26_generator_position_target_coverage_after_screen": 0.9964285714285714,
+      "m26_generator_position_target_coverage_of_eligible_reads": 0.0,
+      "leftmost_exact_sequence_match_coverage_after_qc": 0.11,
+      "leftmost_exact_sequence_match_coverage_after_screen": 0.11,
       "default_triage_exclusion": "LOW_SEQUENCE_COMPLEXITY"
     }
   ],
+  "coverage_reconciliation": {
+    "target_read_count_definition": "Exact full match to m2503-r followed by five digits; reference-read IDs are excluded.",
+    "target_coverage_definition": "Distinct synthetic target bases covered divided by target length; M26 uses known generator read starts.",
+    "assembly_eligible_read_definition": "Target-identified residual reads that pass unchanged M6 triage; these counts are not coverage percentages.",
+    "m27_sequence_placement_caveat": "M27's retrospective sequence-only diagnostic chooses the leftmost exact placement for repeated reads. In repetitive sequence this can place multiple reads at the same bases, so its percentages are not a target-coverage measurement and are not comparable with M26 generator-position coverage.",
+    "coverage_denominators_bases": {
+      "development-m25-03": 1400,
+      "tuning-m25-03": 500,
+      "held_out-m25-03": 1400
+    }
+  },
   "paired_experiments": [
     {"case_id": "development-m25-03", "setting": "A_existing_default", "min_entropy_bits": 1.2, "eligible_reads": 0, "assembler_status": "NO_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
     {"case_id": "development-m25-03", "setting": "B_conservative_entropy_0_95", "min_entropy_bits": 0.95, "eligible_reads": 1, "assembler_status": "EXECUTION_FAILED", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 0, "unsupported_candidates": 0, "low_support_candidates": 0},
@@ -59,6 +79,37 @@
     {"case_id": "held_out-m25-03", "setting": "C_diagnostic_entropy_0", "min_entropy_bits": 0.0, "eligible_reads": 673, "assembler_status": "READ_SUPPORTED_ASSEMBLY", "exact_reconstruction": false, "partial_reconstruction": false, "candidate_count": 7, "unsupported_candidates": 1, "low_support_candidates": 2}
   ],
   "promotion_decision": "RETAIN_EXISTING_DEFAULT",
+  "verification": {
+    "local_focused_m27_tests": "PASS (4 tests)",
+    "local_focused_m20_phase1_2b_3_tests": "PASS (18 tests)",
+    "local_broad_discovery": "STOPPED at the five-minute local command limit before a summary; not a test failure result",
+    "final_head_github_actions": {
+      "head_sha": "7a07576779452b581557db1222d4ad4756dddc0d",
+      "run_id": 41051186116,
+      "completed_at": "2026-10-30T12:03:59Z",
+      "passed_jobs": 11,
+      "failed_jobs": 0,
+      "jobs": [
+        "phase7-schema-validation",
+        "phase7-acceptance-evidence",
+        "offline-tests (ubuntu-latest, 3.11)",
+        "offline-tests (ubuntu-latest, 3.12)",
+        "offline-tests (windows-latest, 3.11)",
+        "offline-tests (windows-latest, 3.12)",
+        "m11-pinned-runtime (ubuntu-latest, 3.11)",
+        "m11-pinned-runtime (ubuntu-latest, 3.12)",
+        "m11-pinned-runtime (windows-latest, 3.11)",
+        "m11-pinned-runtime (windows-latest, 3.12)",
+        "optional-tools"
+      ]
+    }
+  },
+  "m20_phases_executed_during_m27": {
+    "phase2b": true,
+    "phase3": true,
+    "phase4": false,
+    "phase5": false
+  },
   "governance": {
     "decision": "INCOMPLETE",
     "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
