@@ -83,7 +83,7 @@
     "local_focused_m27_tests": "PASS (4 tests)",
     "local_focused_m20_phase1_2b_3_tests": "PASS (18 tests)",
     "local_broad_discovery": "STOPPED at the five-minute local command limit before a summary; not a test failure result",
-    "final_head_github_actions": {
+    "implementation_head_github_actions": {
       "head_sha": "7a07576779452b581557db1222d4ad4756dddc0d",
       "run_id": 41051186116,
       "completed_at": "2026-10-30T12:03:59Z",

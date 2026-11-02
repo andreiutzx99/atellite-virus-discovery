@@ -119,11 +119,14 @@ of a test failure. The final-head GitHub Actions run subsequently completed
 full repository discovery successfully in its offline test matrix and optional
 tools job; no tests were weakened.
 
-## Final-head CI and PR contents
+## Implementation-head CI and PR contents
 
-For final PR head `7a07576779452b581557db1222d4ad4756dddc0d`, GitHub Actions
-run [41051186116](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/41051186116)
-completed all 11 jobs successfully on 2026-10-30:
+For the final M27 source-and-test implementation head
+`7a07576779452b581557db1222d4ad4756dddc0d`, GitHub Actions run
+[41051186116](https://github.com/andreiutzx99/atellite-virus-discovery/actions/runs/41051186116)
+completed all 11 jobs successfully on 2026-10-30. The subsequent PR changes for
+this reconciliation update only the two report files; they do not change source
+or tests.
 
 - `phase7-schema-validation`
 - `phase7-acceptance-evidence`
