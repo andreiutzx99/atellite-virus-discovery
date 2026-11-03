@@ -7,6 +7,14 @@ Retrospective analysis of deterministic artificial A/C/G/T M25–M27 fixtures on
 **Decision: retain existing production default.**
 No experimental configuration is promoted. Existing M6 and assembly defaults remain unchanged.
 
+## Evidence status
+
+- Original experimental results: documented historical results; all three k=21,33 assemblies completed, producing 20 contigs each. All 60 contigs were recorded as unsupported under frozen M6 thresholds, with no exact recovery.
+- Current follow-up verification: report metadata and code/tests only. The experiments were not rerun, and no production threshold or default changed.
+- Unavailable evidence: original experimental eligible-read FASTQ and SAM files. Mapped/unmapped counts, alignment rejection counts and per-contig alignment detail are not supplied.
+
+The original experimental FASTQ and SAM evidence was unavailable for this follow-up analysis. Consequently, mapped/unmapped read counts and the relative contributions of absent alignments versus rejected low-confidence alignments could not be independently determined. Unsupported classifications reflect the previously recorded frozen M6 support criteria and must not be interpreted as proof that no reads aligned.
+
 ## Frozen baseline
 
 - Cases: 18 (9 positive; 9 target-absent controls).
@@ -68,6 +76,18 @@ Paired experiments used identical eligible reads within each frozen partition:
 | held_out | 20 | 20 | 12.3% | 7.4% | False | 0 / 0 / 20 |
 
 The unchanged default was not modified. Experimental contigs were evaluated against matching frozen M6 read-support thresholds. This synthetic comparison does not justify promotion.
+
+### Read accounting from original experimental evidence
+
+The per-run input counts below are preserved from the original mapper execution records. Primary mapped/unmapped counts, rejection counts, and per-contig qualifying-read counts are not supplied because the original FASTQ and SAM evidence is unavailable.
+
+| Split | Historically recorded input reads | Primary mapped | Primary unmapped | Rejected by MAPQ | Rejected by alignment fraction | Rejected by identity | Rejected by other support criteria | Per-contig qualifying support counts |
+|---|---:|---|---|---|---|---|---|---|
+| development | 432 | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED |
+| tuning | 671 | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED |
+| held_out | 427 | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED |
+
+SPAdes `-m 2` is 2 GB (2,048 MB). The experimental command used `-m 2`; the execution metadata now reports the value in both units.
 
 ## M20 integration
 

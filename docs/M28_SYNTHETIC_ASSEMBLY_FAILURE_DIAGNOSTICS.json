@@ -5654,6 +5654,9 @@
             "-k",
             "21,33"
           ],
+          "memory_gb": 2,
+          "memory_mb": 2048,
+          "memory_unit_basis": "SPAdes -m 2 specifies 2 GB, equivalent to 2048 MB.",
           "duration_seconds": 1.1740112410000165,
           "output": {
             "artifact_name": "contigs.fasta",
@@ -6371,6 +6374,9 @@
             "-k",
             "21,33"
           ],
+          "memory_gb": 2,
+          "memory_mb": 2048,
+          "memory_unit_basis": "SPAdes -m 2 specifies 2 GB, equivalent to 2048 MB.",
           "duration_seconds": 0.5154174309999462,
           "output": {
             "artifact_name": "contigs.fasta",
@@ -7072,6 +7078,9 @@
             "-k",
             "21,33"
           ],
+          "memory_gb": 2,
+          "memory_mb": 2048,
+          "memory_unit_basis": "SPAdes -m 2 specifies 2 GB, equivalent to 2048 MB.",
           "duration_seconds": 0.5687672909999719,
           "output": {
             "artifact_name": "contigs.fasta",
@@ -7770,6 +7779,38 @@
     "status": "COMPLETE"
   },
   "external_biological_references_used": false,
+  "follow_up_evidence_status": {
+    "original_experimental_results": "DOCUMENTED_HISTORICAL_RESULTS",
+    "current_verification": "REPORT_METADATA_AND_TESTS_ONLY; EXPERIMENTS_NOT_RERUN",
+    "unavailable_evidence": [
+      "original experimental eligible-read FASTQ files",
+      "original experimental SAM alignment files"
+    ],
+    "per_partition": {
+      "development": {
+        "total_input_reads_historically_recorded": 432,
+        "mapped_primary_reads": "NOT_SUPPLIED",
+        "unmapped_primary_reads": "NOT_SUPPLIED",
+        "mapped_reads_rejected_by_criterion": "NOT_SUPPLIED",
+        "per_contig_qualifying_support_counts": "NOT_SUPPLIED"
+      },
+      "tuning": {
+        "total_input_reads_historically_recorded": 671,
+        "mapped_primary_reads": "NOT_SUPPLIED",
+        "unmapped_primary_reads": "NOT_SUPPLIED",
+        "mapped_reads_rejected_by_criterion": "NOT_SUPPLIED",
+        "per_contig_qualifying_support_counts": "NOT_SUPPLIED"
+      },
+      "held_out": {
+        "total_input_reads_historically_recorded": 427,
+        "mapped_primary_reads": "NOT_SUPPLIED",
+        "unmapped_primary_reads": "NOT_SUPPLIED",
+        "mapped_reads_rejected_by_criterion": "NOT_SUPPLIED",
+        "per_contig_qualifying_support_counts": "NOT_SUPPLIED"
+      }
+    },
+    "scientific_limitation": "The original experimental FASTQ and SAM evidence was unavailable for this follow-up analysis. Consequently, mapped/unmapped read counts and the relative contributions of absent alignments versus rejected low-confidence alignments could not be independently determined. Unsupported classifications reflect the previously recorded frozen M6 support criteria and must not be interpreted as proof that no reads aligned."
+  },
   "governance": {
     "biological_execution_authorized": false,
     "decision": "INCOMPLETE",

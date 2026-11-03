@@ -21,6 +21,12 @@ GOVERNANCE = {
     "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
     "biological_execution_authorized": False,
 }
+FOLLOW_UP_SCIENTIFIC_LIMITATION = (
+    "The original experimental FASTQ and SAM evidence was unavailable for this follow-up analysis. "
+    "Consequently, mapped/unmapped read counts and the relative contributions of absent alignments versus "
+    "rejected low-confidence alignments could not be independently determined. Unsupported classifications "
+    "reflect the previously recorded frozen M6 support criteria and must not be interpreted as proof that no reads aligned."
+)
 
 
 def _json(path):
@@ -241,6 +247,7 @@ def _evaluate_experimental_read_support(experiment_dir, reads_path, contigs_path
                 "contig_count": len(assessed["contigs"]),
                 "contig_status_counts": dict(sorted(counts.items())),
                 "contigs": assessed["contigs"],
+                "read_evidence": _read_support_diagnostics(assessed, thresholds),
                 "mapper_execution": mapper_run,
             }
         except (OSError, ValueError) as error:
@@ -251,6 +258,66 @@ def _evaluate_experimental_read_support(experiment_dir, reads_path, contigs_path
             }
     result_path.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
     return result
+
+
+def _read_support_diagnostics(assessed, thresholds):
+    """Summarize primary alignment outcomes without changing support thresholds."""
+    reads = assessed["read_support"]
+    min_mapq = thresholds.get("min_mapq", 20)
+    min_fraction = thresholds.get("min_alignment_fraction", .8)
+    min_identity = thresholds.get("min_sequence_identity", .95)
+    mapped = [row for row in reads if row["mapped"]]
+    unmapped_count = len(reads) - len(mapped)
+    criteria = {
+        "mapq": lambda row: row.get("mapq") == 255 or row.get("mapq", 0) < min_mapq,
+        "alignment_fraction": lambda row: row.get("aligned_query_fraction", 0) < min_fraction,
+        "sequence_identity": lambda row: row.get("sequence_identity", 0) < min_identity,
+        "other_read_quality": lambda row: not row.get("quality_eligible", False),
+    }
+    rejected = [row for row in mapped if not row["qualifying"]]
+    rejected_counts = {
+        name: sum(test(row) for row in mapped)
+        for name, test in criteria.items()
+    }
+    by_contig = {}
+    for row in mapped:
+        item = by_contig.setdefault(row["contig_id"], {"mapped": [], "qualifying": 0})
+        item["mapped"].append(row)
+        item["qualifying"] += bool(row["qualifying"])
+    contigs = []
+    for contig in assessed["contigs"]:
+        cid = contig["contig_id"]
+        evidence = by_contig.get(cid, {"mapped": [], "qualifying": 0})
+        rejected_on_contig = [row for row in evidence["mapped"] if not row["qualifying"]]
+        qualifying = evidence["qualifying"]
+        contigs.append({
+            "contig_id": cid,
+            "mapped_primary_read_count": len(evidence["mapped"]),
+            "rejected_mapped_primary_read_count": len(rejected_on_contig),
+            "qualifying_supporting_read_count": qualifying,
+            "rejected_by_criterion": {
+                name: sum(test(row) for row in rejected_on_contig)
+                for name, test in criteria.items()
+            },
+            "zero_qualifying_support_interpretation": (
+                None if qualifying else (
+                    "MAPPED_ALIGNMENTS_REJECTED_BY_CONFIGURED_CRITERIA"
+                    if evidence["mapped"] else "NO_PRIMARY_READS_ALIGNED_TO_CONTIG"
+                )
+            ),
+        })
+    return {
+        "primary_reads": {
+            "total_input_reads": len(reads),
+            "mapped": len(mapped),
+            "unmapped": unmapped_count,
+            "mapped_with_qualifying_alignment": sum(row["qualifying"] for row in mapped),
+            "mapped_rejected_by_one_or_more_support_criteria": len(rejected),
+        },
+        "mapped_reads_rejected_by_criterion": rejected_counts,
+        "criterion_counts_overlap": True,
+        "contigs": contigs,
+    }
 
 
 def execute_experimental_assemblies(baseline_root, output_root):
@@ -283,7 +350,8 @@ def execute_experimental_assemblies(baseline_root, output_root):
                       "sha256": expected_input},
             "command_parameters": ["--only-assembler", "-t", "1", "-m", "2", "-k", "21,33"],
             "thread_count": 1,
-            "memory_mb": 2,
+            "memory_gb": 2,
+            "memory_mb": 2048,
             "k_values": [21, 33],
             "return_code": None,
             "status": "NOT_EVALUATED",
@@ -379,6 +447,24 @@ def _validate_experiment_execution(experiment_dir, expected_reads, expected_mani
         return {"status": "INCOMPLETE", "reason": "paired input identity does not match frozen baseline"}
     if manifest["command_parameters"] != ["--only-assembler", "-t", "1", "-m", "2", "-k", "21,33"]:
         return {"status": "INCOMPLETE", "reason": "execution parameters do not match the declared comparison"}
+    try:
+        memory_index = manifest["command_parameters"].index("-m")
+        command_memory_gb = int(manifest["command_parameters"][memory_index + 1])
+    except (IndexError, TypeError, ValueError):
+        return {"status": "INCOMPLETE", "reason": "SPAdes memory command metadata is malformed"}
+    if command_memory_gb < 1:
+        return {"status": "INCOMPLETE", "reason": "SPAdes memory command metadata is invalid"}
+    if (manifest.get("memory_gb") != command_memory_gb
+            or manifest.get("memory_mb") != command_memory_gb * 1024):
+        manifest["memory_metadata_correction"] = {
+            "source": "SPAdes -m command parameter is in GB",
+            "previous_memory_gb": manifest.get("memory_gb"),
+            "previous_memory_mb": manifest.get("memory_mb"),
+            "corrected_memory_gb": command_memory_gb,
+            "corrected_memory_mb": command_memory_gb * 1024,
+        }
+    manifest["memory_gb"] = command_memory_gb
+    manifest["memory_mb"] = command_memory_gb * 1024
     output = manifest.get("output")
     contigs = experiment_dir / "contigs.fasta"
     if (not isinstance(output, dict) or output.get("artifact_name") != "contigs.fasta"
@@ -575,6 +661,7 @@ def _experimental_comparison(baseline_root, experiment_root):
             if (reassessed["status"] != support.get("aggregate_status")
                     or reassessed["contigs"] != support_contigs):
                 raise ValueError("read-support result does not match its SAM evidence")
+            read_evidence = _read_support_diagnostics(reassessed, frozen_thresholds)
         except (OSError, ValueError, AttributeError, TypeError) as error:
             row.update(
                 status="INCOMPLETE",
@@ -605,6 +692,7 @@ def _experimental_comparison(baseline_root, experiment_root):
                     record["read_support"] = {
                         "status": sr.get("status"),
                         "supporting_read_count": sr.get("supporting_read_count"),
+                        "qualifying_supporting_read_count": sr.get("supporting_read_count"),
                         "distinct_sequence_count": sr.get("distinct_sequence_count"),
                         "distinct_fragment_count": sr.get("distinct_fragment_count"),
                         "coverage_breadth": sr.get("coverage_breadth"),
@@ -640,6 +728,9 @@ def _experimental_comparison(baseline_root, experiment_root):
                 "status": execution_manifest["status"],
                 "return_code": execution_manifest["return_code"],
                 "command_parameters": execution_manifest["command_parameters"],
+                "memory_gb": execution_manifest["memory_gb"],
+                "memory_mb": execution_manifest["memory_mb"],
+                "memory_metadata_correction": execution_manifest.get("memory_metadata_correction"),
                 "duration_seconds": execution_manifest.get("duration_seconds"),
                 "output": execution_manifest["output"],
             },
@@ -660,6 +751,7 @@ def _experimental_comparison(baseline_root, experiment_root):
                     "aggregate_status": support["aggregate_status"],
                     "contig_status_counts": dict(sorted(support_counts.items())),
                     "candidates_by_support": support_summary,
+                    "read_evidence": read_evidence,
                     "mapper_execution": support["mapper_execution"],
                 },
                 "assembly_graph": _graph_summary(exp),
@@ -788,6 +880,42 @@ def analyze(baseline_root, m20_root=None, experiment_root=None):
         "cases": cases,
         "m20_integration": _m20_summary(m20_root),
         "controlled_experiment": controlled_experiment,
+        "follow_up_evidence_status": {
+            "original_experimental_results": "DOCUMENTED_HISTORICAL_RESULTS",
+            "current_verification": "REPORT_METADATA_AND_TESTS_ONLY; EXPERIMENTS_NOT_RERUN",
+            "unavailable_evidence": [
+                "original experimental eligible-read FASTQ files",
+                "original experimental SAM alignment files",
+            ],
+            "per_partition": {
+                run["split"]: {
+                    "total_input_reads_historically_recorded": (
+                        run["experimental_configuration_B"]["read_support"]
+                        .get("mapper_execution", {}).get("query_count", "NOT_SUPPLIED")
+                    ),
+                    "mapped_primary_reads": (
+                        run["experimental_configuration_B"]["read_support"]["read_evidence"]
+                        ["primary_reads"]["mapped"]
+                        if run["experimental_configuration_B"]["read_support"].get("read_evidence")
+                        else "NOT_SUPPLIED"
+                    ),
+                    "unmapped_primary_reads": (
+                        run["experimental_configuration_B"]["read_support"]["read_evidence"]
+                        ["primary_reads"]["unmapped"]
+                        if run["experimental_configuration_B"]["read_support"].get("read_evidence")
+                        else "NOT_SUPPLIED"
+                    ),
+                    "per_contig_qualifying_support_counts": (
+                        "AVAILABLE_FROM_VALIDATED_SAM"
+                        if run["experimental_configuration_B"]["read_support"].get("read_evidence")
+                        else "NOT_SUPPLIED"
+                    ),
+                }
+                for run in controlled_experiment.get("runs", [])
+                if run.get("status") == "COMPLETE"
+            },
+            "scientific_limitation": FOLLOW_UP_SCIENTIFIC_LIMITATION,
+        },
         "graph_diagnostics": {
             "status": (
                 "AVAILABLE_FOR_SOME_COMPLETED_ASSEMBLIES"
@@ -823,6 +951,16 @@ def render_markdown(result):
         "",
         f"**Decision: {result['promotion_decision'].replace('_', ' ').lower()}.**",
         "No experimental configuration is promoted. Existing M6 and assembly defaults remain unchanged.",
+        "",
+        "## Evidence status",
+        "",
+        "- Original experimental results: documented historical results; three k=21,33 assemblies completed, yielding 60 contigs recorded as unsupported under frozen M6 thresholds, with no exact recovery.",
+        "- Current verification: report metadata and code/test changes only; the experiments were not rerun.",
+        "- Unavailable evidence: original experimental eligible-read FASTQ and SAM files; mapped/unmapped counts and alignment-rejection attribution are not supplied.",
+        "",
+        result.get("follow_up_evidence_status", {}).get(
+            "scientific_limitation", FOLLOW_UP_SCIENTIFIC_LIMITATION
+        ),
         "",
         "## Frozen baseline",
         "",
@@ -894,6 +1032,63 @@ def render_markdown(result):
             if experiment.get("status") == "COMPLETE"
             else "No paired experimental comparison was completed."
         ),
+        "",
+        "### Read-alignment and support evidence",
+        "",
+        "`UNSUPPORTED_ASSEMBLY` means no reads qualified under the configured M6 criteria; it does not mean no reads aligned. "
+        "Mapped-primary rejection counts below overlap when a read fails more than one criterion. A contig with zero "
+        "qualifying support is labeled separately according to whether any primary reads aligned to it.",
+        "",
+        "| Split | Total reads | Primary mapped | Primary unmapped | Mapped rejected by any criterion | MAPQ failures | Alignment-fraction failures | Identity failures | Other read-quality failures |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        *[
+            (
+                f"| {row['split']} | "
+                f"{row['experimental_configuration_B']['read_support'].get('mapper_execution', {}).get('query_count', 'NOT_SUPPLIED')} | "
+                "NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | "
+                "NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED | NOT_SUPPLIED |"
+                if not row["experimental_configuration_B"]["read_support"].get("read_evidence")
+                else (
+                    f"| {row['split']} | {evidence['primary_reads']['total_input_reads']} | "
+                    f"{evidence['primary_reads']['mapped']} | {evidence['primary_reads']['unmapped']} | "
+                    f"{evidence['primary_reads']['mapped_rejected_by_one_or_more_support_criteria']} | "
+                    f"{evidence['mapped_reads_rejected_by_criterion']['mapq']} | "
+                    f"{evidence['mapped_reads_rejected_by_criterion']['alignment_fraction']} | "
+                    f"{evidence['mapped_reads_rejected_by_criterion']['sequence_identity']} | "
+                    f"{evidence['mapped_reads_rejected_by_criterion']['other_read_quality']} |"
+                )
+            )
+            for row in experiment_runs
+            for evidence in [row["experimental_configuration_B"]["read_support"].get("read_evidence", {})]
+        ],
+        "",
+        *(
+            [
+                "| Split | Contig | Mapped primary reads | Rejected mapped reads | Qualifying supporting reads | Zero-support interpretation |",
+                "|---|---|---:|---:|---:|---|",
+            ] + [
+                (
+                    f"| {row['split']} | `{contig['contig_id']}` | {contig['mapped_primary_read_count']} | "
+                    f"{contig['rejected_mapped_primary_read_count']} | "
+                    f"{contig['qualifying_supporting_read_count']} | "
+                    f"{contig['zero_qualifying_support_interpretation'] or 'QUALIFYING_SUPPORT_PRESENT'} |"
+                )
+                for row in experiment_runs
+                for contig in row["experimental_configuration_B"]["read_support"]
+                .get("read_evidence", {}).get("contigs", [])
+            ]
+            if any(
+                row["experimental_configuration_B"]["read_support"].get("read_evidence")
+                for row in experiment_runs
+            )
+            else [
+                "Per-contig mapped, rejected, and qualifying read counts: `NOT_SUPPLIED`; the original SAM evidence was unavailable."
+            ]
+        ),
+        "",
+        "Per-contig mapped/rejected read counts are `NOT_SUPPLIED` where the original SAM is unavailable; no values are inferred.",
+        "",
+        "SPAdes `-m 2` is recorded as 2 GB (2,048 MB) in the execution metadata; the value matches the actual command.",
         "",
         "## M20 integration",
         "",
