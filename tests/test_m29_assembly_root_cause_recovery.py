@@ -8,6 +8,7 @@ from satellite_discovery.m29_assembly_root_cause_recovery import (
     _summarize_case,
     _case_seed,
     _controlled_improvement,
+    _recovery_support,
     case_matrix,
     historical_findings,
 )
@@ -140,6 +141,50 @@ class M29AssemblyRootCauseRecoveryTests(unittest.TestCase):
             self.assertEqual(row["assembler_status"], "READ_SUPPORTED_ASSEMBLY")
             self.assertEqual(row["stage_read_counts"]["assembly_eligible"], 2)
             self.assertIsNone(row["false_positive_candidates"])
+            self.assertEqual(row["discovery_candidate_acceptance"]["status"], "NOT_EVALUATED")
+            self.assertIsNone(row["discovery_candidate_acceptance"]["accepted_candidate_count"])
+
+    def test_exact_unsupported_contig_is_not_rescued_by_another_supported_contig(self):
+        truth = "ACGTTGCA" * 15
+        other = "T" * len(truth)
+        result = _recovery_support(
+            [("exact", truth), ("other", other)], truth,
+            [
+                {"contig_id": "exact", "status": "UNSUPPORTED_ASSEMBLY"},
+                {"contig_id": "other", "status": "READ_SUPPORTED_ASSEMBLY"},
+            ],
+        )
+        self.assertTrue(result["exact_recovery"])
+        self.assertFalse(result["supported_exact_recovery"])
+
+    def test_supported_non_exact_contig_does_not_count_as_exact_recovery(self):
+        truth = "ACGTTGCA" * 15
+        mutated = "T" + truth[1:]
+        result = _recovery_support(
+            [("mutated", mutated)], truth,
+            [{"contig_id": "mutated", "status": "READ_SUPPORTED_ASSEMBLY"}],
+        )
+        self.assertFalse(result["exact_recovery"])
+        self.assertFalse(result["supported_exact_recovery"])
+
+    def test_exact_contig_requires_its_own_read_support(self):
+        truth = "ACGTTGCA" * 15
+        result = _recovery_support(
+            [("exact", truth)], truth,
+            [{"contig_id": "exact", "status": "READ_SUPPORTED_ASSEMBLY"}],
+        )
+        self.assertTrue(result["exact_recovery"])
+        self.assertTrue(result["supported_exact_recovery"])
+
+    def test_target_absent_supported_background_is_not_candidate_acceptance(self):
+        truth_absent = None
+        result = _recovery_support(
+            [("background", "ACGT" * 20)], truth_absent,
+            [{"contig_id": "background", "status": "READ_SUPPORTED_ASSEMBLY"}],
+        )
+        self.assertFalse(result["exact_recovery"])
+        self.assertFalse(result["supported_exact_recovery"])
+        self.assertIsNone(truth_absent)
 
 
 if __name__ == "__main__":

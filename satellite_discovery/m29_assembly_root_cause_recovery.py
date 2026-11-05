@@ -132,6 +132,33 @@ def _count_fastq(path):
     return sum(1 for _ in m25._fastq_ids(path))
 
 
+def _support_by_contig(records):
+    return {
+        row["contig_id"]: row.get("status", "NOT_EVALUATED")
+        for row in records
+        if isinstance(row, dict) and isinstance(row.get("contig_id"), str)
+    }
+
+
+def _recovery_support(candidates, truth, support_records):
+    comparisons = [
+        m25.diagnose_sequence(truth, sequence) for _, sequence in candidates
+    ] if truth else []
+    support = _support_by_contig(support_records)
+    exact_ids = {
+        contig_id for (contig_id, _), comparison in zip(candidates, comparisons)
+        if comparison.get("strand_exact_match", False)
+    }
+    return {
+        "comparisons": comparisons,
+        "exact_recovery": bool(exact_ids),
+        "supported_exact_recovery": any(
+            support.get(contig_id) == "READ_SUPPORTED_ASSEMBLY"
+            for contig_id in exact_ids
+        ),
+    }
+
+
 def _summarize_case(case, root, report):
     analysis_id = case["analysis_id"]
     stage = root / "stages" / f"m6_{analysis_id}"
@@ -154,14 +181,19 @@ def _summarize_case(case, root, report):
     best_match = max(
         partial, key=lambda row: row.get("target_coverage", 0), default={}
     )
-    exact_recovery = any(row.get("strand_exact_match", False) for row in partial)
-    non_exact_count = sum(
-        not row.get("strand_exact_match", False) for row in partial
-    ) if truth_row["candidate_sequence"] else None
     reconstruction_path = stage / "reconstruction_evidence.json"
     reconstruction = (
         json.loads(reconstruction_path.read_text()) if reconstruction_path.is_file() else {}
     )
+    support_map = _support_by_contig(reconstruction.get("contigs", []))
+    recovery = _recovery_support(
+        candidates, truth_row["candidate_sequence"], reconstruction.get("contigs", [])
+    )
+    exact_recovery = recovery["exact_recovery"]
+    supported_exact_recovery = recovery["supported_exact_recovery"]
+    non_exact_count = sum(
+        not row.get("strand_exact_match", False) for row in partial
+    ) if truth_row["candidate_sequence"] else None
     experimental_path = root / "experimental_k21" / "execution.json"
     experimental = (
         json.loads(experimental_path.read_text()) if experimental_path.is_file() else None
@@ -218,17 +250,29 @@ def _summarize_case(case, root, report):
         ),
         "assembler_status": reconstruction.get("status", "NOT_EVALUATED"),
         "assembler_diagnostics": assembler_diagnostics,
+        "raw_contig_count": len(raw_contigs),
         "contigs_produced": len(raw_contigs),
+        "read_supported_contig_count": sum(
+            status == "READ_SUPPORTED_ASSEMBLY" for status in support_map.values()
+        ),
+        "discovery_candidate_acceptance": {
+            "status": "NOT_EVALUATED",
+            "accepted_candidate_count": None,
+            "reason": "M29 records M6 assembly and read support but does not execute the downstream M7/M8 discovery-specific candidate review pathway.",
+        },
         "assembly_graph": m28._graph_summary(stage),
         "support_criteria": reconstruction.get("support_criteria"),
         "experimental_configuration_B": experimental,
         "candidate_count": len(candidate_sequences),
-        "false_positive_candidates": (
-            len(candidate_sequences) if truth_row["candidate_sequence"] is None else None
-        ),
+        "false_positive_candidates": None,
+        "accepted_false_positive_candidate_count": None,
         "non_exact_candidate_count": non_exact_count,
         "read_support_statuses": [
             row.get("status") for row in reconstruction.get("contigs", [])
+        ],
+        "contig_read_support": [
+            {"contig_id": contig_id, "status": support_map.get(contig_id, "NOT_EVALUATED")}
+            for contig_id, _ in candidates
         ],
         "best_truth_match": {
             "strand_exact_match": best_match.get("strand_exact_match"),
@@ -237,6 +281,7 @@ def _summarize_case(case, root, report):
             "candidate_length": len(candidate_sequences[0]) if candidate_sequences else None,
         } if best_match else None,
         "exact_recovery": exact_recovery,
+        "supported_exact_recovery": supported_exact_recovery,
         "partial_recovery": any(
             row.get("local_alignment_identity", 0) >= 0.95
             and row.get("target_coverage", 0) >= 0.5
@@ -291,7 +336,8 @@ def _run_k21_experiment(case_root, case):
             )
             contigs = output / "contigs.fasta"
             if process.returncode == 0 and contigs.is_file():
-                sequences = [sequence for _, sequence in m25._fasta(contigs)]
+                experimental_contigs = m25._fasta(contigs)
+                sequences = [sequence for _, sequence in experimental_contigs]
                 thresholds_doc = json.loads((stage / "read_support.json").read_text())
                 support = m28._evaluate_experimental_read_support(
                     experiment_dir, reads, contigs,
@@ -300,15 +346,33 @@ def _run_k21_experiment(case_root, case):
                 truth = json.loads((case_root / "heldout_truth.json").read_text())[
                     "cases"
                 ][0]["candidate_sequence"]
-                comparisons = [
-                    m25.diagnose_sequence(truth, sequence) for sequence in sequences
-                ] if truth else []
+                experimental_support = _support_by_contig(support.get("contigs", []))
+                recovery = _recovery_support(
+                    experimental_contigs, truth, support.get("contigs", [])
+                )
+                comparisons = recovery["comparisons"]
                 result.update(
                     contig_count=len(sequences),
+                    raw_contig_count=len(sequences),
+                    read_supported_contig_count=sum(
+                        status == "READ_SUPPORTED_ASSEMBLY"
+                        for status in experimental_support.values()
+                    ),
+                    contig_read_support=[
+                        {"contig_id": contig_id,
+                         "status": experimental_support.get(contig_id, "NOT_EVALUATED")}
+                        for contig_id, _ in experimental_contigs
+                    ],
                     contigs_sha256=m28._sha_file(contigs),
                     read_support_status=support.get("aggregate_status", support.get("status")),
-                    false_positive_candidates=(len(sequences) if not case["positive"] else None),
-                    exact_recovery=any(row.get("strand_exact_match") for row in comparisons),
+                    discovery_candidate_acceptance={
+                        "status": "NOT_EVALUATED",
+                        "accepted_candidate_count": None,
+                        "reason": "Configuration B was assessed for assembly and read support only; the downstream M7/M8 discovery-specific candidate review pathway was not run.",
+                    },
+                    accepted_false_positive_candidate_count=None,
+                    exact_recovery=recovery["exact_recovery"],
+                    supported_exact_recovery=recovery["supported_exact_recovery"],
                     partial_recovery=any(
                         row.get("local_alignment_identity", 0) >= 0.95
                         and row.get("target_coverage", 0) >= 0.5
@@ -403,7 +467,64 @@ def historical_findings(repository_root):
     }
 
 
-def run(output, repository_root, case_limit=None):
+def _historical_run_record(repository_root, report_path=None):
+    path = Path(report_path) if report_path else (
+        Path(repository_root) / "docs" / "M29_ASSEMBLY_ROOT_CAUSE_RECOVERY.json"
+    )
+    if not path.is_file():
+        return None
+    raw = path.read_bytes()
+    previous = json.loads(raw.decode("utf-8"))
+    return {
+        "source": "PR #96 head dcc138fb4830e066a10baf1ac45f90f346d38cbb",
+        "source_report_sha256": hashlib.sha256(raw).hexdigest(),
+        "summary": previous.get("summary"),
+        "cases": previous.get("cases", []),
+    }
+
+
+def _compare_historical_report(repository_root, summaries, report_path=None):
+    path = Path(report_path) if report_path else (
+        Path(repository_root) / "docs" / "M29_ASSEMBLY_ROOT_CAUSE_RECOVERY.json"
+    )
+    if not path.is_file():
+        return {"status": "NOT_EVALUATED", "reason": "prior M29 JSON report is unavailable"}
+    previous = json.loads(path.read_text(encoding="utf-8"))
+    old_cases = {row["case_id"]: row for row in previous.get("cases", [])}
+    stable_fields = (
+        "split", "factor", "positive", "parameters", "random_seed",
+        "truth_sha256", "assembly_eligible_input_sha256", "input_manifest_sha256",
+    )
+    comparisons = []
+    for row in summaries:
+        old = old_cases.get(row["case_id"])
+        comparisons.append({
+            "case_id": row["case_id"],
+            "stable_fields_match": bool(old) and all(
+                old.get(field) == row.get(field) for field in stable_fields
+            ),
+            "assembly_graph_sha256_match": bool(old) and (
+                old.get("assembly_graph", {}).get("sha256")
+                == row.get("assembly_graph", {}).get("sha256")
+            ),
+        })
+    matched = (
+        len(old_cases) == len(summaries)
+        and all(row["stable_fields_match"] and row["assembly_graph_sha256_match"]
+                for row in comparisons)
+    )
+    return {
+        "status": "MATCHED_STABLE_FIELDS" if matched else "STABLE_FIELD_DIFFERENCES",
+        "historical_report": "docs/M29_ASSEMBLY_ROOT_CAUSE_RECOVERY.json at replay start",
+        "historical_case_count": len(old_cases),
+        "fresh_replay_case_count": len(summaries),
+        "stable_fields_compared": list(stable_fields),
+        "assembly_graph_sha256_compared": True,
+        "cases": comparisons,
+    }
+
+
+def run(output, repository_root, case_limit=None, historical_report_path=None):
     output = Path(output).resolve()
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Refusing to overwrite existing M29 evidence: {output}")
@@ -432,7 +553,19 @@ def run(output, repository_root, case_limit=None):
         "truth_use": "retrospective scoring only, after the registered M19 workflow completes",
         "production_defaults_changed": False,
         "historical_root_cause_evidence": historical_findings(repository_root),
+        "historical_run_record": _historical_run_record(
+            repository_root, historical_report_path
+        ),
         "cases": summaries,
+        "execution_provenance": {
+            "kind": "fresh_clean_execution",
+            "all_fixed_cases_executed": case_limit is None,
+            "case_limit": case_limit,
+            "output_directory": str(output),
+        },
+        "replay_comparison": _compare_historical_report(
+            repository_root, summaries, historical_report_path
+        ),
         "controlled_improvement": _controlled_improvement(summaries),
         "demonstrated_m29_findings": [
             {
@@ -461,29 +594,36 @@ def run(output, repository_root, case_limit=None):
             "target_absent_controls": sum(not row["positive"] for row in summaries),
             "exact_recoveries": sum(row["exact_recovery"] for row in summaries),
             "supported_exact_recoveries": sum(
-                row["exact_recovery"]
-                and "READ_SUPPORTED_ASSEMBLY" in row["read_support_statuses"]
+                row["supported_exact_recovery"]
                 for row in summaries
             ),
             "held_out_supported_exact_recoveries": sum(
-                row["split"] == "held_out" and row["exact_recovery"]
-                and "READ_SUPPORTED_ASSEMBLY" in row["read_support_statuses"]
+                row["split"] == "held_out" and row["supported_exact_recovery"]
                 for row in summaries
             ),
             "confirmatory_held_out_supported_exact_recoveries": sum(
                 row["factor"] == "low_coverage_validation"
-                and row.get("experimental_configuration_B", {}).get("exact_recovery")
-                and row.get("experimental_configuration_B", {}).get("read_support_status")
-                == "READ_SUPPORTED_ASSEMBLY"
+                and row.get("experimental_configuration_B", {}).get("supported_exact_recovery")
                 for row in summaries
             ),
-            "negative_control_false_positive_candidates": sum(
-                row["false_positive_candidates"]
+            "negative_control_accepted_false_positive_candidates": "NOT_EVALUATED",
+            "experimental_negative_control_accepted_false_positive_candidates": "NOT_EVALUATED",
+            "negative_control_raw_contigs": sum(
+                row["raw_contig_count"] for row in summaries if not row["positive"]
+            ),
+            "negative_control_read_supported_contigs": sum(
+                row["read_supported_contig_count"]
                 for row in summaries if not row["positive"]
             ),
-            "experimental_negative_control_false_positive_candidates": sum(
+            "experimental_negative_control_raw_contigs": sum(
                 (row.get("experimental_configuration_B") or {}).get(
-                    "false_positive_candidates", 0
+                    "raw_contig_count", 0
+                ) or 0
+                for row in summaries if not row["positive"]
+            ),
+            "experimental_negative_control_read_supported_contigs": sum(
+                (row.get("experimental_configuration_B") or {}).get(
+                    "read_supported_contig_count", 0
                 ) or 0
                 for row in summaries if not row["positive"]
             ),
@@ -493,7 +633,6 @@ def run(output, repository_root, case_limit=None):
     }
     result["summary"]["m29_success_criterion_met"] = bool(
         result["summary"]["confirmatory_held_out_supported_exact_recoveries"] >= 1
-        and result["summary"]["negative_control_false_positive_candidates"] == 0
         and result["controlled_improvement"].get("held_out", {}).get(
             "input_identity_matched", False
         )
@@ -502,7 +641,7 @@ def run(output, repository_root, case_limit=None):
         ).get("status") == "COMPLETED"
         and result["controlled_improvement"].get("negative_control", {}).get(
             "configuration_B", {}
-        ).get("false_positive_candidates") == 0
+        ).get("accepted_false_positive_candidate_count") == 0
         and result["controlled_improvement"].get("negative_control", {}).get(
             "input_identity_matched", False
         )
@@ -536,29 +675,31 @@ def render_markdown(result):
         "## M29 benchmark",
         "",
         f"- Cases: {summary['case_count']} ({summary['positive_cases']} positive; {summary['target_absent_controls']} target-absent control).",
-        f"- Exact recoveries: {summary['exact_recoveries']}; independently read-supported exact recoveries: {summary['supported_exact_recoveries']}.",
+        f"- Demonstrated exact synthetic recoveries: {summary['exact_recoveries']}; per-contig read-supported exact recoveries: {summary['supported_exact_recoveries']}.",
         f"- Held-out read-supported exact recoveries: {summary['held_out_supported_exact_recoveries']}.",
         f"- Confirmatory fresh-seed held-out B recoveries: {summary['confirmatory_held_out_supported_exact_recoveries']}.",
-        f"- False-positive candidates in target-absent controls: {summary['negative_control_false_positive_candidates']}.",
-        f"- Configuration B false-positive candidates in its held-out target-absent control: {summary['experimental_negative_control_false_positive_candidates']}.",
+        f"- Target-absent raw contigs: {summary['negative_control_raw_contigs']}; read-supported target-absent contigs: {summary['negative_control_read_supported_contigs']}.",
+        f"- Configuration B target-absent raw contigs: {summary['experimental_negative_control_raw_contigs']}; read-supported background contigs: {summary['experimental_negative_control_read_supported_contigs']}.",
+        "- Accepted false-positive satellite-virus candidates: NOT_EVALUATED; M29 did not run downstream discovery-specific candidate screening.",
+        "- False-positive discovery rates remain unknown; assembly and read support are not candidate acceptance.",
+        "- Historical checked-in benchmark findings are distinct from results freshly reproduced by this revision; see the JSON replay comparison.",
+        "- The prior PR-head summary and all 17 case-level historical run records are preserved separately in the JSON `historical_run_record` field.",
         f"- M29 success criterion met: {summary['m29_success_criterion_met']}.",
         "- Truth is read only after each registered M19 workflow run for retrospective scoring.",
         "- The earlier exploratory B pilot is excluded from confirmation; the counted held-out validation uses a distinct deterministic seed.",
         "- Reduced-coverage failures with an SPAdes invalid k-mer coverage histogram are attributed to the observed coverage-model failure only; no operating-system cause is inferred.",
         "",
-        "| Case | Split | Factor | Eligible | Contigs | Assembly | Exact | Partial | Identity | Breadth | Candidates |",
-        "|---|---|---|---:|---:|---|---|---|---:|---:|---:|",
+        "| Case | Split | Factor | Eligible reads | Raw contigs | Supported contigs | Exact | Supported exact | Partial | Candidate acceptance |",
+        "|---|---|---|---:|---:|---:|---|---|---|---|",
     ]
     for row in result["cases"]:
         counts = row["stage_read_counts"]
         lines.append(
             f"| {row['case_id']} | {row['split']} | {row['factor']} | "
-            f"{counts['assembly_eligible']} | {row['contigs_produced']} | "
-            f"{row['assembler_status']} | "
-            f"{row['exact_recovery']} | {row['partial_recovery']} | "
-            f"{(row['best_truth_match'] or {}).get('sequence_identity')} | "
-            f"{(row['best_truth_match'] or {}).get('target_breadth')} | "
-            f"{row['candidate_count']} |"
+            f"{counts['assembly_eligible']} | {row['raw_contig_count']} | "
+            f"{row['read_supported_contig_count']} | {row['exact_recovery']} | "
+            f"{row['supported_exact_recovery']} | {row['partial_recovery']} | "
+            f"{row['discovery_candidate_acceptance']['status']} |"
         )
     comparisons = result.get("controlled_improvement") or {}
     if comparisons:
@@ -571,16 +712,19 @@ def render_markdown(result):
             lines.extend([
                 f"{partition}: `{comparison['case_id']}`. Eligible-read input identity matched: `{comparison['input_identity_matched']}`.",
                 "",
-                "| Configuration | Assembly status | Exact recovery | Read support | False-positive candidates |",
-                "|---|---|---|---|---:|",
-                f"| A: registered default | {comparison['configuration_A']['assembler_status']} | {comparison['configuration_A']['exact_recovery']} | {comparison['configuration_A']['read_support_statuses']} | {comparison['configuration_A']['false_positive_candidates']} |",
-                f"| B: SPAdes k=21 only | {comparison['configuration_B']['status']} | {comparison['configuration_B'].get('exact_recovery')} | {comparison['configuration_B'].get('read_support_status')} | {comparison['configuration_B'].get('false_positive_candidates')} |",
+                "| Configuration | Status | Raw contigs | Read-supported contigs | Exact recovery | Supported exact | Accepted false-positive candidates |",
+                "|---|---|---:|---:|---|---|---|",
+                f"| A: registered default | {comparison['configuration_A']['assembler_status']} | {comparison['configuration_A']['raw_contig_count']} | {comparison['configuration_A']['read_supported_contig_count']} | {comparison['configuration_A']['exact_recovery']} | {comparison['configuration_A']['supported_exact_recovery']} | NOT_EVALUATED |",
+                f"| B: SPAdes k=21 only | {comparison['configuration_B']['status']} | {comparison['configuration_B'].get('raw_contig_count')} | {comparison['configuration_B'].get('read_supported_contig_count')} | {comparison['configuration_B'].get('exact_recovery')} | {comparison['configuration_B'].get('supported_exact_recovery')} | NOT_EVALUATED |",
                 "",
             ])
-        lines.append("B is an isolated experiment on matched synthetic reads. It does not alter production parameters. Promotion requires replicated held-out performance.")
+        lines.append("B is an isolated experiment on matched synthetic reads. It produced one read-supported background contig in the target-absent control; this is not an accepted satellite-virus candidate. Candidate screening was not evaluated, so specificity and the false-positive discovery rate remain unknown. B does not alter production parameters; the decision remains NO_PROMOTION.")
     lines += [
         "",
         "## Verification and limitations",
+        "",
+        f"Fresh run status: `{result.get('execution_provenance', {}).get('kind', 'UNKNOWN')}`; full fixed matrix executed: `{result.get('execution_provenance', {}).get('all_fixed_cases_executed', False)}`. Replay comparison: `{result.get('replay_comparison', {}).get('status', 'NOT_RECORDED')}`.",
+        f"Compared {result.get('replay_comparison', {}).get('fresh_replay_case_count', 0)} cases on fixed case identity, truth/input digests, parameters, and assembly-graph SHA-256. See JSON for per-case results.",
         "",
         "Reproduce with `python -m satellite_discovery.m29_assembly_root_cause_recovery --output /tmp/m29-evidence --repository-root .`. The output directory must be new or empty; generated assembler work products stay outside Git.",
         "",
@@ -617,17 +761,22 @@ def _controlled_improvement(summaries):
                 row.get("assembly_eligible_input_sha256") == experiment.get("input_sha256")
             ),
             "configuration_A": {
-                "assembler_status": row["assembler_status"],
-                "exact_recovery": row["exact_recovery"],
-                "read_support_statuses": row["read_support_statuses"],
-                "false_positive_candidates": row["false_positive_candidates"],
+                "assembler_status": row.get("assembler_status", "NOT_EVALUATED"),
+                "exact_recovery": row.get("exact_recovery", False),
+                "supported_exact_recovery": row.get("supported_exact_recovery", False),
+                "raw_contig_count": row.get("raw_contig_count", 0),
+                "read_supported_contig_count": row.get("read_supported_contig_count", 0),
+                "read_support_statuses": row.get("read_support_statuses", []),
+                "accepted_false_positive_candidate_count": row.get(
+                    "accepted_false_positive_candidate_count"
+                ),
             },
             "configuration_B": experiment,
         }
     return comparisons
 
 
-def summarize_existing_runs(output, repository_root):
+def summarize_existing_runs(output, repository_root, historical_report_path=None):
     """Rebuild report metadata from preserved run folders without rerunning SPAdes."""
     output = Path(output).resolve()
     summaries = []
@@ -643,7 +792,19 @@ def summarize_existing_runs(output, repository_root):
         "truth_use": "retrospective scoring only, after the registered M19 workflow completes",
         "production_defaults_changed": False,
         "historical_root_cause_evidence": historical_findings(repository_root),
+        "historical_run_record": _historical_run_record(
+            repository_root, historical_report_path
+        ),
         "cases": summaries,
+        "execution_provenance": {
+            "kind": "summary_from_preserved_runs",
+            "all_fixed_cases_executed": True,
+            "case_limit": None,
+            "output_directory": str(output),
+        },
+        "replay_comparison": _compare_historical_report(
+            repository_root, summaries, historical_report_path
+        ),
         "controlled_improvement": _controlled_improvement(summaries),
         "demonstrated_m29_findings": [
             {
@@ -671,32 +832,23 @@ def summarize_existing_runs(output, repository_root):
             "positive_cases": sum(row["positive"] for row in summaries),
             "target_absent_controls": sum(not row["positive"] for row in summaries),
             "exact_recoveries": sum(row["exact_recovery"] for row in summaries),
-            "supported_exact_recoveries": sum(
-                row["exact_recovery"]
-                and "READ_SUPPORTED_ASSEMBLY" in row["read_support_statuses"]
-                for row in summaries
-            ),
+            "supported_exact_recoveries": sum(row["supported_exact_recovery"] for row in summaries),
             "held_out_supported_exact_recoveries": sum(
-                row["split"] == "held_out" and row["exact_recovery"]
-                and "READ_SUPPORTED_ASSEMBLY" in row["read_support_statuses"]
+                row["split"] == "held_out" and row["supported_exact_recovery"]
                 for row in summaries
             ),
             "confirmatory_held_out_supported_exact_recoveries": sum(
                 row["factor"] == "low_coverage_validation"
-                and row.get("experimental_configuration_B", {}).get("exact_recovery")
-                and row.get("experimental_configuration_B", {}).get("read_support_status")
-                == "READ_SUPPORTED_ASSEMBLY"
+                and row.get("experimental_configuration_B", {}).get("supported_exact_recovery")
                 for row in summaries
             ),
-            "negative_control_false_positive_candidates": sum(
-                row["false_positive_candidates"]
-                for row in summaries if not row["positive"]
+            "negative_control_accepted_false_positive_candidates": "NOT_EVALUATED",
+            "experimental_negative_control_accepted_false_positive_candidates": "NOT_EVALUATED",
+            "negative_control_raw_contigs": sum(
+                row["raw_contig_count"] for row in summaries if not row["positive"]
             ),
-            "experimental_negative_control_false_positive_candidates": sum(
-                (row.get("experimental_configuration_B") or {}).get(
-                    "false_positive_candidates", 0
-                ) or 0
-                for row in summaries if not row["positive"]
+            "negative_control_read_supported_contigs": sum(
+                row["read_supported_contig_count"] for row in summaries if not row["positive"]
             ),
             "production_promotion_decision": "NO_PROMOTION",
         },
@@ -704,7 +856,6 @@ def summarize_existing_runs(output, repository_root):
     }
     result["summary"]["m29_success_criterion_met"] = bool(
         result["summary"]["confirmatory_held_out_supported_exact_recoveries"] >= 1
-        and result["summary"]["negative_control_false_positive_candidates"] == 0
         and result["controlled_improvement"].get("held_out", {}).get(
             "input_identity_matched", False
         )
@@ -713,7 +864,7 @@ def summarize_existing_runs(output, repository_root):
         ).get("status") == "COMPLETED"
         and result["controlled_improvement"].get("negative_control", {}).get(
             "configuration_B", {}
-        ).get("false_positive_candidates") == 0
+        ).get("accepted_false_positive_candidate_count") == 0
         and result["controlled_improvement"].get("negative_control", {}).get(
             "input_identity_matched", False
         )
@@ -736,12 +887,29 @@ def main(argv=None):
         "--summarize-existing", action="store_true",
         help="Rebuild reports from completed runs without rerunning the assembler",
     )
+    parser.add_argument(
+        "--report-output", help="Optional directory receiving the generated JSON and Markdown reports",
+    )
+    parser.add_argument(
+        "--historical-report", help="Prior M29 JSON report to preserve and compare",
+    )
     args = parser.parse_args(argv)
     result = (
-        summarize_existing_runs(args.output, args.repository_root)
+        summarize_existing_runs(
+            args.output, args.repository_root, args.historical_report
+        )
         if args.summarize_existing
-        else run(args.output, args.repository_root, args.case_limit)
+        else run(
+            args.output, args.repository_root, args.case_limit,
+            args.historical_report,
+        )
     )
+    if args.report_output:
+        report_dir = Path(args.report_output)
+        report_dir.mkdir(parents=True, exist_ok=True)
+        for name in ("M29_ASSEMBLY_ROOT_CAUSE_RECOVERY.json",
+                     "M29_ASSEMBLY_ROOT_CAUSE_RECOVERY.md"):
+            shutil.copyfile(Path(args.output) / name, report_dir / name)
     print(json.dumps(result["summary"], sort_keys=True))
 
 
