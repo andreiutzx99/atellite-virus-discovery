@@ -1,0 +1,71 @@
+{
+  "cases": [
+    {
+      "candidate_id": "m30q001",
+      "scenario": "target_like_supported",
+      "target_present": true,
+      "target_sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2"
+    },
+    {
+      "candidate_id": "m30q002",
+      "scenario": "background_supported",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q003",
+      "scenario": "near_target_decoy",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q004",
+      "scenario": "repeat_challenge",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q005",
+      "scenario": "truncated_target",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q006",
+      "scenario": "unsupported_exact_target",
+      "target_present": true,
+      "target_sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2"
+    },
+    {
+      "candidate_id": "m30q007",
+      "scenario": "target_like_supported",
+      "target_present": true,
+      "target_sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2"
+    },
+    {
+      "candidate_id": "m30q008",
+      "scenario": "background_supported",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q009",
+      "scenario": "near_target_decoy",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q010",
+      "scenario": "target_absent",
+      "target_present": false,
+      "target_sequence_sha256": null
+    },
+    {
+      "candidate_id": "m30q011",
+      "scenario": "ambiguous_insufficient_evidence",
+      "target_present": true,
+      "target_sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2"
+    }
+  ],
+  "schema": "m30-retrospective-truth-v1"
+}
