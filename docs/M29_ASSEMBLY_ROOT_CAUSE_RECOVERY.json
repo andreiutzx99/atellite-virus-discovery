@@ -1,0 +1,1420 @@
+{
+  "biological_data_used": false,
+  "cases": [
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "b40a7b153cd5e25795ccda3bc20c2645b2ad8b068a08568d595cbb897e5b1827",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 38.3432,
+        "coverage_tag_min": 38.3432,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "bfcca203312bfa288358e944112c110f57b463537678d53cda1da816784c55f8",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 900,
+        "sequence_identity": 1.0,
+        "strand_exact_match": true,
+        "target_breadth": 1.0
+      },
+      "candidate_count": 1,
+      "case_id": "development-m29-positive_control",
+      "contigs_produced": 1,
+      "exact_recovery": true,
+      "experimental_configuration_B": null,
+      "factor": "positive_control",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "458a811996e990091e98e7d52322e8cf4c2fbedf58fa7b22cd8f94fa1241993a",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250130,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "development",
+      "stage_read_counts": {
+        "after_qc": 728,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 728
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "bfab27d81bd92161f54ffacf159194ad7a6de5675652a6902a8d7ba3c1d7fcac",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "NO_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "8def80a8e299953e515b81968c0f5d13a1b7db7771f596d0e3811fe37ed275cc",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 3240.0,
+        "coverage_tag_min": 3240.0,
+        "dead_end_segment_count": 0,
+        "link_count": 1,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "02236eff9f6b4b2067d128732772bf79c0b1937cd690e192bedb89f0f241fd39",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 65,
+        "sequence_identity": 1.0,
+        "strand_exact_match": false,
+        "target_breadth": 0.07222222222222222
+      },
+      "candidate_count": 1,
+      "case_id": "development-m29-repeat_challenge",
+      "contigs_produced": 1,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "repeat_challenge",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "49ecb3f7eb1894e2d74dd6076398a59594e0d8b33c7473281fb689106ee2d685",
+      "non_exact_candidate_count": 1,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "high",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250130,
+      "read_support_statuses": [
+        "UNSUPPORTED_ASSEMBLY"
+      ],
+      "split": "development",
+      "stage_read_counts": {
+        "after_qc": 728,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 728
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "53da2460b60e04143e28c98faf4fcd4f217a906ca56690d4a40771cbcbd73060",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "NO_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "development-m29-target_absent_negative",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "target_absent_negative",
+      "false_positive_candidates": 0,
+      "input_manifest_sha256": "9c6b5f502b019e446132032360405d8ff13d555799ed586894bd1c0f6e9c77b4",
+      "non_exact_candidate_count": null,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": false,
+      "random_seed": 250130,
+      "read_support_statuses": [],
+      "split": "development",
+      "stage_read_counts": {
+        "after_qc": 8,
+        "after_reference_screen": 0,
+        "assembly_eligible": 0,
+        "raw": 8
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": null,
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [
+        "0:00:00.009     1M / 23M   ERROR   General                 (kmer_coverage_model.cpp   : 188)   Invalid kmer coverage histogram, make sure that the coverage is indeed uniform",
+        "== Error ==  system call for: \"['/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core', '/tmp/m29-final-report/runs/tuning-m29-reduced_coverage/stages/m6_m2904/assembly/raw/K33/configs/config.info']\" finished abnormally, OS return value: 21"
+      ],
+      "assembler_status": "EXECUTION_FAILED",
+      "assembly_eligible_input_sha256": "2257919a727986870c1233df578ec1e334e6c7c3319d4dc9040f9544e3bd959d",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "tuning-m29-reduced_coverage",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": {
+        "command": [
+          "spades.py",
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21",
+          "-s",
+          "eligible_read1.fastq.gz",
+          "-o",
+          "experimental_k21/spades"
+        ],
+        "command_parameters": [
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21"
+        ],
+        "configuration": "B_SPAdes_k21_only",
+        "contig_count": 1,
+        "contigs_sha256": "9dad5387206fafa391a564bc9c7c6867d2026c58ef80c0ffcb81d568a9b9ec14",
+        "duration_seconds": 0.36518507800019506,
+        "exact_recovery": true,
+        "false_positive_candidates": null,
+        "input_sha256": "2257919a727986870c1233df578ec1e334e6c7c3319d4dc9040f9544e3bd959d",
+        "partial_recovery": false,
+        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+        "return_code": 0,
+        "status": "COMPLETED",
+        "thresholds_unchanged": true,
+        "truth_scoring_phase": "AFTER_CONFIGURATION_B_EXECUTION"
+      },
+      "factor": "reduced_coverage",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "369c3c4118d940ba759fcb64e12e25c697b246365a76f14d47afc98b970c6ebc",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 12,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250230,
+      "read_support_statuses": [],
+      "split": "tuning",
+      "stage_read_counts": {
+        "after_qc": 116,
+        "after_reference_screen": 108,
+        "assembly_eligible": 108,
+        "raw": 116
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "15068286cdf6b27f24f4993c7aba2d6d641b26128c1cb111d53f45c2cf01b1af",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "974624a0642a6e5ed536f5b1b027a26bef395c04e36cb2104d3636d652bd44dd",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 28.2353,
+        "coverage_tag_min": 28.2353,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "3581e8b1adb63fbfca5afbea0e3f4fbc6eca6bc43858a90fd6c1f0a9e1e4e4f4",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 900,
+        "sequence_identity": 1.0,
+        "strand_exact_match": true,
+        "target_breadth": 1.0
+      },
+      "candidate_count": 1,
+      "case_id": "tuning-m29-short_reads",
+      "contigs_produced": 1,
+      "exact_recovery": true,
+      "experimental_configuration_B": null,
+      "factor": "short_reads",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "f78a2fc4d0faeb0f938ba4a707ab914a09db2af65c3aaa1b121c9cfd80c472d8",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 50,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250230,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "tuning",
+      "stage_read_counts": {
+        "after_qc": 1448,
+        "after_reference_screen": 1440,
+        "assembly_eligible": 1440,
+        "raw": 1448
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "66fd6d364250cafba0e297f446b4a3372c6ab1f3809479d1bd49affc41cbac6a",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "e468b63b26ef9161804fea41c9df0f063b045f2e13abdad4d983f2e8c2508c08",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 7.46675,
+        "coverage_tag_min": 7.46675,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "50a08070d4c00b5cc65981d104a7f229aff9f62513d607be8d0eb910c5e92a5d",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 897,
+        "sequence_identity": 0.9988851727982163,
+        "strand_exact_match": false,
+        "target_breadth": 0.9966666666666667
+      },
+      "candidate_count": 1,
+      "case_id": "tuning-m29-sequencing_errors",
+      "contigs_produced": 1,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "sequencing_errors",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "4ee5d37c835286d29b5649c93fe7bd62a6ce64243b527f3c474f2fb1590b8c77",
+      "non_exact_candidate_count": 1,
+      "parameters": {
+        "error_rate": 0.02,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": true,
+      "positive": true,
+      "random_seed": 250230,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "tuning",
+      "stage_read_counts": {
+        "after_qc": 728,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 728
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "4b0dcb22766cbbaad61c6dcff4f73bfb55d5e17f742a0619fa5741883fa1b22b",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "b5962847b104ddd5337083a6c32bd49e97bd1222da27b2fda192e3f51cda7f11",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 38.3432,
+        "coverage_tag_min": 38.3432,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "a0a841d8d49b92026edbf4fe23bac90c69be9ecbc41fa41d988330feb096e07e",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 900,
+        "sequence_identity": 1.0,
+        "strand_exact_match": true,
+        "target_breadth": 1.0
+      },
+      "candidate_count": 1,
+      "case_id": "tuning-m29-synthetic_background",
+      "contigs_produced": 1,
+      "exact_recovery": true,
+      "experimental_configuration_B": null,
+      "factor": "synthetic_background",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "bd0449ce88944410c6829cfcabddb7c277b6bd08a0d525535919bcb0bac09152",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": true,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250230,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "tuning",
+      "stage_read_counts": {
+        "after_qc": 736,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 736
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "15068286cdf6b27f24f4993c7aba2d6d641b26128c1cb111d53f45c2cf01b1af",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "NO_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "tuning-m29-target_absent_negative",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "target_absent_negative",
+      "false_positive_candidates": 0,
+      "input_manifest_sha256": "31789874a46e5fb118fbcbb9b363ce93433afbf06d2464b4670ac3afd55928e4",
+      "non_exact_candidate_count": null,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": false,
+      "random_seed": 250230,
+      "read_support_statuses": [],
+      "split": "tuning",
+      "stage_read_counts": {
+        "after_qc": 8,
+        "after_reference_screen": 0,
+        "assembly_eligible": 0,
+        "raw": 8
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": null,
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "01cb7001a2e1fd411211556e349943ef87ff72a707e6bc20069397fba45163da",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 38.3432,
+        "coverage_tag_min": 38.3432,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "88845f586bb3999ea8eeaede3be457614e4393b27ca994ff7d328450c62052a9",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 900,
+        "sequence_identity": 1.0,
+        "strand_exact_match": true,
+        "target_breadth": 1.0
+      },
+      "candidate_count": 1,
+      "case_id": "held_out-m29-positive_control",
+      "contigs_produced": 1,
+      "exact_recovery": true,
+      "experimental_configuration_B": null,
+      "factor": "positive_control",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "ddf411dfceca9d1a5376830707d53233391fcf676aed3e42ca7d6f1ddc16b7fa",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250330,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 728,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 728
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "e0d6019b8aa02d314cc35fea6e92edff9556e7da68c1ca354ea3f17c2d3cab25",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [
+        "0:00:00.016     1M / 23M   ERROR   General                 (kmer_coverage_model.cpp   : 188)   Invalid kmer coverage histogram, make sure that the coverage is indeed uniform",
+        "== Error ==  system call for: \"['/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core', '/tmp/m29-final-report/runs/held_out-m29-reduced_coverage/stages/m6_m2910/assembly/raw/K33/configs/config.info']\" finished abnormally, OS return value: 21"
+      ],
+      "assembler_status": "EXECUTION_FAILED",
+      "assembly_eligible_input_sha256": "6a97c49fed94720c91ee39abefbb21a407d9712662354d9805e0740926a21076",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "held_out-m29-reduced_coverage",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "reduced_coverage",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "32ec18a5dec3abfaf587f8988dcc68564a2bde6b481fe6584e37a943f895342f",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 12,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250330,
+      "read_support_statuses": [],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 116,
+        "after_reference_screen": 108,
+        "assembly_eligible": 108,
+        "raw": 116
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "15d3eb0bafe43bc982e7bcce2dc6e59a79e3b3e3e748bcbc0013ff80f937031e",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "5aab90e5732ed7c606e198f2fe2b27cf1eb18c8c05c44dbdcfe59925353523e9",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 28.2353,
+        "coverage_tag_min": 28.2353,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "3d5ddae96bae360529073f8c2595088c1bcfc00a2f31ffb219af84c8c97bf628",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 900,
+        "sequence_identity": 1.0,
+        "strand_exact_match": true,
+        "target_breadth": 1.0
+      },
+      "candidate_count": 1,
+      "case_id": "held_out-m29-short_reads",
+      "contigs_produced": 1,
+      "exact_recovery": true,
+      "experimental_configuration_B": null,
+      "factor": "short_reads",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "8a2028d9b1d08edcd10628d03e1e0c15b5481693850832ab2ca95ea30b2d23f6",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 50,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250330,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 1448,
+        "after_reference_screen": 1440,
+        "assembly_eligible": 1440,
+        "raw": 1448
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "20ec6a08102291d038d71ff4f6eff944a8ccfbca49316fa8105d54f1c783aeb0",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "NO_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "8e90af0bfdafd9ee46768d7f5e64f691902bb2ba83cf1d0c5669675814baedf9",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 3240.0,
+        "coverage_tag_min": 3240.0,
+        "dead_end_segment_count": 0,
+        "link_count": 1,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "02236eff9f6b4b2067d128732772bf79c0b1937cd690e192bedb89f0f241fd39",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 65,
+        "sequence_identity": 1.0,
+        "strand_exact_match": false,
+        "target_breadth": 0.07222222222222222
+      },
+      "candidate_count": 1,
+      "case_id": "held_out-m29-repeat_challenge",
+      "contigs_produced": 1,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "repeat_challenge",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "5d2a6b73293ad5711f0bf89172094f35ebe3073a736f400f3c52cde856b4ff60",
+      "non_exact_candidate_count": 1,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "high",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250330,
+      "read_support_statuses": [
+        "UNSUPPORTED_ASSEMBLY"
+      ],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 728,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 728
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "53da2460b60e04143e28c98faf4fcd4f217a906ca56690d4a40771cbcbd73060",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "73ca05c20a689cec2143d8628067694b4ad2a52960eaa639bfb51f2186714484",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 7.45024,
+        "coverage_tag_min": 7.45024,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "254f0e200355a7e30278c1477a85ec70dc89e7d8a20f303d5cabfa29bb45e58d",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 899,
+        "sequence_identity": 0.9988876529477196,
+        "strand_exact_match": false,
+        "target_breadth": 0.9988888888888889
+      },
+      "candidate_count": 1,
+      "case_id": "held_out-m29-sequencing_errors",
+      "contigs_produced": 1,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "sequencing_errors",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "06b6c824f56eec818eaf816e1d1c4b009ac66c35bafbff7273243ebe02ceeb03",
+      "non_exact_candidate_count": 1,
+      "parameters": {
+        "error_rate": 0.02,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": true,
+      "positive": true,
+      "random_seed": 250330,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 728,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 728
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "15d3eb0bafe43bc982e7bcce2dc6e59a79e3b3e3e748bcbc0013ff80f937031e",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "READ_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "54d0d41a4e4a9e9df1531bf3882983d33ccdbf1aa0789b270be92316e45967db",
+      "assembly_graph": {
+        "branch_segment_count": 0,
+        "coverage_tag_count": 1,
+        "coverage_tag_max": 38.3432,
+        "coverage_tag_min": 38.3432,
+        "dead_end_segment_count": 1,
+        "link_count": 0,
+        "path": "assembly_graph_with_scaffolds.gfa",
+        "segment_count": 1,
+        "sha256": "7413d64600d1bebd429c20ea2f128e376defde9ab462a20a07d6c0cd549d62ec",
+        "status": "AVAILABLE"
+      },
+      "best_truth_match": {
+        "candidate_length": 900,
+        "sequence_identity": 1.0,
+        "strand_exact_match": true,
+        "target_breadth": 1.0
+      },
+      "candidate_count": 1,
+      "case_id": "held_out-m29-synthetic_background",
+      "contigs_produced": 1,
+      "exact_recovery": true,
+      "experimental_configuration_B": null,
+      "factor": "synthetic_background",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "e80289f93c6658a7bd9074de370164097453ec57329d3df85704e03262073b5e",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": true,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 250330,
+      "read_support_statuses": [
+        "READ_SUPPORTED_ASSEMBLY"
+      ],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 736,
+        "after_reference_screen": 720,
+        "assembly_eligible": 720,
+        "raw": 736
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "20ec6a08102291d038d71ff4f6eff944a8ccfbca49316fa8105d54f1c783aeb0",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [
+        "0:00:00.009     1M / 23M   ERROR   General                 (kmer_coverage_model.cpp   : 188)   Invalid kmer coverage histogram, make sure that the coverage is indeed uniform",
+        "== Error ==  system call for: \"['/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core', '/tmp/m29-final-report/runs/held_out-m29-low_coverage_validation/stages/m6_m2915/assembly/raw/K33/configs/config.info']\" finished abnormally, OS return value: 21"
+      ],
+      "assembler_status": "EXECUTION_FAILED",
+      "assembly_eligible_input_sha256": "b1e31ba8f14133f8b97bf37111542331e43e71d597e08ad7c5fd6cc159007773",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "held_out-m29-low_coverage_validation",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": {
+        "command": [
+          "spades.py",
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21",
+          "-s",
+          "eligible_read1.fastq.gz",
+          "-o",
+          "experimental_k21/spades"
+        ],
+        "command_parameters": [
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21"
+        ],
+        "configuration": "B_SPAdes_k21_only",
+        "contig_count": 1,
+        "contigs_sha256": "95ee3a9233891005654cdcc42c7e9d5edb2da794a3a18806dfeeac5990101945",
+        "duration_seconds": 0.36495340399960696,
+        "exact_recovery": true,
+        "false_positive_candidates": null,
+        "input_sha256": "b1e31ba8f14133f8b97bf37111542331e43e71d597e08ad7c5fd6cc159007773",
+        "partial_recovery": false,
+        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+        "return_code": 0,
+        "status": "COMPLETED",
+        "thresholds_unchanged": true,
+        "truth_scoring_phase": "AFTER_CONFIGURATION_B_EXECUTION"
+      },
+      "factor": "low_coverage_validation",
+      "false_positive_candidates": null,
+      "input_manifest_sha256": "231856866fda7edaac87fb46a49c21c1db8101afa404eb829c74a1aabddea63e",
+      "non_exact_candidate_count": 0,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 12,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": true,
+      "random_seed": 350330,
+      "read_support_statuses": [],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 116,
+        "after_reference_screen": 108,
+        "assembly_eligible": 108,
+        "raw": 116
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": "2496a109abffbae49d87707f5021d0afeea43ef32b7bc217f47fb73a8e394b60",
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    },
+    {
+      "assembler_diagnostics": [
+        "0:00:00.007     1M / 23M   ERROR   General                 (kmer_coverage_model.cpp   : 188)   Invalid kmer coverage histogram, make sure that the coverage is indeed uniform",
+        "== Error ==  system call for: \"['/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades-core', '/tmp/m29-final-report/runs/held_out-m29-low_coverage_target_absent_background/stages/m6_m2916/assembly/raw/K33/configs/config.info']\" finished abnormally, OS return value: 21"
+      ],
+      "assembler_status": "EXECUTION_FAILED",
+      "assembly_eligible_input_sha256": "14aae760989c4132e93995ec5da18305a5ab33d1e7a47fa315ecd30ffc91b7c1",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "held_out-m29-low_coverage_target_absent_background",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": {
+        "command": [
+          "spades.py",
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21",
+          "-s",
+          "eligible_read1.fastq.gz",
+          "-o",
+          "experimental_k21/spades"
+        ],
+        "command_parameters": [
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21"
+        ],
+        "configuration": "B_SPAdes_k21_only",
+        "contig_count": 1,
+        "contigs_sha256": "c5577ef7f86c631f656dbb0a7674a3bb1cf99ef5d968ddc265f1f11e086d63ea",
+        "duration_seconds": 0.36505551200025366,
+        "exact_recovery": false,
+        "false_positive_candidates": 1,
+        "input_sha256": "14aae760989c4132e93995ec5da18305a5ab33d1e7a47fa315ecd30ffc91b7c1",
+        "partial_recovery": false,
+        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+        "return_code": 0,
+        "status": "COMPLETED",
+        "thresholds_unchanged": true,
+        "truth_scoring_phase": "AFTER_CONFIGURATION_B_EXECUTION"
+      },
+      "factor": "low_coverage_target_absent_background",
+      "false_positive_candidates": 0,
+      "input_manifest_sha256": "264537f6d9ff59e042d14628ae49b86115843c31a2798f56f3e258f9409a28f3",
+      "non_exact_candidate_count": null,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 12,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": true,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": false,
+      "random_seed": 450330,
+      "read_support_statuses": [],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 124,
+        "after_reference_screen": 108,
+        "assembly_eligible": 108,
+        "raw": 124
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": null,
+      "unreferenced_background": {
+        "read_count": 108,
+        "sequence_sha256": "f1110e3df74d3ae9e6ce3e06c5ff19147fea6171c5a579abd161b447d44e1ef2",
+        "used": true
+      }
+    },
+    {
+      "assembler_diagnostics": [],
+      "assembler_status": "NO_SUPPORTED_ASSEMBLY",
+      "assembly_eligible_input_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "assembly_graph": {
+        "path": null,
+        "status": "NOT_AVAILABLE"
+      },
+      "best_truth_match": null,
+      "candidate_count": 0,
+      "case_id": "held_out-m29-target_absent_negative",
+      "contigs_produced": 0,
+      "exact_recovery": false,
+      "experimental_configuration_B": null,
+      "factor": "target_absent_negative",
+      "false_positive_candidates": 0,
+      "input_manifest_sha256": "1ee6a6d57bba26574a7e648547c7f3b05f7afaf76c8d44c5a8e8e092b527e16e",
+      "non_exact_candidate_count": null,
+      "parameters": {
+        "error_rate": 0.0,
+        "nominal_coverage": 80,
+        "read_length": 100,
+        "repeat_complexity": "low",
+        "synthetic_background": false,
+        "target_length": 900
+      },
+      "partial_recovery": false,
+      "positive": false,
+      "random_seed": 250330,
+      "read_support_statuses": [],
+      "split": "held_out",
+      "stage_read_counts": {
+        "after_qc": 8,
+        "after_reference_screen": 0,
+        "assembly_eligible": 0,
+        "raw": 8
+      },
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "truth_sha256": null,
+      "unreferenced_background": {
+        "read_count": null,
+        "sequence_sha256": null,
+        "used": false
+      }
+    }
+  ],
+  "controlled_improvement": {
+    "held_out": {
+      "case_id": "held_out-m29-low_coverage_validation",
+      "configuration_A": {
+        "assembler_status": "EXECUTION_FAILED",
+        "exact_recovery": false,
+        "false_positive_candidates": null,
+        "read_support_statuses": []
+      },
+      "configuration_B": {
+        "command": [
+          "spades.py",
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21",
+          "-s",
+          "eligible_read1.fastq.gz",
+          "-o",
+          "experimental_k21/spades"
+        ],
+        "command_parameters": [
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21"
+        ],
+        "configuration": "B_SPAdes_k21_only",
+        "contig_count": 1,
+        "contigs_sha256": "95ee3a9233891005654cdcc42c7e9d5edb2da794a3a18806dfeeac5990101945",
+        "duration_seconds": 0.36495340399960696,
+        "exact_recovery": true,
+        "false_positive_candidates": null,
+        "input_sha256": "b1e31ba8f14133f8b97bf37111542331e43e71d597e08ad7c5fd6cc159007773",
+        "partial_recovery": false,
+        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+        "return_code": 0,
+        "status": "COMPLETED",
+        "thresholds_unchanged": true,
+        "truth_scoring_phase": "AFTER_CONFIGURATION_B_EXECUTION"
+      },
+      "input_identity_matched": true
+    },
+    "negative_control": {
+      "case_id": "held_out-m29-low_coverage_target_absent_background",
+      "configuration_A": {
+        "assembler_status": "EXECUTION_FAILED",
+        "exact_recovery": false,
+        "false_positive_candidates": 0,
+        "read_support_statuses": []
+      },
+      "configuration_B": {
+        "command": [
+          "spades.py",
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21",
+          "-s",
+          "eligible_read1.fastq.gz",
+          "-o",
+          "experimental_k21/spades"
+        ],
+        "command_parameters": [
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21"
+        ],
+        "configuration": "B_SPAdes_k21_only",
+        "contig_count": 1,
+        "contigs_sha256": "c5577ef7f86c631f656dbb0a7674a3bb1cf99ef5d968ddc265f1f11e086d63ea",
+        "duration_seconds": 0.36505551200025366,
+        "exact_recovery": false,
+        "false_positive_candidates": 1,
+        "input_sha256": "14aae760989c4132e93995ec5da18305a5ab33d1e7a47fa315ecd30ffc91b7c1",
+        "partial_recovery": false,
+        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+        "return_code": 0,
+        "status": "COMPLETED",
+        "thresholds_unchanged": true,
+        "truth_scoring_phase": "AFTER_CONFIGURATION_B_EXECUTION"
+      },
+      "input_identity_matched": true
+    },
+    "tuning": {
+      "case_id": "tuning-m29-reduced_coverage",
+      "configuration_A": {
+        "assembler_status": "EXECUTION_FAILED",
+        "exact_recovery": false,
+        "false_positive_candidates": null,
+        "read_support_statuses": []
+      },
+      "configuration_B": {
+        "command": [
+          "spades.py",
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21",
+          "-s",
+          "eligible_read1.fastq.gz",
+          "-o",
+          "experimental_k21/spades"
+        ],
+        "command_parameters": [
+          "--only-assembler",
+          "-t",
+          "1",
+          "-m",
+          "2",
+          "-k",
+          "21"
+        ],
+        "configuration": "B_SPAdes_k21_only",
+        "contig_count": 1,
+        "contigs_sha256": "9dad5387206fafa391a564bc9c7c6867d2026c58ef80c0ffcb81d568a9b9ec14",
+        "duration_seconds": 0.36518507800019506,
+        "exact_recovery": true,
+        "false_positive_candidates": null,
+        "input_sha256": "2257919a727986870c1233df578ec1e334e6c7c3319d4dc9040f9544e3bd959d",
+        "partial_recovery": false,
+        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+        "return_code": 0,
+        "status": "COMPLETED",
+        "thresholds_unchanged": true,
+        "truth_scoring_phase": "AFTER_CONFIGURATION_B_EXECUTION"
+      },
+      "input_identity_matched": true
+    }
+  },
+  "demonstrated_m29_findings": [
+    {
+      "case_ids": [
+        "tuning-m29-reduced_coverage",
+        "held_out-m29-reduced_coverage"
+      ],
+      "evidence": "SPAdes logs report an invalid k-mer coverage histogram; this is a tool-level low-coverage model failure, not evidence of an operating-system failure.",
+      "finding": "LOW_COVERAGE_KMER_HISTOGRAM_FAILURE"
+    },
+    {
+      "case_ids": [
+        "development-m29-repeat_challenge",
+        "held_out-m29-repeat_challenge"
+      ],
+      "evidence": "The repeated-sequence controls produced an unsupported candidate with limited target breadth; this documents the failure mode but does not prove a unique graph-level cause.",
+      "finding": "REPEAT_CHALLENGE_UNSUPPORTED_SHORT_CONTIG"
+    }
+  ],
+  "governance": {
+    "biological_execution_authorized": false,
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION"
+  },
+  "historical_root_cause_evidence": {
+    "demonstrated": {
+      "incomplete_supported_cases": [
+        "development-m25-02",
+        "tuning-m25-01",
+        "tuning-m25-02",
+        "held_out-m25-01",
+        "held_out-m25-02"
+      ],
+      "m27_low_complexity_focus_cases": [
+        {
+          "case_id": "development-m25-03",
+          "documented_exclusion": "LOW_SEQUENCE_COMPLEXITY",
+          "target_reads_after_reference_screen": 2,
+          "target_reads_default_assembly_eligible": 0,
+          "target_reads_generated": 747
+        },
+        {
+          "case_id": "tuning-m25-03",
+          "documented_exclusion": "LOW_SEQUENCE_COMPLEXITY",
+          "target_reads_after_reference_screen": 265,
+          "target_reads_default_assembly_eligible": 0,
+          "target_reads_generated": 267
+        },
+        {
+          "case_id": "held_out-m25-03",
+          "documented_exclusion": "LOW_SEQUENCE_COMPLEXITY",
+          "target_reads_after_reference_screen": 673,
+          "target_reads_default_assembly_eligible": 0,
+          "target_reads_generated": 747
+        }
+      ],
+      "positive_cases_with_zero_eligible_reads": 3,
+      "spades_exit_21_cases": [
+        {
+          "case_id": "development-m25-01",
+          "error": "External tool failed with exit status 21; see stderr.log",
+          "error_type": "ExternalToolExitError",
+          "return_code": 21,
+          "stderr_bytes": 0
+        }
+      ],
+      "target_absent_cases_with_zero_eligible_reads": 9
+    },
+    "source_reports": [
+      "M27_LOW_COMPLEXITY_TRIAGE_VALIDATION.json",
+      "M28_SYNTHETIC_ASSEMBLY_FAILURE_DIAGNOSTICS.json"
+    ],
+    "unresolved": [
+      "The persisted evidence does not identify an operating-system cause for SPAdes exit 21.",
+      "The five incomplete supported cases have not been assigned a specific causal mechanism by the available historical evidence.",
+      "Historical M28 experimental FASTQ/SAM evidence is unavailable, so mapped reads and rejection causes cannot be reconstructed.",
+      "Incomplete supported assemblies require case-specific graph and read evidence; association is not causal proof."
+    ]
+  },
+  "production_defaults_changed": false,
+  "schema": "m29-synthetic-recovery-v1",
+  "summary": {
+    "case_count": 17,
+    "confirmatory_held_out_supported_exact_recoveries": 1,
+    "exact_recoveries": 6,
+    "experimental_negative_control_false_positive_candidates": 1,
+    "held_out_supported_exact_recoveries": 3,
+    "m29_success_criterion_met": false,
+    "negative_control_false_positive_candidates": 0,
+    "positive_cases": 13,
+    "production_promotion_decision": "NO_PROMOTION",
+    "supported_exact_recoveries": 6,
+    "target_absent_controls": 4
+  },
+  "synthetic_only": true,
+  "truth_use": "retrospective scoring only, after the registered M19 workflow completes"
+}
