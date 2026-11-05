@@ -1,74 +1,54 @@
 # M32 — End-to-end synthetic evidence integration
 
-M32 connects fresh deterministic synthetic reads to the registered M6
-reconstruction/read-back implementation, the typed M6-to-M8 sequence contract,
-the frozen M8 BLAST+ profile, and M31's panel-relative triage. It does not alter
-production assembly or acceptance thresholds.
+Synthetic-only software integration; no biological discovery claims.
 
-## Reproduction
+## Pre-registered case outcomes
 
-Install the repository's normal optional tools (`spades.py`, `minimap2`, and
-`blastdbcmd`), then provision NCBI BLAST+ 2.17.0+ using the archive, executable
-hashes, and runtime checks in `satellite_discovery/m8_blastn_profile.py` and
-`.github/workflows/tests.yml`. Run:
+| Case | Experiment | Reference panel | Expected triage |
+|---|---|---|---|
+| development-m29-positive_control | known_reference_positive | PRESENT | REVIEW_PRIORITY |
+| development-m29-repeat_challenge | reference_absent_adversarial | ABSENT | INSUFFICIENT_EVIDENCE |
+| tuning-m29-synthetic_background | known_reference_positive | PRESENT | REVIEW_PRIORITY |
+| held_out-m29-positive_control | known_reference_positive | PRESENT | REVIEW_PRIORITY |
+| held_out-m29-sequencing_errors | reference_independent_challenge | ABSENT | INSUFFICIENT_EVIDENCE |
+| held_out-m29-target_absent_negative | target_absent_no_contig | NOT_APPLICABLE | INSUFFICIENT_EVIDENCE |
+| held_out-m32-target_absent_background | target_absent_supported_background | NOT_APPLICABLE | INSUFFICIENT_EVIDENCE |
 
-```sh
-PYTHONPATH=. python -m satellite_discovery.m32_end_to_end_synthetic_evidence \
-  --output /tmp/m32-run \
-  --blastn /path/to/blastn \
-  --makeblastdb /path/to/makeblastdb \
-  --blastdbcmd /path/to/blastdbcmd
-```
+Known-reference cases measure synthetic retrieval/integration, not independent discovery. The reference-independent challenge is checked against the frozen panel without consulting held-out truth during screening.
 
-Outputs retain each M19/M6 run, assembly graph and manifest, contig FASTA,
-read-support evidence, support alignments, M6-to-M8 handoff, M8 commands,
-normalized matches, and raw BLAST branches. The report stores hashes for the
-handoff, M6 evidence, reference snapshot, and raw search outputs. The generated
-truth sidecar is retrospective and is not an M8 or triage input.
+## Reconstruction and M6-to-M8 handoff
 
-## Evaluation scope and limitations
+| Case | Split | Assembly | Contigs | Handoff |
+|---|---|---|---:|---|
+| development-m29-positive_control | development | READ_SUPPORTED_ASSEMBLY | 1 | VALIDATED |
+| development-m29-repeat_challenge | development | NO_SUPPORTED_ASSEMBLY | 1 | VALIDATED |
+| tuning-m29-synthetic_background | tuning | READ_SUPPORTED_ASSEMBLY | 1 | VALIDATED |
+| held_out-m29-positive_control | held_out | READ_SUPPORTED_ASSEMBLY | 1 | VALIDATED |
+| held_out-m29-sequencing_errors | held_out | READ_SUPPORTED_ASSEMBLY | 1 | VALIDATED |
+| held_out-m29-target_absent_negative | held_out | NO_SUPPORTED_ASSEMBLY | 0 | NO_CONTIGS |
+| held_out-m32-target_absent_background | held_out | READ_SUPPORTED_ASSEMBLY | 1 | VALIDATED |
 
-The fixed case set includes development, tuning, and held-out synthetic cases
-plus a held-out target-absent control. M6 read-back support is technical
-evidence from the specified reads; it is not independent biological
-confirmation. M8 similarity and M31 triage are relative to a synthetic panel.
-Neither establishes biological identity, satellite-virus status, novelty, or
-candidate acceptance. Biological sensitivity, specificity, and false-discovery
-rate remain `NOT_EVALUATED`.
+## M8 and triage
 
-## Observed run
+Triage is panel-relative synthetic evidence only; it is not biological acceptance.
 
-The completed local run used the frozen BLAST+ 2.17.0+ runtime with verified
-`blastn` and `makeblastdb` executable hashes. Results were:
+| Case | Candidate | Query SHA-256 | M6 support | M8 | Panel result | Triage |
+|---|---|---|---|---|---|---|
+| development-m29-positive_control | NODE_1_length_900_cov_38.343195 | bfab27d81bd92161f54ffacf159194ad7a6de5675652a6902a8d7ba3c1d7fcac | READ_SUPPORTED_ASSEMBLY | COMPLETE | MATCH_REPORTED SYN001.1,SYN002.1,SYN004.1 | REVIEW_PRIORITY |
+| development-m29-repeat_challenge | NODE_1_length_65_cov_3240.000000 | e73cffc6653973f42cf33f183973bd4b967b6fd8e1fef17fa519a187d30cf5a0 | UNSUPPORTED_ASSEMBLY | COMPLETE | NO_REPORTED_MATCH  | INSUFFICIENT_EVIDENCE |
+| tuning-m29-synthetic_background | NODE_1_length_900_cov_38.343195 | 8cb5b5000f6db0889c52fca63f198f77b2babb9330b71f055f985f73537b44f7 | READ_SUPPORTED_ASSEMBLY | COMPLETE | MATCH_REPORTED SYN001.1,SYN002.1 | REVIEW_PRIORITY |
+| held_out-m29-positive_control | NODE_1_length_900_cov_38.343195 | 5f0626f0f6ebf4d9acbeb9b2d4179a53f9d031c51519c89ff54fa41efdf0d90b | READ_SUPPORTED_ASSEMBLY | COMPLETE | MATCH_REPORTED SYN003.1,SYN006.1 | REVIEW_PRIORITY |
+| held_out-m29-sequencing_errors | NODE_1_length_899_cov_7.450237 | 772608d50730f6f670e2c2f34f5513203592685a89395ff8e1000f6bc8d052d2 | READ_SUPPORTED_ASSEMBLY | COMPLETE | MATCH_REPORTED SYN001.1,SYN002.1,SYN007.1 | INSUFFICIENT_EVIDENCE |
+| held_out-m29-target_absent_negative | — | — | — | NOT_RUN | — | INSUFFICIENT_EVIDENCE |
+| held_out-m32-target_absent_background | NODE_1_length_900_cov_38.343195 | f1110e3df74d3ae9e6ce3e06c5ff19147fea6171c5a579abd161b447d44e1ef2 | READ_SUPPORTED_ASSEMBLY | COMPLETE | NO_REPORTED_MATCH  | INSUFFICIENT_EVIDENCE |
 
-| Measure | Result |
-|---|---:|
-| Cases | 5 |
-| Positive synthetic assembly exact recoveries | 3 / 4 |
-| Positive exact recoveries with qualifying M6 read support | 3 / 4 |
-| Validated M6-to-M8 handoffs | 4 / 5 |
-| Completed M8 searches | 4 / 4 contig-bearing cases |
-| Held-out positive exact, supported, handed off, screened, and triaged | Yes |
-| Held-out target-absent controls | 1; no contig, no M8 query, insufficient evidence |
+Target-absent background control: 1 M6-supported contig(s); M8 complete=True. This is a synthetic technical control and is not biological acceptance.
 
-The held-out positive was an exact reconstructed contig with measured M6
-support, passed the integrity-checked M6-to-M8 handoff, completed both M8
-masking branches, and received `REVIEW_PRIORITY` triage. A development repeat
-challenge produced an unsupported short contig and was assigned
-`INSUFFICIENT_EVIDENCE`. M8 raw outputs, commands, normalized matches, reference
-provenance, assembly graphs, support records, and digests are retained in the
-generated run directory. The report JSON records per-case denominators and
-hashes.
+## Limits
 
-This is a small synthetic integration benchmark, not evidence of biological
-performance. The checked-in JSON is the concise frozen result summary; the
-reproduction command writes the full artifact bundle.
+Biological sensitivity, specificity, and false-discovery rate are NOT_EVALUATED. M6 support is technical read-back evidence, not independent biological validation.
 
-Missing contigs, failed reconstruction, absent support, invalid provenance, or
-incomplete M8 branches must remain explicit and cannot be treated as a
-successful end-to-end result.
-
-Governance remains:
+Retrospective truth comparisons are reported only after every available M8 search and triage result.
 
 ```text
 decision=INCOMPLETE
