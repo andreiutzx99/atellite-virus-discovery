@@ -1,0 +1,9 @@
+{
+  "alphabet": "ACGT",
+  "candidate_count": 9,
+  "candidate_fasta_sha256": "816503ea6e9d57d66ebd73233829a1037c1b6de0dd8d0e41165a87ca778140c2",
+  "held_out_target_seed": 31036,
+  "panel_record_count": 6,
+  "schema": "m31-synthetic-fixture-generation-v1",
+  "seed": 31031
+}

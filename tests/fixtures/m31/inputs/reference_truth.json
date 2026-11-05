@@ -1,0 +1,29 @@
+{
+  "records": [
+    {
+      "panel_id": "SYN001.1",
+      "synthetic_role": "target"
+    },
+    {
+      "panel_id": "SYN002.1",
+      "synthetic_role": "target"
+    },
+    {
+      "panel_id": "SYN003.1",
+      "synthetic_role": "target"
+    },
+    {
+      "panel_id": "SYN004.1",
+      "synthetic_role": "background"
+    },
+    {
+      "panel_id": "SYN005.1",
+      "synthetic_role": "background"
+    },
+    {
+      "panel_id": "SYN006.1",
+      "synthetic_role": "target"
+    }
+  ],
+  "schema": "m31-reference-truth-v1"
+}

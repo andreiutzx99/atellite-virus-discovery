@@ -1,0 +1,181 @@
+{
+  "blast_toolchain": {
+    "archive_md5_from_ncbi_sidecar": "bdec166721de3b55f90a3badc83538e8",
+    "archive_sha256_recomputed_from_fresh_download": "3888112d8207831aa47371d93583c601f058f88b5db22dc782438b039a3a411b",
+    "archive_url": "https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.17.0/ncbi-blast-2.17.0+-x64-linux.tar.gz",
+    "blastn_sha256": "33b64bc67d3149cee2459b2f7766b363323df632cf12c099546de00aea9698b5",
+    "database_search_performed": false,
+    "index_files_external": [
+      {
+        "filename": "synthetic_panel.ndb",
+        "sha256": "b9844b91a786256e9ce82caf0bbd6eb85dfc8ef2f215b5a10cf25c12f0a90a21",
+        "size_bytes": 32768
+      },
+      {
+        "filename": "synthetic_panel.nhr",
+        "sha256": "c8a2a63b799dd194f1dcaac8699f9a71c86be49800cb76c7d30dcfca68675c27",
+        "size_bytes": 282
+      },
+      {
+        "filename": "synthetic_panel.nin",
+        "sha256": "0299abc29700da7bad2315b31fdcd6604e41b2c2e0622d722b3ec57c2c5c5488",
+        "size_bytes": 204
+      },
+      {
+        "filename": "synthetic_panel.njs",
+        "sha256": "c089c25fe1efb4ad5d385143e9c0743c54fe4f6bbcbcc8dcbc799220dcd6bb91",
+        "size_bytes": 588
+      },
+      {
+        "filename": "synthetic_panel.nog",
+        "sha256": "6a8d7cb2f0f59e347f499fb95297c260914d10896a9861c2cf70e41c760df12d",
+        "size_bytes": 56
+      },
+      {
+        "filename": "synthetic_panel.nos",
+        "sha256": "66d96d7c62cd750430098ba75ec2f26e035804a1132e7476b731a95cf2be96b8",
+        "size_bytes": 110
+      },
+      {
+        "filename": "synthetic_panel.not",
+        "sha256": "eb90c3f5171d2f6b54240e79df365c1055a317cd096e3c928ffbc71cc2256899",
+        "size_bytes": 80
+      },
+      {
+        "filename": "synthetic_panel.nsq",
+        "sha256": "98bf6f4219d475d7db26c8204580bbbb58e5b02468ca9c6ce379e2c30b7e2c62",
+        "size_bytes": 1357
+      },
+      {
+        "filename": "synthetic_panel.ntf",
+        "sha256": "67982e4d7b1490b09cce06e7c29175c6bd011cd542cfacb1a1c310084a50821a",
+        "size_bytes": 16384
+      },
+      {
+        "filename": "synthetic_panel.nto",
+        "sha256": "1ff4dcc0d13d46df32e525f97d772fe4b0502a80e3377f19bd4f6c0fbac40192",
+        "size_bytes": 28
+      }
+    ],
+    "index_validation": "blastdbcmd -info reported complete synthetic database; blastdbcmd -entry all returned the same sequence IDs listed below",
+    "makeblastdb_command": "makeblastdb -in panel.fasta -dbtype nucl -parse_seqids -out synthetic_panel",
+    "makeblastdb_sha256": "c1ffdcf6f15d1d8d75377cc9f37afa42bc9fa06678903bad77c2641e60778fce",
+    "release": "2.17.0+"
+  },
+  "database": "synthetic-only",
+  "normalization": "uppercase ASCII; deterministic A/C/G/T",
+  "panel_fasta": {
+    "external_filename": "panel.fasta",
+    "record_count": 6,
+    "sha256": "5b62f17add445c9b089096ac0f52de061b462b1eeeef8ccb61bf8129743db4b0",
+    "size_bytes": 5466,
+    "total_bases": 5400
+  },
+  "payload_storage": "M31 generated workspace output",
+  "provider": "M31 deterministic synthetic generator",
+  "records": [
+    {
+      "accession_version": "SYN001.1",
+      "curation_state": "REVIEWED",
+      "length": 900,
+      "role": "satellite_subviral",
+      "sequence_sha256": "617859e1d034d2eb8aa3122cc4956260ce78c0c9a666582d2459dba7c4eaedbc",
+      "source_organism": null,
+      "source_response_sha256": "93f32e82f63643cef9b9beb954b602b5b4f9db2eaba1b98e44acb9e2d6dd59b7",
+      "source_study_ids": [
+        "m31-synthetic-1"
+      ],
+      "subrole": "satellite_rna",
+      "taxid": 0
+    },
+    {
+      "accession_version": "SYN002.1",
+      "curation_state": "REVIEWED",
+      "length": 900,
+      "role": "satellite_subviral",
+      "sequence_sha256": "d505f607e02a40c7b331a405d53c94fa94011a05e354213dc83b090b3416ed2c",
+      "source_organism": null,
+      "source_response_sha256": "e67c9a2a8250ba5d5316e3834c171a0341999614c94c4a2dbadcee6654ed466a",
+      "source_study_ids": [
+        "m31-synthetic-2"
+      ],
+      "subrole": "satellite_rna",
+      "taxid": 0
+    },
+    {
+      "accession_version": "SYN003.1",
+      "curation_state": "REVIEWED",
+      "length": 900,
+      "role": "satellite_subviral",
+      "sequence_sha256": "41108c3b9b3758dcb253cdb4d9152edcb85ea3ef6a556254d9c4b94741fd1721",
+      "source_organism": null,
+      "source_response_sha256": "80ccf2945bee6258cec6cae03d124007c2cda97f38f6430d74c5c496790d935f",
+      "source_study_ids": [
+        "m31-synthetic-3"
+      ],
+      "subrole": "satellite_rna",
+      "taxid": 0
+    },
+    {
+      "accession_version": "SYN004.1",
+      "curation_state": "REVIEWED",
+      "length": 900,
+      "role": "virus_helper",
+      "sequence_sha256": "38e2d0944ef2c140d95215e2ebbcfa9c6cd85810c61602111652b319d5ad328a",
+      "source_organism": null,
+      "source_response_sha256": "bd60553deb615660ea1d86ed5a24ad37bd9aa5bb26022e8b09b31891b171772d",
+      "source_study_ids": [
+        "m31-synthetic-4"
+      ],
+      "subrole": "other_virus",
+      "taxid": 0
+    },
+    {
+      "accession_version": "SYN005.1",
+      "curation_state": "REVIEWED",
+      "length": 900,
+      "role": "virus_helper",
+      "sequence_sha256": "043abc44db8f69527aa6e7a9dc243d4f013ebeb6e4d93e0ba59e931f24672141",
+      "source_organism": null,
+      "source_response_sha256": "7910b03279540198d4005709704c15c9d78846e0ee1e6e886a6253703c6417f1",
+      "source_study_ids": [
+        "m31-synthetic-5"
+      ],
+      "subrole": "other_virus",
+      "taxid": 0
+    },
+    {
+      "accession_version": "SYN006.1",
+      "curation_state": "REVIEWED",
+      "length": 900,
+      "role": "satellite_subviral",
+      "sequence_sha256": "d02aa31a78a571f9efe367e07d317a044debbca8b3afbb475c0a32bba48f3a8b",
+      "source_organism": null,
+      "source_response_sha256": "3ff06d11535275a5c76616d34cb2e43c800f7582b82e1ad1d7daf332eb0f737c",
+      "source_study_ids": [
+        "m31-synthetic-6"
+      ],
+      "subrole": "satellite_rna",
+      "taxid": 0
+    }
+  ],
+  "request_endpoint": "fixture://m31",
+  "retrieval_method": "fixed-seed generator",
+  "retrieved_utc": "2026-01-01T00:00:00Z",
+  "rights": {
+    "analysis_disposition": "synthetic-only",
+    "provider_policy_urls": [
+      "https://example.invalid/synthetic"
+    ],
+    "publication_supplements": "synthetic",
+    "record_scan": "synthetic",
+    "redistribution_class": "A",
+    "redistribution_disposition": "APPROVED"
+  },
+  "schema": "m8-reference-snapshot-manifest-v1",
+  "snapshot_digest": "0d4edce726cd77e2a238a37daee24046e63e09d12ba0862cb491e8473ec87f43",
+  "snapshot_digest_algorithm": "SHA-256 canonical JSON excluding snapshot digest fields",
+  "snapshot_id": "m31-synthetic-panel-v1",
+  "status": "EXTERNAL_ONLY",
+  "taxonomy_provenance": "synthetic fixture; no taxonomy claim"
+}
