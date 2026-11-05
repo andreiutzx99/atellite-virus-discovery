@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from satellite_discovery.m32_end_to_end_synthetic_evidence import (
-    validate_handoff, validate_success_criteria,
+    _handoff, validate_handoff, validate_success_criteria,
 )
 
 
@@ -42,6 +42,12 @@ class M32HandoffTests(unittest.TestCase):
             expected["contig-B"] = expected.pop("contig-A")
             with self.assertRaisesRegex(ValueError, "IDs or sequence digests mismatch"):
                 validate_handoff(temp, expected, support)
+
+    def test_missing_assembly_fasta_does_not_create_a_candidate_handoff(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "m6-output"
+            (source / "assembly").mkdir(parents=True)
+            self.assertIsNone(_handoff(source, Path(temp) / "handoff", "missing-assembly"))
 
     def test_missing_measured_support_blocks_handoff(self):
         with tempfile.TemporaryDirectory() as temp:
