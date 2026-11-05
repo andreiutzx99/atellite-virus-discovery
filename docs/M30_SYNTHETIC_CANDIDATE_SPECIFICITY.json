@@ -1,0 +1,306 @@
+{
+  "biological_data_used": false,
+  "candidate_inputs": "M30_SYNTHETIC_CANDIDATE_INPUTS.json",
+  "conclusion": {
+    "capability": "PARTIAL_SCREENING_CAPABILITY",
+    "statement": "M8 defines and implements similarity-evidence searches, but its pinned runtime is unavailable here and its results are not a biological classifier. M7 is optional recurrence context. M9\u2013M15 provide analyses and review/provenance artifacts, not a frozen final acceptance classifier. End-to-end synthetic candidate specificity is therefore not demonstrated.",
+    "status": "NOT_VALIDATED"
+  },
+  "external_biological_queries": false,
+  "governance": {
+    "biological_execution_authorized": false,
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION"
+  },
+  "historical_m29_evidence": {
+    "source": "M29 synthetic benchmark report on main",
+    "summary": {
+      "case_count": 17,
+      "confirmatory_held_out_supported_exact_recoveries": 1,
+      "exact_recoveries": 6,
+      "experimental_negative_control_accepted_false_positive_candidates": "NOT_EVALUATED",
+      "experimental_negative_control_raw_contigs": 1,
+      "experimental_negative_control_read_supported_contigs": 1,
+      "held_out_supported_exact_recoveries": 3,
+      "m29_success_criterion_met": false,
+      "negative_control_accepted_false_positive_candidates": "NOT_EVALUATED",
+      "negative_control_raw_contigs": 0,
+      "negative_control_read_supported_contigs": 0,
+      "positive_cases": 13,
+      "production_promotion_decision": "NO_PROMOTION",
+      "supported_exact_recoveries": 6,
+      "target_absent_controls": 4
+    }
+  },
+  "metrics": {
+    "confidence_intervals": "NOT_EVALUATED",
+    "denominator": 0,
+    "false_discovery_proportion": "NOT_EVALUATED",
+    "false_negatives": "NOT_EVALUATED",
+    "false_positives": "NOT_EVALUATED",
+    "precision": "NOT_EVALUATED",
+    "reason": "No candidate completed an end-to-end discovery-specific acceptance pathway.",
+    "sensitivity": "NOT_EVALUATED",
+    "specificity": "NOT_EVALUATED",
+    "status": "NOT_EVALUATED",
+    "true_negatives": "NOT_EVALUATED",
+    "true_positives": "NOT_EVALUATED"
+  },
+  "production_defaults_changed": false,
+  "schema": "m30-synthetic-candidate-specificity-v1",
+  "screening": [
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q001",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2",
+      "source_case_id": "m30q001",
+      "split": "development"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q002",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "edf69845c95601782a7caab53a313513f175a37ddfd96039543c918903cf0358",
+      "source_case_id": "m30q002",
+      "split": "development"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q003",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "1748dfb880fc460fc31049caba0b2856aaf0715584ab7cccba24f1e9055b61d4",
+      "source_case_id": "m30q003",
+      "split": "development"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q004",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "043abc44db8f69527aa6e7a9dc243d4f013ebeb6e4d93e0ba59e931f24672141",
+      "source_case_id": "m30q004",
+      "split": "development"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q005",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "9594a8789367548280efe6df58ddc3a9e999a8c73cb50c2fd804bf3f076c2f69",
+      "source_case_id": "m30q005",
+      "split": "tuning"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q006",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "UNSUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2",
+      "source_case_id": "m30q006",
+      "split": "tuning"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q007",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2",
+      "source_case_id": "m30q007",
+      "split": "held_out"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q008",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "ec239b174e0049252a41c238d4109a0015ed57d71ca4296c2468815aac279d0d",
+      "source_case_id": "m30q008",
+      "split": "held_out"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q009",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "a915aaad1c291b092545e2f3b8e062f6236d4616cd7fa1575ffd5dc527a8b380",
+      "source_case_id": "m30q009",
+      "split": "held_out"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q010",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "NOT_EVALUATED",
+      "screening_stages_executed": [],
+      "sequence_sha256": null,
+      "source_case_id": "m30q010",
+      "split": "held_out"
+    },
+    {
+      "assembly_status": "SYNTHETIC_FIXTURE_ONLY",
+      "candidate_id": "m30q011",
+      "evidence_used_for_acceptance": [],
+      "final_acceptance_status": "NOT_EVALUATED",
+      "final_status_reason": "No existing stage implements frozen end-to-end candidate acceptance.",
+      "m7_status": "NOT_EVALUATED",
+      "m8_reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "m8_status": "DEPENDENCY_UNAVAILABLE",
+      "m9_m15_reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "m9_m15_status": "NO_END_TO_END_ACCEPTANCE_STAGE",
+      "read_support_provenance": "synthetic_fixture_declaration_not_measured_M6_evidence",
+      "read_support_status": "AMBIGUOUS_ASSEMBLY",
+      "screening_stages_executed": [],
+      "sequence_sha256": "3e83dd26658686d4ca88e5cdb494705fa0bfa0e593be8858efaf2cd2e41b65e2",
+      "source_case_id": "m30q011",
+      "split": "held_out"
+    }
+  ],
+  "stage_audit": {
+    "m10": {
+      "role": "Repeat and sequence-pattern evidence; not acceptance.",
+      "status": "AVAILABLE_EVIDENCE_STAGE"
+    },
+    "m11": {
+      "role": "RNA fold predictions; prediction is not demonstrated function.",
+      "status": "AVAILABLE_PREDICTION_STAGE"
+    },
+    "m12": {
+      "role": "Artifact review and evidence validation; not an automated final classifier.",
+      "status": "AVAILABLE_REVIEW_STAGE"
+    },
+    "m13": {
+      "role": "Evidence dossier; does not establish candidate identity.",
+      "status": "AVAILABLE_DOSSIER_STAGE"
+    },
+    "m14": {
+      "role": "Descriptive observations; not classification.",
+      "status": "AVAILABLE_DESCRIPTIVE_STAGE"
+    },
+    "m15": {
+      "role": "Provenance and workflow-state reporting; not biological acceptance.",
+      "status": "AVAILABLE_PROVENANCE_STAGE"
+    },
+    "m7": {
+      "reason": "M7 recurrence requires independent, provenance-backed observations; synthetic candidate fixtures do not provide them.",
+      "role": "Optional recurrence/context evidence; not a classifier.",
+      "status": "NOT_EVALUATED"
+    },
+    "m8": {
+      "blastn": {
+        "path": "/nix/store/4x85hyx7shzylgpac5r5z2s1rp79hmv4-blast-bin-2.16.0/bin/blastn",
+        "version": "2.16.0+"
+      },
+      "makeblastdb": {
+        "path": "/nix/store/4x85hyx7shzylgpac5r5z2s1rp79hmv4-blast-bin-2.16.0/bin/makeblastdb",
+        "version": "2.16.0+"
+      },
+      "reason": "M8 requires verified 2.17.0+ on Linux x86_64; detected blastn='2.16.0+', makeblastdb='2.16.0+'.",
+      "role": "Frozen nucleotide similarity evidence only; M8 does not accept or reject satellite-virus candidates.",
+      "status": "DEPENDENCY_UNAVAILABLE"
+    },
+    "m9": {
+      "role": "ORF translation/protein-search evidence; not identity or acceptance.",
+      "status": "AVAILABLE_EVIDENCE_STAGE"
+    },
+    "m9_m15": {
+      "reason": "Available downstream stages produce ORF, repeat, RNA-fold, review, evidence-dossier, descriptive and provenance outputs; none implements a frozen final satellite-virus acceptance classifier.",
+      "status": "NO_END_TO_END_ACCEPTANCE_STAGE"
+    }
+  },
+  "synthetic_only": true,
+  "truth_file": "M30_SYNTHETIC_CANDIDATE_TRUTH.json",
+  "truth_use": "Retrospective evaluation only; truth and scenarios are stored separately from blinded candidate inputs."
+}
