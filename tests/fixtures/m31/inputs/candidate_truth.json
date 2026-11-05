@@ -1,0 +1,50 @@
+{
+  "cases": [
+    {
+      "candidate_id": "q001",
+      "scenario": "exact_synthetic_target",
+      "split": "development"
+    },
+    {
+      "candidate_id": "q002",
+      "scenario": "near_synthetic_target",
+      "split": "development"
+    },
+    {
+      "candidate_id": "q003",
+      "scenario": "synthetic_helper_background",
+      "split": "development"
+    },
+    {
+      "candidate_id": "q004",
+      "scenario": "unrelated_background",
+      "split": "development"
+    },
+    {
+      "candidate_id": "q005",
+      "scenario": "low_complexity_repeat",
+      "split": "tuning"
+    },
+    {
+      "candidate_id": "q006",
+      "scenario": "conflicting_target_and_helper",
+      "split": "tuning"
+    },
+    {
+      "candidate_id": "q007",
+      "scenario": "short_query",
+      "split": "held_out"
+    },
+    {
+      "candidate_id": "q008",
+      "scenario": "partial_target",
+      "split": "held_out"
+    },
+    {
+      "candidate_id": "q009",
+      "scenario": "target_absent",
+      "split": "held_out"
+    }
+  ],
+  "schema": "m31-retrospective-truth-v1"
+}
