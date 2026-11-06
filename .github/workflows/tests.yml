@@ -206,6 +206,23 @@ jobs:
           BLASTN_EXECUTABLE="$M8_BLASTN_EXECUTABLE" \
           MAKEBLASTDB_EXECUTABLE="$M8_MAKEBLASTDB_EXECUTABLE" \
             python -m unittest tests.test_m8_blastn_synthetic -v
+      - name: M32 end-to-end synthetic reconstruction and M8 integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          BLASTN_EXECUTABLE="$M8_BLASTN_EXECUTABLE" \
+          MAKEBLASTDB_EXECUTABLE="$M8_MAKEBLASTDB_EXECUTABLE" \
+          BLASTDBCMD_EXECUTABLE="$(dirname "$M8_MAKEBLASTDB_EXECUTABLE")/blastdbcmd" \
+            python -m satellite_discovery.m32_end_to_end_synthetic_evidence \
+              --output "$RUNNER_TEMP/m32-end-to-end-synthetic-evidence" \
+              --blastn "$M8_BLASTN_EXECUTABLE" \
+              --makeblastdb "$M8_MAKEBLASTDB_EXECUTABLE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m32-end-to-end-synthetic-evidence
+          path: ${{ runner.temp }}/m32-end-to-end-synthetic-evidence/
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:
