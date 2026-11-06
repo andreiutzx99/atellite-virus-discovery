@@ -48,6 +48,38 @@ output directory. The reported rates are
 synthetic triage false alarms only. Biological sensitivity, specificity,
 false-discovery rate, and satellite-virus identification remain NOT_EVALUATED.
 
+## Completed synthetic run
+
+The checked-in machine-readable results are in
+[`M33_INDEPENDENT_SYNTHETIC_ROBUSTNESS.json`](M33_INDEPENDENT_SYNTHETIC_ROBUSTNESS.json).
+The run used the hash-verified NCBI BLAST+ 2.17.0+ runtime and completed 21
+cases across three independent seeded runs, plus a fresh repeat of the first
+seed set. Reconstruction, screening, and normalized alignment evidence matched
+between the original and repeat runs.
+
+| Measure | Result |
+|---|---:|
+| Positive controls | 7/15 exact, read-supported reconstructions (46.7%) |
+| Validated M6-to-M8 handoffs | 14/21 |
+| Completed M8 searches | 14/21 |
+| Negative/decoy case REVIEW_PRIORITY | 0/5 eligible (Wilson 95%: 0–43.4%) |
+| Negative/decoy contig REVIEW_PRIORITY | 0/14 eligible (Wilson 95%: 0–21.5%) |
+
+Positive recovery varied by condition: 6/7 cases at coverage 80, read length
+100, and 0% substitution error were exact-supported; 1/1 at coverage 48,
+read length 100, and 0% error was exact-supported. No exact-supported
+reconstructions occurred in the other tested positive conditions. These are
+technical synthetic recovery results, not estimates of biological sensitivity.
+
+By negative-control category, reference-absent adversarial cases had 0/2
+eligible cases and 0/11 eligible contigs marked REVIEW_PRIORITY. Supported
+target-absent background controls had 0/3 eligible cases and 0/3 eligible
+contigs marked REVIEW_PRIORITY. Four negative/decoy cases were unevaluable
+because they lacked a supported contig or had incomplete M8; they remain in
+the JSON report and are excluded from the eligible denominators. The
+target-absent no-contig controls likewise do not count as successful negative
+screens.
+
 Governance is unchanged:
 
 ```text

@@ -159,9 +159,15 @@ def _reproducibility_signature(report):
              candidate.get("triage_status"))
             for candidate in row.get("candidate_records", [])
         ))
+        normalized = [{
+            "candidate_id": match.get("candidate_id"),
+            "accession_version": match.get("reference", {}).get("accession_version"),
+            "panel_role": match.get("panel_role"),
+            "masking_branch": match.get("masking_branch"),
+            "alignment": match.get("alignment"),
+        } for match in row.get("matches", [])]
         alignments[row["case_id"]] = _sha(json.dumps(
-            sorted(row.get("matches", []),
-                   key=lambda item: json.dumps(item, sort_keys=True)),
+            sorted(normalized, key=lambda item: json.dumps(item, sort_keys=True)),
             sort_keys=True, separators=(",", ":")).encode())
     return {"reconstruction": reconstruction, "screening": screening,
             "normalized_alignment_sha256": alignments}

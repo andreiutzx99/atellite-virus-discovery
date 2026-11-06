@@ -1,10 +1,49 @@
 import unittest
 
 from satellite_discovery.m33_independent_synthetic_robustness import (
+    _reproducibility_signature,
     false_alarm_metrics,
     preregistered_trials,
     wilson_interval,
 )
+
+
+class M33RepeatabilityTests(unittest.TestCase):
+    def test_alignment_repeatability_ignores_run_specific_match_metadata(self):
+        def report(run_id):
+            return {
+                "reconstruction_and_handoffs": [{
+                    "case_id": "case-1",
+                    "read_input_sha256": "same-input",
+                    "assembly_status": "ASSEMBLED",
+                    "contig_count": 1,
+                    "handoff": {"status": "COMPLETE"},
+                }],
+                "candidate_triage": [{
+                    "case_id": "case-1",
+                    "candidate_records": [{
+                        "candidate_id": "candidate-1",
+                        "query_sha256": "same-query",
+                        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+                        "m8_aggregate_status": "COMPLETE",
+                        "reference_panel_entries": ["ref-1"],
+                        "triage_status": "INSUFFICIENT_EVIDENCE",
+                    }],
+                    "matches": [{
+                        "candidate_id": "candidate-1",
+                        "reference": {"accession_version": "ref-1"},
+                        "panel_role": "known_reference",
+                        "masking_branch": "unmasked",
+                        "alignment": {"identity": 99.0, "aligned_length": 100},
+                        "run_metadata": run_id,
+                    }],
+                }],
+            }
+
+        self.assertEqual(
+            _reproducibility_signature(report("first")),
+            _reproducibility_signature(report("repeat")),
+        )
 
 
 class M33DesignTests(unittest.TestCase):
