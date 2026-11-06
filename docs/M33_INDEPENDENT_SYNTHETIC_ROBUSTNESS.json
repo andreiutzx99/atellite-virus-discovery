@@ -1,0 +1,4407 @@
+{
+  "case_count": 21,
+  "cases": [
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "12414a8abe527595784e80b2a0dc8a2c7cc7a53991c144fbb5eb87db6980169d",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2901",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "4a3e8cffbae4b33e5767a865f6f89635e929d75db00c9deb76cd82d8a8cd921e",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN002.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "REVIEW_PRIORITY",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "REVIEW_PRIORITY"
+        }
+      ],
+      "case_id": "r1:development-m29-positive_control",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "ed9325edfcfdf4d6647c682e5168fd64e51f542a260c038336b57c8306731045",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3507d74478cf4aad040383c6a97145b78efcd301f19c63c31788e44556d3967",
+          "size_bytes": 1121
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e3507d74478cf4aad040383c6a97145b78efcd301f19c63c31788e44556d3967",
+          "size_bytes": 1121
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "e3507d74478cf4aad040383c6a97145b78efcd301f19c63c31788e44556d3967",
+          "size_bytes": 1121
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "e3507d74478cf4aad040383c6a97145b78efcd301f19c63c31788e44556d3967",
+          "size_bytes": 1121
+        }
+      ],
+      "read_input_sha256": "471b154ca57de6b1e6a32c42c556974d65b0cad16a6a58dc34a9d823ff694bcb",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "development-m29-positive_control",
+      "source_manifest_sha256": "affe84531d5825dc62b77f441647449430148f5227b5d161a49197a5806b985f",
+      "split": "development",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "f531d61a71b3ab3b6b284bef3252757b71b3f4cb71debc2d2509b334da9993a9",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2902",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_111_cov_31.678571",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "67f6ea0a11d62e8ddfdef80d6761f8f50b733ad98f522d14166f6d7f01a1ff2b",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 9,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 789,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_2_length_111_cov_31.267857",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "f054f50dd31080837e6cdd15bce3746b277375001f4c7e21da284ae50e4cdd17",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 7,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 4,
+              "missing_target_suffix_bases": 785,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_3_length_111_cov_30.392857",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "db4960dee81d8ac332f4ae9b2f31d3e01e65d51b1de708896ad61016e4c44e8f",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 4,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 9,
+              "missing_target_suffix_bases": 780,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_4_length_111_cov_28.589286",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "c88372964d4d5cfa131a5a966a95be9b4d7f5856aa5d1bd155ede935807fcf7f",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 7,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 6,
+              "missing_target_suffix_bases": 783,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_5_length_111_cov_27.964286",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "00c6d177f20340189d7966a8330da94702275fb0e323f9deba619539efe60309",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 5,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 5,
+              "missing_target_suffix_bases": 784,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_6_length_111_cov_27.910714",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "40a00c39b9278a68930780697b6264d421b99395307b42f340afd7d77c93331e",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 3,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 8,
+              "missing_target_suffix_bases": 781,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_7_length_111_cov_27.464286",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "40bbe2c3719d279dfc5e9960d2b9828bbe0f765ccee02fd822e09ef4c5376403",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 3,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 7,
+              "missing_target_suffix_bases": 782,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_8_length_111_cov_27.035714",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "d721fa517af8359e72721e917feb1025724451bf25ca076434be83298b2a2f51",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 6,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 1,
+              "missing_target_suffix_bases": 788,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_9_length_111_cov_26.964286",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "fa68aae1061ce5821e7aad0d16e30cd4d1e67e922612527d8761614d15f4da5d",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 6,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 3,
+              "missing_target_suffix_bases": 786,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_10_length_111_cov_26.642857",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 111,
+          "query_sha256": "755ae1ffa9e84c8afc8058533746753fd88f17ef10877a7e4bb9c24ec0461162",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 111,
+              "deletion_count": 789,
+              "full_length_sequence_identity": 0.12333333333333334,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 5,
+              "local_alignment_identity": 0.990990990990991,
+              "missing_target_prefix_bases": 2,
+              "missing_target_suffix_bases": 787,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.12333333333333334,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_11_length_56_cov_676.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "81c8735141e1c201df6be947e86b7973684e7127ee135af649fadebbdc38c0e5",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 3,
+              "missing_target_suffix_bases": 841,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_12_length_56_cov_675.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "1976791630e063c111a4f4bc37e1940458f796124e27463f98538f11880bb2ce",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 1,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 6,
+              "missing_target_suffix_bases": 838,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_13_length_56_cov_674.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "204dfdc34031d05b37d4edf5d758cfc9bcee78fd3c53a7d8cabdcf4487314194",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 2,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 7,
+              "missing_target_suffix_bases": 837,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_14_length_56_cov_671.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "2f51407c964539f10c62809a1991203c424c2035e5c059bf4723513e7fa9b677",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 2,
+              "missing_target_suffix_bases": 842,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_15_length_56_cov_667.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "05cb3920cdcb4124b3cbd6f658c7bbb6d5434e1fc30bc0f8a8636922ebd6d9be",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 1,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 1,
+              "missing_target_suffix_bases": 843,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_16_length_56_cov_660.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "cca9ab2712db66711241aa82d05b88b2adfa0cf1b3ced1ae0657744106755f6d",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 4,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 5,
+              "missing_target_suffix_bases": 839,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_17_length_56_cov_660.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "1531542b13bb1313ef5fa9b95057c8eb8409b99cd37c9350b4d21d3a449cc62b",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 844,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_18_length_56_cov_656.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "cee00ce650e990baffb2813e52646757835e499becaefa6e197686d755a01895",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 2,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 8,
+              "missing_target_suffix_bases": 836,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_19_length_56_cov_656.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "458d37cbac8ef3f76c9732e4d6617b90ff08f10c67069f680c3e7a2064c215a9",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 4,
+              "missing_target_suffix_bases": 840,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_20_length_56_cov_643.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 56,
+          "query_sha256": "c2a3e17cde127264bf29717e17e22ce56288dba243db3098d5c7498c5d7da904",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 56,
+              "deletion_count": 844,
+              "full_length_sequence_identity": 0.06222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 2,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 9,
+              "missing_target_suffix_bases": 835,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.06222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r1:development-m29-repeat_challenge",
+      "contig_count": 20,
+      "coverage": 80,
+      "experiment_type": "reference_absent_adversarial",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "07d9328e83177df50105e0fd85ec5155d7164f2d0ac9e6769827a9ee56262295",
+      "m8_search_complete": true,
+      "negative_or_decoy": true,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1237edea54124266685abffafd9bc2f99c86969fd3557102115cd2c65f7f6bfc_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1237edea54124266685abffafd9bc2f99c86969fd3557102115cd2c65f7f6bfc_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "efe8b415a689d441e9130cbae7792ed34711bd3a1e344370fd86536c3a2d0f77",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1237edea54124266685abffafd9bc2f99c86969fd3557102115cd2c65f7f6bfc_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1237edea54124266685abffafd9bc2f99c86969fd3557102115cd2c65f7f6bfc_virus_helper_dust_unmasked.tsv",
+          "sha256": "efe8b415a689d441e9130cbae7792ed34711bd3a1e344370fd86536c3a2d0f77",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1654b43b2a9d7a3845ff6319b32d21ed3f75327e7dda4211335c81f8b25efaaf_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1654b43b2a9d7a3845ff6319b32d21ed3f75327e7dda4211335c81f8b25efaaf_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "3bc6b58ef0f6e184b68d0430f387af0203f805509d18ae7f5d1ea29eab9a1e58",
+          "size_bytes": 856
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1654b43b2a9d7a3845ff6319b32d21ed3f75327e7dda4211335c81f8b25efaaf_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1654b43b2a9d7a3845ff6319b32d21ed3f75327e7dda4211335c81f8b25efaaf_virus_helper_dust_unmasked.tsv",
+          "sha256": "3bc6b58ef0f6e184b68d0430f387af0203f805509d18ae7f5d1ea29eab9a1e58",
+          "size_bytes": 856
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_25011a0baf7f66a500754a1babea198559fe2352d0d6f91655297664f6f26bf3_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_25011a0baf7f66a500754a1babea198559fe2352d0d6f91655297664f6f26bf3_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "1069d53ac536e13808fd62ea63f33297370c9e29597de5dfee3ac4f0fa442e44",
+          "size_bytes": 474
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_25011a0baf7f66a500754a1babea198559fe2352d0d6f91655297664f6f26bf3_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_25011a0baf7f66a500754a1babea198559fe2352d0d6f91655297664f6f26bf3_virus_helper_dust_unmasked.tsv",
+          "sha256": "1069d53ac536e13808fd62ea63f33297370c9e29597de5dfee3ac4f0fa442e44",
+          "size_bytes": 474
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_2792598f110b3f7adeaf965e0dcd4d2d6d3de710bc5c5c73c6497a33696b9241_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_2792598f110b3f7adeaf965e0dcd4d2d6d3de710bc5c5c73c6497a33696b9241_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "1f7cfdfe75ffb9e27498ba105f920455b1ddf4fbbe261d1f8c1589d4bcdaf210",
+          "size_bytes": 469
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_2792598f110b3f7adeaf965e0dcd4d2d6d3de710bc5c5c73c6497a33696b9241_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_2792598f110b3f7adeaf965e0dcd4d2d6d3de710bc5c5c73c6497a33696b9241_virus_helper_dust_unmasked.tsv",
+          "sha256": "1f7cfdfe75ffb9e27498ba105f920455b1ddf4fbbe261d1f8c1589d4bcdaf210",
+          "size_bytes": 469
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3b84f1d807742e39a23c9c50fa365a3e8b4295d670b2f37c1b59fc05e7f7cc68_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3b84f1d807742e39a23c9c50fa365a3e8b4295d670b2f37c1b59fc05e7f7cc68_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "8e1cee87e18c2b24aeff1e0fe7e2504ae85378c5575dba503b05ca57988fbacc",
+          "size_bytes": 473
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3b84f1d807742e39a23c9c50fa365a3e8b4295d670b2f37c1b59fc05e7f7cc68_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3b84f1d807742e39a23c9c50fa365a3e8b4295d670b2f37c1b59fc05e7f7cc68_virus_helper_dust_unmasked.tsv",
+          "sha256": "8e1cee87e18c2b24aeff1e0fe7e2504ae85378c5575dba503b05ca57988fbacc",
+          "size_bytes": 473
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3cbcfbd089b92b111c5eafdab2beb6a12f19f98d65ce072b7ad845090eb3a7d0_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3cbcfbd089b92b111c5eafdab2beb6a12f19f98d65ce072b7ad845090eb3a7d0_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "9f930b8548fee46b4d7b9b12cb8b38ab6f8675524034691b0c2d1751e5df557b",
+          "size_bytes": 951
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3cbcfbd089b92b111c5eafdab2beb6a12f19f98d65ce072b7ad845090eb3a7d0_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_3cbcfbd089b92b111c5eafdab2beb6a12f19f98d65ce072b7ad845090eb3a7d0_virus_helper_dust_unmasked.tsv",
+          "sha256": "9f930b8548fee46b4d7b9b12cb8b38ab6f8675524034691b0c2d1751e5df557b",
+          "size_bytes": 951
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4609649a31e824cea320d0b7c7f756bc7c2e3c5b6ea28d4b50d4f9b46401f18c_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4609649a31e824cea320d0b7c7f756bc7c2e3c5b6ea28d4b50d4f9b46401f18c_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "f584f0c6ca61b855deeee66a86d0c6359d2306f1b5ad869982acc6ee8c957f9b",
+          "size_bytes": 863
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4609649a31e824cea320d0b7c7f756bc7c2e3c5b6ea28d4b50d4f9b46401f18c_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4609649a31e824cea320d0b7c7f756bc7c2e3c5b6ea28d4b50d4f9b46401f18c_virus_helper_dust_unmasked.tsv",
+          "sha256": "f584f0c6ca61b855deeee66a86d0c6359d2306f1b5ad869982acc6ee8c957f9b",
+          "size_bytes": 863
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4ec3ee141610fac5fa400f3db60612ed0bd4241fb76e383812ff24fd34031588_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4ec3ee141610fac5fa400f3db60612ed0bd4241fb76e383812ff24fd34031588_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "caec5ca3488240e83c812f94c01a46894c587d6276d4dc0e762094e7e33cf8da",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4ec3ee141610fac5fa400f3db60612ed0bd4241fb76e383812ff24fd34031588_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_4ec3ee141610fac5fa400f3db60612ed0bd4241fb76e383812ff24fd34031588_virus_helper_dust_unmasked.tsv",
+          "sha256": "caec5ca3488240e83c812f94c01a46894c587d6276d4dc0e762094e7e33cf8da",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_542a637428ab0a24c67ddb3736e9cccc08e0de161b2fa549228f3e409d443d09_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_542a637428ab0a24c67ddb3736e9cccc08e0de161b2fa549228f3e409d443d09_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "ccdbe371b99f51d49676b387a66d68a74a31fbc4ae85f0ce8a2651e69d6b3234",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_542a637428ab0a24c67ddb3736e9cccc08e0de161b2fa549228f3e409d443d09_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_542a637428ab0a24c67ddb3736e9cccc08e0de161b2fa549228f3e409d443d09_virus_helper_dust_unmasked.tsv",
+          "sha256": "ccdbe371b99f51d49676b387a66d68a74a31fbc4ae85f0ce8a2651e69d6b3234",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_60b4eeae9911c96f51aed772ecfb5f34f5a1dae9dbbb2fc00ac7feba04c8fbe8_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_60b4eeae9911c96f51aed772ecfb5f34f5a1dae9dbbb2fc00ac7feba04c8fbe8_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "c6f7db385bdd930a0dd936ca65d8909c75dca8cf9a2ed4c9a84bbc176f07c53c",
+          "size_bytes": 474
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_60b4eeae9911c96f51aed772ecfb5f34f5a1dae9dbbb2fc00ac7feba04c8fbe8_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_60b4eeae9911c96f51aed772ecfb5f34f5a1dae9dbbb2fc00ac7feba04c8fbe8_virus_helper_dust_unmasked.tsv",
+          "sha256": "c6f7db385bdd930a0dd936ca65d8909c75dca8cf9a2ed4c9a84bbc176f07c53c",
+          "size_bytes": 474
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_660e4907da4e7d380ec22f1c23e388de5d7af093d8cebf1a9ee2a86f482add8a_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_660e4907da4e7d380ec22f1c23e388de5d7af093d8cebf1a9ee2a86f482add8a_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "a5a6852c16eb9bd7c3ae53fd4ac285048fac4045fd77a73f507a28ea3bb41ff2",
+          "size_bytes": 469
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_660e4907da4e7d380ec22f1c23e388de5d7af093d8cebf1a9ee2a86f482add8a_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_660e4907da4e7d380ec22f1c23e388de5d7af093d8cebf1a9ee2a86f482add8a_virus_helper_dust_unmasked.tsv",
+          "sha256": "a5a6852c16eb9bd7c3ae53fd4ac285048fac4045fd77a73f507a28ea3bb41ff2",
+          "size_bytes": 469
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_92d9856bc46f10a34de9183ff2a562626dc0ad3d6c25f502f09993cdfac26a3c_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_92d9856bc46f10a34de9183ff2a562626dc0ad3d6c25f502f09993cdfac26a3c_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "49f7a0d158bbb7659e4de0ebae7b636d6f3ee399dece03d7e73227be0ed7c21a",
+          "size_bytes": 474
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_92d9856bc46f10a34de9183ff2a562626dc0ad3d6c25f502f09993cdfac26a3c_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_92d9856bc46f10a34de9183ff2a562626dc0ad3d6c25f502f09993cdfac26a3c_virus_helper_dust_unmasked.tsv",
+          "sha256": "49f7a0d158bbb7659e4de0ebae7b636d6f3ee399dece03d7e73227be0ed7c21a",
+          "size_bytes": 474
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_9bc8b4e6d65e12699bdbe9d02d9d07d783ff924d8545690bbe3a6493cdddc2aa_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_9bc8b4e6d65e12699bdbe9d02d9d07d783ff924d8545690bbe3a6493cdddc2aa_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "7111ece3a87fcfe200e94509ace8b00e8f7736038c211267d2acd135a05a2758",
+          "size_bytes": 854
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_9bc8b4e6d65e12699bdbe9d02d9d07d783ff924d8545690bbe3a6493cdddc2aa_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_9bc8b4e6d65e12699bdbe9d02d9d07d783ff924d8545690bbe3a6493cdddc2aa_virus_helper_dust_unmasked.tsv",
+          "sha256": "7111ece3a87fcfe200e94509ace8b00e8f7736038c211267d2acd135a05a2758",
+          "size_bytes": 854
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_a435c04d2b679d90f2a4c0ded4194f97b4a6eb2c4cbe1e8367ac79826d922523_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_a435c04d2b679d90f2a4c0ded4194f97b4a6eb2c4cbe1e8367ac79826d922523_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "5d8b29e3c3353cdcad42dbe18b1f5828b562ac8ff2c544e226dd0e2f8d7ef208",
+          "size_bytes": 951
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_a435c04d2b679d90f2a4c0ded4194f97b4a6eb2c4cbe1e8367ac79826d922523_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_a435c04d2b679d90f2a4c0ded4194f97b4a6eb2c4cbe1e8367ac79826d922523_virus_helper_dust_unmasked.tsv",
+          "sha256": "5d8b29e3c3353cdcad42dbe18b1f5828b562ac8ff2c544e226dd0e2f8d7ef208",
+          "size_bytes": 951
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b0e12991e4597f7221ac9abbbf4a89d4dd9cbf15f503a865a83cfa8e73179057_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b0e12991e4597f7221ac9abbbf4a89d4dd9cbf15f503a865a83cfa8e73179057_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "7596917edf0dde2cdb8172615dc9669c23ecb91c8c2eddc74dedbe078998be1d",
+          "size_bytes": 468
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b0e12991e4597f7221ac9abbbf4a89d4dd9cbf15f503a865a83cfa8e73179057_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b0e12991e4597f7221ac9abbbf4a89d4dd9cbf15f503a865a83cfa8e73179057_virus_helper_dust_unmasked.tsv",
+          "sha256": "7596917edf0dde2cdb8172615dc9669c23ecb91c8c2eddc74dedbe078998be1d",
+          "size_bytes": 468
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b751dcddabbdf95998b4dcd28c5d6aec71142dc1300152f43d2151a79d7dc764_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b751dcddabbdf95998b4dcd28c5d6aec71142dc1300152f43d2151a79d7dc764_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "8973a453b19520a125217e5844df163ff139871e5021789e0f03e5a1d1a94110",
+          "size_bytes": 379
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b751dcddabbdf95998b4dcd28c5d6aec71142dc1300152f43d2151a79d7dc764_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b751dcddabbdf95998b4dcd28c5d6aec71142dc1300152f43d2151a79d7dc764_virus_helper_dust_unmasked.tsv",
+          "sha256": "8973a453b19520a125217e5844df163ff139871e5021789e0f03e5a1d1a94110",
+          "size_bytes": 379
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_c237671108ce2c23f98cf712123a669f5c013c98920777d9066885149b3d15bd_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_c237671108ce2c23f98cf712123a669f5c013c98920777d9066885149b3d15bd_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "3fc512deebcc3fb921d840bc4e6e0e00bbfb0e91ee82163f280164766cf9da64",
+          "size_bytes": 379
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_c237671108ce2c23f98cf712123a669f5c013c98920777d9066885149b3d15bd_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_c237671108ce2c23f98cf712123a669f5c013c98920777d9066885149b3d15bd_virus_helper_dust_unmasked.tsv",
+          "sha256": "3fc512deebcc3fb921d840bc4e6e0e00bbfb0e91ee82163f280164766cf9da64",
+          "size_bytes": 379
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d4a88ffee2e4f965d1655cdfba02c4d24e2a53158b0585d660c57d751718635f_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d4a88ffee2e4f965d1655cdfba02c4d24e2a53158b0585d660c57d751718635f_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "0e3abd394b01a43f9e88e1aa1424d6ea0b0dc7729ced33c54536d9faa5cdd4e6",
+          "size_bytes": 847
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d4a88ffee2e4f965d1655cdfba02c4d24e2a53158b0585d660c57d751718635f_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d4a88ffee2e4f965d1655cdfba02c4d24e2a53158b0585d660c57d751718635f_virus_helper_dust_unmasked.tsv",
+          "sha256": "0e3abd394b01a43f9e88e1aa1424d6ea0b0dc7729ced33c54536d9faa5cdd4e6",
+          "size_bytes": 847
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_ec9da212ae1213f53e7d61233fdf6e0c01d23055fe0696d2475c02f34bbcab3d_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_ec9da212ae1213f53e7d61233fdf6e0c01d23055fe0696d2475c02f34bbcab3d_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "d6649ea12fe0503fb08a0f6b6129dd3cd0e1489867dacac8facb838b36d742e1",
+          "size_bytes": 375
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_ec9da212ae1213f53e7d61233fdf6e0c01d23055fe0696d2475c02f34bbcab3d_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_ec9da212ae1213f53e7d61233fdf6e0c01d23055fe0696d2475c02f34bbcab3d_virus_helper_dust_unmasked.tsv",
+          "sha256": "d6649ea12fe0503fb08a0f6b6129dd3cd0e1489867dacac8facb838b36d742e1",
+          "size_bytes": 375
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_f392c4974a38f7172c235c2ce7e839bb899e2c855ebed7f60c300e0debe75aa8_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_f392c4974a38f7172c235c2ce7e839bb899e2c855ebed7f60c300e0debe75aa8_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "82da6d823907257f82240e9bcd9a8003423fa113b285a48d1ce8a5f2abe84292",
+          "size_bytes": 855
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_f392c4974a38f7172c235c2ce7e839bb899e2c855ebed7f60c300e0debe75aa8_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_f392c4974a38f7172c235c2ce7e839bb899e2c855ebed7f60c300e0debe75aa8_virus_helper_dust_unmasked.tsv",
+          "sha256": "82da6d823907257f82240e9bcd9a8003423fa113b285a48d1ce8a5f2abe84292",
+          "size_bytes": 855
+        }
+      ],
+      "read_input_sha256": "5d38bb8bee9ceef742efc4c6119b9f688ee121a5e0b28f4ad0c7363599a60382",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "development-m29-repeat_challenge",
+      "source_manifest_sha256": "34c31c934492bb602b30e5891d392051f02271ffa14126b1172ffa7a50011ac3",
+      "split": "development",
+      "substitution_error_rate": 0.02,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_10_length_111_cov_26.642857",
+        "NODE_1_length_111_cov_31.678571",
+        "NODE_2_length_111_cov_31.267857",
+        "NODE_3_length_111_cov_30.392857",
+        "NODE_4_length_111_cov_28.589286",
+        "NODE_5_length_111_cov_27.964286",
+        "NODE_6_length_111_cov_27.910714",
+        "NODE_7_length_111_cov_27.464286",
+        "NODE_8_length_111_cov_27.035714",
+        "NODE_9_length_111_cov_26.964286"
+      ],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "014274be0f2dba65d4b4c2dbf2c957c9e5e5da0c3e4205009e1716a8b8d3ae04",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2907",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_23.005917",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "f2a45ada63709dba3984383ac05aa39b39ac8de2d5bcce90d6e725aab7a38c72",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN002.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "REVIEW_PRIORITY",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "REVIEW_PRIORITY"
+        }
+      ],
+      "case_id": "r1:tuning-m29-synthetic_background",
+      "contig_count": 1,
+      "coverage": 48,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "230abf4cd7233939ad58d71d3b233c7117a6413b0eeab0252d09486448568c8c",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_5ea36ae492b59d4b00c075657f030dd17f1e3df600710a265f4f7850e7f51b78_satellite_subviral_dust_masked.tsv",
+          "sha256": "e25ba54ed9ddf6501db6227a1f98ca568bcc24bda30637d74592cf8f381e5336",
+          "size_bytes": 851
+        },
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_5ea36ae492b59d4b00c075657f030dd17f1e3df600710a265f4f7850e7f51b78_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "685862e8a5bfb863d42c2a76015606238be75b0a493d73837c122722fb47e270",
+          "size_bytes": 1037
+        },
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_5ea36ae492b59d4b00c075657f030dd17f1e3df600710a265f4f7850e7f51b78_virus_helper_dust_masked.tsv",
+          "sha256": "e25ba54ed9ddf6501db6227a1f98ca568bcc24bda30637d74592cf8f381e5336",
+          "size_bytes": 851
+        },
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_5ea36ae492b59d4b00c075657f030dd17f1e3df600710a265f4f7850e7f51b78_virus_helper_dust_unmasked.tsv",
+          "sha256": "685862e8a5bfb863d42c2a76015606238be75b0a493d73837c122722fb47e270",
+          "size_bytes": 1037
+        }
+      ],
+      "read_input_sha256": "07bfd4cce404cbef38c265103c1afb5199a539b254b4ebbca5eea543acc1e090",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "tuning-m29-synthetic_background",
+      "source_manifest_sha256": "0a16cc8b72d84e7a39b92a1ab562699287508a1d7b2ffb928d451b9d96ff8828",
+      "split": "tuning",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_23.005917"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "0bd023533df9804eb3315ca4b8ab2b27f84ce1ea1002d4fd807746540092645d",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2909",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "5be301a7ed7aec377de04993861684c4e95027d0ed2b8b67484df24fd4ccdad2",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN003.1",
+            "SYN006.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "REVIEW_PRIORITY",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "REVIEW_PRIORITY"
+        }
+      ],
+      "case_id": "r1:held_out-m29-positive_control",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "31063cf6fd24d59080351a44c421ffeeee2c33166307d99e4dad247f21bbfccc",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2909/m8-m2909/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "c27c01ce1cd67d08bacb837e0574f3193dbf7bb246e0c78420842dda7d21b11c",
+          "size_bytes": 853
+        },
+        {
+          "path": "m8_runs/m2909/m8-m2909/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "c27c01ce1cd67d08bacb837e0574f3193dbf7bb246e0c78420842dda7d21b11c",
+          "size_bytes": 853
+        },
+        {
+          "path": "m8_runs/m2909/m8-m2909/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "c27c01ce1cd67d08bacb837e0574f3193dbf7bb246e0c78420842dda7d21b11c",
+          "size_bytes": 853
+        },
+        {
+          "path": "m8_runs/m2909/m8-m2909/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "c27c01ce1cd67d08bacb837e0574f3193dbf7bb246e0c78420842dda7d21b11c",
+          "size_bytes": 853
+        }
+      ],
+      "read_input_sha256": "f71787d48a3cecdf2567350c999f61c406d4bac97ed5d1a7dc039da7cd660e5e",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "held_out-m29-positive_control",
+      "source_manifest_sha256": "656f9bfd687424b59f07d65178e9e6b83dff96b3a492537a31d6d84260393cc4",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "dcd3ce006e0b75edf0425011f4ffbd2a4316e7042677b25785307afa07521c43",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2913",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_899_cov_7.473934",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 899,
+          "query_sha256": "3b24f68a3c82d21ae069264465ee352937f339e332fa96d224f27a256795bcfe",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN002.1",
+            "SYN007.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 899,
+              "deletion_count": 1,
+              "full_length_sequence_identity": 0.9977777777777778,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 0.9988876529477196,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 1,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 1,
+              "target_coverage": 0.9988888888888889,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r1:held_out-m29-sequencing_errors",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "reference_independent_challenge",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "9a097d00af15f66a33935d41b17cc36750c11baa3068b9b75f018a994bb8d867",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_b78cb056617cae1b78d8335b7fcbd9f99b7f45dccf483dbc00fc99999d33d6ce_satellite_subviral_dust_masked.tsv",
+          "sha256": "7f2c6572dc519fe896389a1dbda701dbfa0bcc5aff09a453bb95394f7e4290ef",
+          "size_bytes": 654
+        },
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_b78cb056617cae1b78d8335b7fcbd9f99b7f45dccf483dbc00fc99999d33d6ce_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e707a5f54d1a73eff388c9d8c4057c1d0feef6345db05863c9d798c3fd4d8150",
+          "size_bytes": 841
+        },
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_b78cb056617cae1b78d8335b7fcbd9f99b7f45dccf483dbc00fc99999d33d6ce_virus_helper_dust_masked.tsv",
+          "sha256": "7f2c6572dc519fe896389a1dbda701dbfa0bcc5aff09a453bb95394f7e4290ef",
+          "size_bytes": 654
+        },
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_b78cb056617cae1b78d8335b7fcbd9f99b7f45dccf483dbc00fc99999d33d6ce_virus_helper_dust_unmasked.tsv",
+          "sha256": "e707a5f54d1a73eff388c9d8c4057c1d0feef6345db05863c9d798c3fd4d8150",
+          "size_bytes": 841
+        }
+      ],
+      "read_input_sha256": "63e38930ccce723bf4dd5f17cf1b971a0fd0ad8326ac5a06c7a087f7e79826ae",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "held_out-m29-sequencing_errors",
+      "source_manifest_sha256": "4fa55ee31076bd0678ed717539911c98b3be813305e72b867ce207a1b2532dd9",
+      "split": "held_out",
+      "substitution_error_rate": 0.02,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_899_cov_7.473934"
+      ],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2917",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "NO_SUPPORTED_ASSEMBLY",
+      "candidate_records": [],
+      "case_id": "r1:held_out-m29-target_absent_negative",
+      "contig_count": 0,
+      "coverage": 80,
+      "experiment_type": "target_absent_no_contig",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "27edc709f5e4fe495dfc07ceed58239088a323484e5bf91fa023d4bfbcd26283",
+      "m8_search_complete": false,
+      "negative_or_decoy": true,
+      "positive_control": false,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "3741c1755d0151e9b3b78384e7f0d04ac259bb241cff210e0e5286efa4baa687",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "held_out-m29-target_absent_negative",
+      "source_manifest_sha256": "38dd3062055298bc84d65ba96a5df7ec7cc1ac6324ee8ddf11ed5c7db951144d",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "436f1c13be682f13e83a61f0dd065b50e39341dd8facbb5c6f051743b79772b4",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m32bg01",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "755a3e78406c72f3e256d96cd56c082318da3c45bcb56d629d7ce078501e4ee8",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN003.1",
+            "SYN006.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": null,
+            "exact_synthetic_background_match": true,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r1:held_out-m32-target_absent_background",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "target_absent_supported_background",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "6a3045301aba67db1e218d363daf560b83eab465d043484c6fb5856f04b47e9d",
+      "m8_search_complete": true,
+      "negative_or_decoy": true,
+      "positive_control": false,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "f13a1ae7eaf275f62369c656866abd19b6eafb2850acbcf2e19b83ef8dcc6a55",
+          "size_bytes": 283
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "f13a1ae7eaf275f62369c656866abd19b6eafb2850acbcf2e19b83ef8dcc6a55",
+          "size_bytes": 283
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "f13a1ae7eaf275f62369c656866abd19b6eafb2850acbcf2e19b83ef8dcc6a55",
+          "size_bytes": 283
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "f13a1ae7eaf275f62369c656866abd19b6eafb2850acbcf2e19b83ef8dcc6a55",
+          "size_bytes": 283
+        }
+      ],
+      "read_input_sha256": "2333f1212a83fd691bf7f1d5de2c4714337375a1fb5dc530316b86ab4551ba2b",
+      "read_length": 100,
+      "replicate": "r1",
+      "source_case_id": "held_out-m32-target_absent_background",
+      "source_manifest_sha256": "ac309cb16d3052238d8f38eeef927847beda3c0a346823fce422785383a6ee36",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "7a362a5693682934c7ab180ac5984ac0215ca0057e0540b597ab4670b966b652",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2901",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "9cc4e603fb26482f9f7bd137786f8c7b859935f06a79a7e728b7eb160b33f83f",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "REVIEW_PRIORITY",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "REVIEW_PRIORITY"
+        }
+      ],
+      "case_id": "r2:development-m29-positive_control",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "32d186f949fb2609d35d34bad3865b01f515d49aef2b4da762bbddfadaf5a099",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "0997d6ff316136ee1346912c7d1418ef9f3d9a901fc3b025e147e9e2f6559464",
+          "size_bytes": 468
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "0997d6ff316136ee1346912c7d1418ef9f3d9a901fc3b025e147e9e2f6559464",
+          "size_bytes": 468
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "0997d6ff316136ee1346912c7d1418ef9f3d9a901fc3b025e147e9e2f6559464",
+          "size_bytes": 468
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "0997d6ff316136ee1346912c7d1418ef9f3d9a901fc3b025e147e9e2f6559464",
+          "size_bytes": 468
+        }
+      ],
+      "read_input_sha256": "60062ce7a1d1bf23779244d508b432bb657809d2717a54f622e390f638b6702d",
+      "read_length": 100,
+      "replicate": "r2",
+      "source_case_id": "development-m29-positive_control",
+      "source_manifest_sha256": "9714f0197316bbf3525a8149c32b2c339f21816740e82ac227e911d36fed009f",
+      "split": "development",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "63da83748a552e579655c940564bfc381b1ed5a9c752c5d5c5c0bfddf0ba5ba1",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2902",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_95_cov_2.950000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 95,
+          "query_sha256": "99dc2617972c61661eae0c06f67d1715d1b41bd0c2cdaea8a2531729440d11c6",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [],
+          "reference_panel_result": "NO_REPORTED_MATCH",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 95,
+              "deletion_count": 805,
+              "full_length_sequence_identity": 0.10555555555555556,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 11,
+              "local_alignment_identity": 0.9789473684210527,
+              "missing_target_prefix_bases": 2,
+              "missing_target_suffix_bases": 803,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.10555555555555556,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        },
+        {
+          "candidate_id": "NODE_2_length_65_cov_52.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 65,
+          "query_sha256": "a7512f16191eb2cc3ec27e316e24f734095bd515d2a8325f6f4f04ff0096ba6b",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [],
+          "reference_panel_result": "NO_REPORTED_MATCH",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 65,
+              "deletion_count": 835,
+              "full_length_sequence_identity": 0.07222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 1,
+              "missing_target_suffix_bases": 834,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.07222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r2:development-m29-repeat_challenge",
+      "contig_count": 2,
+      "coverage": 80,
+      "experiment_type": "reference_absent_adversarial",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "0ff8b318b377c7196020e9ef0eba48a5737b12495e19ee00f018076ce49970ce",
+      "m8_search_complete": true,
+      "negative_or_decoy": true,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1ec963e6c6971c9666a8b994463214a3cf1be1757440921d3d269b8ac472639e_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1ec963e6c6971c9666a8b994463214a3cf1be1757440921d3d269b8ac472639e_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1ec963e6c6971c9666a8b994463214a3cf1be1757440921d3d269b8ac472639e_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_1ec963e6c6971c9666a8b994463214a3cf1be1757440921d3d269b8ac472639e_virus_helper_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b40948a79b17ebc3177e4611b14f997247ec43f02297abc45731d2a89055b900_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b40948a79b17ebc3177e4611b14f997247ec43f02297abc45731d2a89055b900_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b40948a79b17ebc3177e4611b14f997247ec43f02297abc45731d2a89055b900_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_b40948a79b17ebc3177e4611b14f997247ec43f02297abc45731d2a89055b900_virus_helper_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        }
+      ],
+      "read_input_sha256": "c00982ace7a872a6431f6219efb0292860079f7dc26a73d09fb628fb0d7c7d86",
+      "read_length": 100,
+      "replicate": "r2",
+      "source_case_id": "development-m29-repeat_challenge",
+      "source_manifest_sha256": "d2932720875daac379304ca5ba00a1dcb36d67c365ce857edf2e91ebedf72d6c",
+      "split": "development",
+      "substitution_error_rate": 0.05,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_95_cov_2.950000"
+      ],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2907",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "EXECUTION_FAILED",
+      "candidate_records": [],
+      "case_id": "r2:tuning-m29-synthetic_background",
+      "contig_count": 0,
+      "coverage": 24,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "b9686675d8cd1b35a941b1775dcf487190386adda58a3554ad2b1c9b2898fc8a",
+      "m8_search_complete": false,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "1a4f818315e38105a0dddde75e60d2f41c64863c28e485145db6b5cadf7ce8e3",
+      "read_length": 100,
+      "replicate": "r2",
+      "source_case_id": "tuning-m29-synthetic_background",
+      "source_manifest_sha256": "5bc110b9f15700a0b92597c9b7d0d01360708754ad2a3c85bc5b11ac49950c09",
+      "split": "tuning",
+      "substitution_error_rate": 0.02,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2909",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "EXECUTION_FAILED",
+      "candidate_records": [],
+      "case_id": "r2:held_out-m29-positive_control",
+      "contig_count": 0,
+      "coverage": 48,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "5b7bdc3f7946c8f4f5ef068774c065942156e96b6e08d8d72adbbf8052aadabb",
+      "m8_search_complete": false,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "2c2cd22b965bac14463d10d31a447ff0e6d3911c123049c39f73f340ebce6f13",
+      "read_length": 75,
+      "replicate": "r2",
+      "source_case_id": "held_out-m29-positive_control",
+      "source_manifest_sha256": "9458493042bb9cb61875f41aea3131b6e0a1819d5e29d4fb28a6c6adea3a8c27",
+      "split": "held_out",
+      "substitution_error_rate": 0.02,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2913",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "EXECUTION_FAILED",
+      "candidate_records": [],
+      "case_id": "r2:held_out-m29-sequencing_errors",
+      "contig_count": 0,
+      "coverage": 80,
+      "experiment_type": "reference_independent_challenge",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "09097fb756bf9c4ae02887bf97d1f5c9ce19038da2ff6d5c2024f763353d6905",
+      "m8_search_complete": false,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "5808af86b55442f0b8c4f1ae969f4f684900db9f25ca92b739f72a3413300277",
+      "read_length": 100,
+      "replicate": "r2",
+      "source_case_id": "held_out-m29-sequencing_errors",
+      "source_manifest_sha256": "cd3ab442e4d92b984ed74552593cdff5ff3eaa42d7cb34eeb3e56519b31eb83d",
+      "split": "held_out",
+      "substitution_error_rate": 0.05,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2917",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "NO_SUPPORTED_ASSEMBLY",
+      "candidate_records": [],
+      "case_id": "r2:held_out-m29-target_absent_negative",
+      "contig_count": 0,
+      "coverage": 80,
+      "experiment_type": "target_absent_no_contig",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "2ccef71917c97c08cbb69613dd618eef7e9bac10d406be0270393c06ebc62c1a",
+      "m8_search_complete": false,
+      "negative_or_decoy": true,
+      "positive_control": false,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "4efc559512a1ecfbe325f4c5a03f71dadd4257a07d6594d9b11c47637b2c43cf",
+      "read_length": 100,
+      "replicate": "r2",
+      "source_case_id": "held_out-m29-target_absent_negative",
+      "source_manifest_sha256": "959d2906d220585d57e172b58650bb1dcc8b0537165d36bc118d6cd85bb2ccbd",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "e700a7ae8a4f8c26f5ba602d795774d89abe0188857b48594dc4437d2de38d3a",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m32bg01",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "80e5983941cca47b3aa62d36fab6abd91a67ca168ee299451fd3e7df0d389631",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [],
+          "reference_panel_result": "NO_REPORTED_MATCH",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": null,
+            "exact_synthetic_background_match": true,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r2:held_out-m32-target_absent_background",
+      "contig_count": 1,
+      "coverage": 48,
+      "experiment_type": "target_absent_supported_background",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "a01cf22f3214a2e170305a37b0922ced65d1a27d2c5ea8bf804ed19fe8317ac2",
+      "m8_search_complete": true,
+      "negative_or_decoy": true,
+      "positive_control": false,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        }
+      ],
+      "read_input_sha256": "f65ad249c5c609c9163f0748c3b7dad7dc0dbe9a21b991ebc8ff20b5f512c977",
+      "read_length": 75,
+      "replicate": "r2",
+      "source_case_id": "held_out-m32-target_absent_background",
+      "source_manifest_sha256": "4e448fbaab32b57b0e432250dc2c3ec2559bc2906d46c4590e78b4040b749552",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "bb1e299c84f385dc7ed795c87cf0fedc0b009f28007d03528847d5d12551f70d",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2901",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "61bbe1107cba9475d09a12e7a987dcde6b50d065e6a602d570b24be3eda3aadb",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN002.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "REVIEW_PRIORITY",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "forward",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "REVIEW_PRIORITY"
+        }
+      ],
+      "case_id": "r3:development-m29-positive_control",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "1116b2a45500bda92f194df0fdab0d2087202f8935fb01d196179d7c6163daea",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "9d2c33ab15a798100d8f2a637d280f49f14e98cb03cb4ad124b65d15134ba52b",
+          "size_bytes": 847
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "9d2c33ab15a798100d8f2a637d280f49f14e98cb03cb4ad124b65d15134ba52b",
+          "size_bytes": 847
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "9d2c33ab15a798100d8f2a637d280f49f14e98cb03cb4ad124b65d15134ba52b",
+          "size_bytes": 847
+        },
+        {
+          "path": "m8_runs/m2901/m8-m2901/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "9d2c33ab15a798100d8f2a637d280f49f14e98cb03cb4ad124b65d15134ba52b",
+          "size_bytes": 847
+        }
+      ],
+      "read_input_sha256": "74afc46ff1c753faa8f0f8726f3fcfdb8cf01faf2db6412c53e8abd17f9dab3c",
+      "read_length": 100,
+      "replicate": "r3",
+      "source_case_id": "development-m29-positive_control",
+      "source_manifest_sha256": "8a54bb823a06e69df0923d18ff90d85ebfcda2fce9c3c217bf7feb73b6601c3e",
+      "split": "development",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "3594c2aa33e911a4fd32b383be946738077f636ebaceddff978d8f3d63d17e4f",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2902",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "NO_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_65_cov_3240.000000",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 65,
+          "query_sha256": "e73cffc6653973f42cf33f183973bd4b967b6fd8e1fef17fa519a187d30cf5a0",
+          "read_support_status": "UNSUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [],
+          "reference_panel_result": "NO_REPORTED_MATCH",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 65,
+              "deletion_count": 835,
+              "full_length_sequence_identity": 0.07222222222222222,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 4,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 6,
+              "missing_target_suffix_bases": 829,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": false,
+              "substitution_count": 0,
+              "target_coverage": 0.07222222222222222,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r3:development-m29-repeat_challenge",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "reference_absent_adversarial",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "517920bff3de0d3916f4f813facf92cdc2cddfccd622c0ed220cbdd1c575b047",
+      "m8_search_complete": true,
+      "negative_or_decoy": true,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d2cf9a6387af6791f440a32bfa37dfd5c4785338b9c2e49d103bf814db45a52e_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d2cf9a6387af6791f440a32bfa37dfd5c4785338b9c2e49d103bf814db45a52e_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d2cf9a6387af6791f440a32bfa37dfd5c4785338b9c2e49d103bf814db45a52e_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m2902/m8-m2902/blastn_d2cf9a6387af6791f440a32bfa37dfd5c4785338b9c2e49d103bf814db45a52e_virus_helper_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        }
+      ],
+      "read_input_sha256": "87b6856baf0e6a74bf5882879d39bd82c590bf8cff6e1bc17df4efbd335a726b",
+      "read_length": 100,
+      "replicate": "r3",
+      "source_case_id": "development-m29-repeat_challenge",
+      "source_manifest_sha256": "c1a66be6ca09f92b4336efd8be8e03df615f5707f9ae46d32201d773fabfcc74",
+      "split": "development",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "2ab00d588299f2e4f0d09d9d578dc5dc97ddad912357349b0cfae7fd104986c7",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2907",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "9da012257587b793ef708fe5cad85ce5a1d2ea500b424422c7747889139ba409",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN002.1",
+            "SYN004.1",
+            "SYN006.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "REVIEW_PRIORITY",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "REVIEW_PRIORITY"
+        }
+      ],
+      "case_id": "r3:tuning-m29-synthetic_background",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "394e530219677b92f06ac0b149728b528564751cf0307c9bc108e3daa2c9d76d",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "a65ddafb5a032be21ece14a11614525325200aaf5ba0fd005178d9f7578e3800",
+          "size_bytes": 1227
+        },
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "acf20a0c2c59c55036eaadafd9c50ffdca54e1fdbc0a8e0d766b8dcf67cf8807",
+          "size_bytes": 1416
+        },
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "a65ddafb5a032be21ece14a11614525325200aaf5ba0fd005178d9f7578e3800",
+          "size_bytes": 1227
+        },
+        {
+          "path": "m8_runs/m2907/m8-m2907/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "acf20a0c2c59c55036eaadafd9c50ffdca54e1fdbc0a8e0d766b8dcf67cf8807",
+          "size_bytes": 1416
+        }
+      ],
+      "read_input_sha256": "fc62e044feb989173c1543ea885880a9b3654b821913afaba036124d0a8994ba",
+      "read_length": 100,
+      "replicate": "r3",
+      "source_case_id": "tuning-m29-synthetic_background",
+      "source_manifest_sha256": "279847a2498118fc982842deb4a880c32f3a5c79c81916f4ee7466b4d61d4389",
+      "split": "tuning",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2909",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "EXECUTION_FAILED",
+      "candidate_records": [],
+      "case_id": "r3:held_out-m29-positive_control",
+      "contig_count": 0,
+      "coverage": 24,
+      "experiment_type": "known_reference_positive",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "61919b1739e5683c26bf1daee8073e57da0a1f0ecd3547122d6973b0b0321e4b",
+      "m8_search_complete": false,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "33a58349e15eabe9cef755ca0222ffc3cd1d428e2cd5a969a4f2264db2cc1626",
+      "read_length": 50,
+      "replicate": "r3",
+      "source_case_id": "held_out-m29-positive_control",
+      "source_manifest_sha256": "d470127bb2d015feb4cfb766aee34fe7503df3daf0d7a9ae6c9a9ec773c11656",
+      "split": "held_out",
+      "substitution_error_rate": 0.05,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "a4a192c952c90c50e7c40f7f9ac2c49fd8d4387e2b66512477d78f539443ad81",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2913",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": true,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "38f4d92023545e1db2d426f1b6e00f165543fa2c4a07fd9bce490ad9def18371",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [
+            "SYN001.1",
+            "SYN002.1"
+          ],
+          "reference_panel_result": "MATCH_REPORTED",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": {
+              "alignment_method": "Smith-Waterman local and Needleman-Wunsch global; linear gaps",
+              "alignment_orientation": "reverse_complement",
+              "candidate_coverage": 1.0,
+              "candidate_length": 900,
+              "deletion_count": 0,
+              "full_length_sequence_identity": 1.0,
+              "incorrect_candidate_prefix_bases": 0,
+              "incorrect_candidate_suffix_bases": 0,
+              "insertion_count": 0,
+              "internal_gap_run_count": 0,
+              "local_alignment_identity": 1.0,
+              "missing_target_prefix_bases": 0,
+              "missing_target_suffix_bases": 0,
+              "potential_incorrect_joins": [],
+              "strand_exact_match": true,
+              "substitution_count": 0,
+              "target_coverage": 1.0,
+              "truth_length": 900
+            },
+            "exact_synthetic_background_match": false,
+            "exact_target_match": true
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r3:held_out-m29-sequencing_errors",
+      "contig_count": 1,
+      "coverage": 80,
+      "experiment_type": "reference_independent_challenge",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "e40ad29a7e2acc2f234257aa0d43c3e2f54a31122cbdd867600cc0b779fd3537",
+      "m8_search_complete": true,
+      "negative_or_decoy": false,
+      "positive_control": true,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "5a7ceb5dd665130fa3b6310a75528e15499ef20f2b27b0e814582826e8e07e1a",
+          "size_bytes": 477
+        },
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "825b45d337dde71b5f1992c54c2bd94a1f9ef9a087404eb03a3d7629ee70ac69",
+          "size_bytes": 944
+        },
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "5a7ceb5dd665130fa3b6310a75528e15499ef20f2b27b0e814582826e8e07e1a",
+          "size_bytes": 477
+        },
+        {
+          "path": "m8_runs/m2913/m8-m2913/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "825b45d337dde71b5f1992c54c2bd94a1f9ef9a087404eb03a3d7629ee70ac69",
+          "size_bytes": 944
+        }
+      ],
+      "read_input_sha256": "fa12a1fb3c76742bc182757b003e946562e89bcba88bc2b6ca0cbae4e31f41fa",
+      "read_length": 100,
+      "replicate": "r3",
+      "source_case_id": "held_out-m29-sequencing_errors",
+      "source_manifest_sha256": "14734e6968d92ef6e4515ad3540ebd27061dffabb8c529bb6f5ee93877fc0e0e",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": true
+    },
+    {
+      "assembler": {
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        }
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m2917",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "NO_SUPPORTED_ASSEMBLY",
+      "candidate_records": [],
+      "case_id": "r3:held_out-m29-target_absent_negative",
+      "contig_count": 0,
+      "coverage": 80,
+      "experiment_type": "target_absent_no_contig",
+      "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
+      "handoff_complete": false,
+      "m6_reconstruction_sha256": "686ce8f4c7bfa5bf7cb096d6319886c866aa6775da6c1b0f9ff2cc3756e5ca31",
+      "m8_search_complete": false,
+      "negative_or_decoy": true,
+      "positive_control": false,
+      "raw_m8_outputs": [],
+      "read_input_sha256": "d8f59735a9a4c06708900be7985fc3384dce928ab02d11072dbbdd9af9214a54",
+      "read_length": 100,
+      "replicate": "r3",
+      "source_case_id": "held_out-m29-target_absent_negative",
+      "source_manifest_sha256": "554c16c5994257d78f19c2f3a95f38526f2f8a5125f7bd578322147f6fcd5cd8",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [],
+      "supported_exact_recovery": false
+    },
+    {
+      "assembler": {
+        "adapter": {
+          "kind": "assembly_spades",
+          "name": "spades-assembly-adapter",
+          "source_sha256": "4a30cbbb8d00faa455dc394a9a0a70c26864e486613ab7189d1ac983af093003",
+          "version": "1.0"
+        },
+        "assembler": "spades",
+        "assembly_path": "assembly/",
+        "configuration": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "manifest_sha256": "af812ac0b949efbf0a78b8c3c759ea61b80ef06c456070b01a1d90038661dad7",
+        "tool": {
+          "executables": [
+            {
+              "capability_test": "not_performed",
+              "path": "/nix/store/xg0kcjj95agrild93r2iwzq6yc37m8qc-spades-4.1.0/bin/spades.py",
+              "sha256": "5df1093a1e7ddf457fbb6a861b19f5ec5e190b409e2eb553bfba767555f31ed2",
+              "status": "version_check_passed",
+              "tool": "spades",
+              "version_output": "SPAdes genome assembler v4.1.0"
+            }
+          ],
+          "name": "SPAdes genome assembler"
+        },
+        "version": "SPAdes genome assembler v4.1.0"
+      },
+      "assembly_configuration": {
+        "assembler": "spades",
+        "assembly": {
+          "assembler": "spades",
+          "layout": "single-end",
+          "memory_mb": 2048,
+          "threads": 1
+        },
+        "assembly_enabled": true,
+        "layout": "single-end",
+        "memory_mb": 2048,
+        "sample_id": "m19-m32bg01",
+        "support": {
+          "coverage_window_size": 100,
+          "min_alignment_fraction": 0.8,
+          "min_coverage_breadth": 0.8,
+          "min_distinct_fragments": 2,
+          "min_mapq": 20,
+          "min_mean_depth": 2,
+          "min_sequence_identity": 0.95
+        },
+        "threads": 1,
+        "triage": {
+          "max_ambiguous_fraction": 0.05,
+          "min_entropy_bits": 1.2,
+          "min_mean_phred": 20,
+          "min_read_length": 50
+        }
+      },
+      "assembly_recovery": false,
+      "assembly_status": "READ_SUPPORTED_ASSEMBLY",
+      "candidate_records": [
+        {
+          "candidate_id": "NODE_1_length_900_cov_38.343195",
+          "m8_aggregate_status": "COMPLETE",
+          "query_length": 900,
+          "query_sha256": "dc46a0ca6daea6c58bb7299e1a5bd3b28c2c590d7a6e2a08d4cfbf28600a9aff",
+          "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+          "reference_panel_entries": [],
+          "reference_panel_result": "NO_REPORTED_MATCH",
+          "retrospective_expected_triage_outcome": "INSUFFICIENT_EVIDENCE",
+          "retrospective_truth_comparison": {
+            "comparison": null,
+            "exact_synthetic_background_match": false,
+            "exact_target_match": false
+          },
+          "triage_status": "INSUFFICIENT_EVIDENCE"
+        }
+      ],
+      "case_id": "r3:held_out-m32-target_absent_background",
+      "contig_count": 1,
+      "coverage": 24,
+      "experiment_type": "target_absent_supported_background",
+      "failure_reason": null,
+      "handoff_complete": true,
+      "m6_reconstruction_sha256": "913f099450a55954ccfec918f19407a637439ce4fb06d66c15131fb089712716",
+      "m8_search_complete": true,
+      "negative_or_decoy": true,
+      "positive_control": false,
+      "raw_m8_outputs": [
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_satellite_subviral_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_masked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        },
+        {
+          "path": "m8_runs/m32bg01/m8-m32bg01/blastn_3b8b75160dc00f852e5f992283f978dd9fa8e574e73783e00fb2985c5dedf940_virus_helper_dust_unmasked.tsv",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "size_bytes": 0
+        }
+      ],
+      "read_input_sha256": "8605189b0a8dd39806833dd15d6a4c3bb6bf1e33d654d9f2aafc9e09803f2060",
+      "read_length": 50,
+      "replicate": "r3",
+      "source_case_id": "held_out-m32-target_absent_background",
+      "source_manifest_sha256": "064aa0afd2766f43762ecd7e71db4da0c78680346a18d8cffe556715011247b0",
+      "split": "held_out",
+      "substitution_error_rate": 0.0,
+      "support_criteria": {
+        "coverage_window_size": 100,
+        "min_alignment_fraction": 0.8,
+        "min_coverage_breadth": 0.8,
+        "min_distinct_fragments": 2,
+        "min_mapq": 20,
+        "min_mean_depth": 2,
+        "min_sequence_identity": 0.95
+      },
+      "supported_contig_ids": [
+        "NODE_1_length_900_cov_38.343195"
+      ],
+      "supported_exact_recovery": false
+    }
+  ],
+  "governance": {
+    "biological_execution_authorized": false,
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION"
+  },
+  "independent_replicate_count": 3,
+  "interpretation": "Rates describe synthetic triage false alarms only; biological specificity and biological false-discovery rate are NOT_EVALUATED.",
+  "production_defaults_changed": false,
+  "repeat_run_count": 1,
+  "replicate_count": 3,
+  "reproducibility": {
+    "reconstruction_and_screening_stable": true,
+    "reference": "r1",
+    "repeat": "repeat-r1"
+  },
+  "runtime_by_replicate": {
+    "r1": {
+      "panel_digest": "91e56e430c0cbc3c5a813a356f8ecb5e935a8975fc13a3ce092f13f9ced217c0",
+      "panel_preregistration": {
+        "design_digest": "ad961ce1732316c49a83e934671de130d0598218ec7d4edfca57aa3dbadf69fa",
+        "panel_fasta_sha256": "80a723868519df090456410df6847e1de2a086cb6f41679c6f4e52a63d4b3d51",
+        "records": [
+          {
+            "accession_version": "SYN001.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33010101,
+            "sequence_sha256": "4a3e8cffbae4b33e5767a865f6f89635e929d75db00c9deb76cd82d8a8cd921e",
+            "source_case_id": "development-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN002.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33010707,
+            "sequence_sha256": "f2a45ada63709dba3984383ac05aa39b39ac8de2d5bcce90d6e725aab7a38c72",
+            "source_case_id": "tuning-m29-synthetic_background",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN006.1",
+            "gc_fraction": 0.75,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33010909,
+            "sequence_sha256": "5be301a7ed7aec377de04993861684c4e95027d0ed2b8b67484df24fd4ccdad2",
+            "source_case_id": "held_out-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN003.1",
+            "derived_from_accession": "SYN006.1",
+            "intent": "fixed_synthetic_near_reference",
+            "role": "satellite_subviral",
+            "seed": 32032026,
+            "sequence_sha256": "0f8337be13f08e0ade382035943ea5c50bf5c3c369cdfcbda4eef94b48e0ca13",
+            "source_case_id": "held_out-m29-positive_control",
+            "substitution_count": 24
+          },
+          {
+            "accession_version": "SYN004.1",
+            "intent": "fixed_synthetic_helper",
+            "role": "virus_helper",
+            "seed": 32032028,
+            "sequence_sha256": "8c0da9d2c26fb6132657306d5c3c0533e6d9aba1d464629f96ceb396f56e1337"
+          },
+          {
+            "accession_version": "SYN005.1",
+            "intent": "fixed_low_complexity_control",
+            "role": "virus_helper",
+            "sequence_sha256": "043abc44db8f69527aa6e7a9dc243d4f013ebeb6e4d93e0ba59e931f24672141"
+          },
+          {
+            "accession_version": "SYN007.1",
+            "intent": "fixed_synthetic_background",
+            "role": "virus_helper",
+            "seed": 32032029,
+            "sequence_sha256": "13f04e1f24317666fa9ab92553dbe8953532c09ada9766721f6ef358d50ecea9"
+          }
+        ],
+        "reference_independent_case_ids": [
+          "held_out-m29-sequencing_errors"
+        ],
+        "reference_panel_status_by_case": {
+          "development-m29-positive_control": "PRESENT",
+          "development-m29-repeat_challenge": "NOT_APPLICABLE",
+          "held_out-m29-positive_control": "PRESENT",
+          "held_out-m29-sequencing_errors": "ABSENT",
+          "held_out-m29-target_absent_negative": "NOT_APPLICABLE",
+          "held_out-m32-target_absent_background": "NOT_APPLICABLE",
+          "tuning-m29-synthetic_background": "PRESENT"
+        },
+        "schema": "m32-preregistered-reference-design-v1",
+        "seed": 32032026,
+        "snapshot_digest": "91e56e430c0cbc3c5a813a356f8ecb5e935a8975fc13a3ce092f13f9ced217c0"
+      },
+      "runtime": {
+        "blastn": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/blastn",
+          "sha256": "33b64bc67d3149cee2459b2f7766b363323df632cf12c099546de00aea9698b5",
+          "status": "version_check_passed",
+          "tool": "blastn",
+          "version": "2.17.0+",
+          "version_output": "blastn: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "makeblastdb": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/makeblastdb",
+          "sha256": "c1ffdcf6f15d1d8d75377cc9f37afa42bc9fa06678903bad77c2641e60778fce",
+          "status": "version_check_passed",
+          "tool": "makeblastdb",
+          "version": "2.17.0+",
+          "version_output": "makeblastdb: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "platform": {
+          "machine": "x86_64",
+          "supported": true,
+          "system": "Linux"
+        },
+        "profile_id": "m8-blastn-linux-x86_64-v1",
+        "release": "2.17.0+",
+        "status": "available"
+      }
+    },
+    "r2": {
+      "panel_digest": "d7455d89ea11b9edc15b86371da7e1dc3fbeae3b34dd46348a38ff22580bf675",
+      "panel_preregistration": {
+        "design_digest": "3c01111d59b8d4129fe17117d2ad91589894a0a5a4372d37cace440c4ce744a1",
+        "panel_fasta_sha256": "1dd174379866ec557721f0d2406c39ee77c499ee1b01bce114525ae2e7851bf8",
+        "records": [
+          {
+            "accession_version": "SYN001.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33020202,
+            "sequence_sha256": "e7b96538234bca67fb32a98cad06d1a566e2d298e98999ebc2267a5db3ec537f",
+            "source_case_id": "development-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN002.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33020808,
+            "sequence_sha256": "e2f8d331653e080bc7667139320e0a7b35e9dfd34fc8f6a5225be4a28bfe506a",
+            "source_case_id": "tuning-m29-synthetic_background",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN006.1",
+            "gc_fraction": 0.75,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33021010,
+            "sequence_sha256": "a64c51a2cbcd8f828c8afa8cc03e7f5e5012b4e371328813782dec4c4f2d9c13",
+            "source_case_id": "held_out-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN003.1",
+            "derived_from_accession": "SYN006.1",
+            "intent": "fixed_synthetic_near_reference",
+            "role": "satellite_subviral",
+            "seed": 32032026,
+            "sequence_sha256": "c87f88ccd050a1c3f047c83c0ddc02564247b9fd35c714f3da1e298e706af06f",
+            "source_case_id": "held_out-m29-positive_control",
+            "substitution_count": 24
+          },
+          {
+            "accession_version": "SYN004.1",
+            "intent": "fixed_synthetic_helper",
+            "role": "virus_helper",
+            "seed": 32032028,
+            "sequence_sha256": "8c0da9d2c26fb6132657306d5c3c0533e6d9aba1d464629f96ceb396f56e1337"
+          },
+          {
+            "accession_version": "SYN005.1",
+            "intent": "fixed_low_complexity_control",
+            "role": "virus_helper",
+            "sequence_sha256": "043abc44db8f69527aa6e7a9dc243d4f013ebeb6e4d93e0ba59e931f24672141"
+          },
+          {
+            "accession_version": "SYN007.1",
+            "intent": "fixed_synthetic_background",
+            "role": "virus_helper",
+            "seed": 32032029,
+            "sequence_sha256": "13f04e1f24317666fa9ab92553dbe8953532c09ada9766721f6ef358d50ecea9"
+          }
+        ],
+        "reference_independent_case_ids": [
+          "held_out-m29-sequencing_errors"
+        ],
+        "reference_panel_status_by_case": {
+          "development-m29-positive_control": "PRESENT",
+          "development-m29-repeat_challenge": "NOT_APPLICABLE",
+          "held_out-m29-positive_control": "PRESENT",
+          "held_out-m29-sequencing_errors": "ABSENT",
+          "held_out-m29-target_absent_negative": "NOT_APPLICABLE",
+          "held_out-m32-target_absent_background": "NOT_APPLICABLE",
+          "tuning-m29-synthetic_background": "PRESENT"
+        },
+        "schema": "m32-preregistered-reference-design-v1",
+        "seed": 32032026,
+        "snapshot_digest": "d7455d89ea11b9edc15b86371da7e1dc3fbeae3b34dd46348a38ff22580bf675"
+      },
+      "runtime": {
+        "blastn": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/blastn",
+          "sha256": "33b64bc67d3149cee2459b2f7766b363323df632cf12c099546de00aea9698b5",
+          "status": "version_check_passed",
+          "tool": "blastn",
+          "version": "2.17.0+",
+          "version_output": "blastn: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "makeblastdb": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/makeblastdb",
+          "sha256": "c1ffdcf6f15d1d8d75377cc9f37afa42bc9fa06678903bad77c2641e60778fce",
+          "status": "version_check_passed",
+          "tool": "makeblastdb",
+          "version": "2.17.0+",
+          "version_output": "makeblastdb: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "platform": {
+          "machine": "x86_64",
+          "supported": true,
+          "system": "Linux"
+        },
+        "profile_id": "m8-blastn-linux-x86_64-v1",
+        "release": "2.17.0+",
+        "status": "available"
+      }
+    },
+    "r3": {
+      "panel_digest": "603bd8f5fcd4aba918198477459a41aa3aa9e12d2d27b9093fb0f9cbdeca2357",
+      "panel_preregistration": {
+        "design_digest": "40aa58bb1dc242c79309f3ae7bd7a2b71e3c7d69fbfd66401658286e77b3470c",
+        "panel_fasta_sha256": "700f36ef51babd3cfa9c1f26cd1ff15f7db9dd6c5d6fbbf0f1d9a8507f6cf59c",
+        "records": [
+          {
+            "accession_version": "SYN001.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33030303,
+            "sequence_sha256": "61bbe1107cba9475d09a12e7a987dcde6b50d065e6a602d570b24be3eda3aadb",
+            "source_case_id": "development-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN002.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33030909,
+            "sequence_sha256": "effb0d310b1ab528e832eb56743120794c4d8db2e96c930676bc6a16ca17e78f",
+            "source_case_id": "tuning-m29-synthetic_background",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN006.1",
+            "gc_fraction": 0.75,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33031111,
+            "sequence_sha256": "8bd5bb8594d19ff572ca8dc5db7bcc8138ce857249ca41fa20fef90d21e1ce56",
+            "source_case_id": "held_out-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN003.1",
+            "derived_from_accession": "SYN006.1",
+            "intent": "fixed_synthetic_near_reference",
+            "role": "satellite_subviral",
+            "seed": 32032026,
+            "sequence_sha256": "2ad34db32af8e6e37056451f4c8402534a1d7c922ae84114985325f319819d7b",
+            "source_case_id": "held_out-m29-positive_control",
+            "substitution_count": 24
+          },
+          {
+            "accession_version": "SYN004.1",
+            "intent": "fixed_synthetic_helper",
+            "role": "virus_helper",
+            "seed": 32032028,
+            "sequence_sha256": "8c0da9d2c26fb6132657306d5c3c0533e6d9aba1d464629f96ceb396f56e1337"
+          },
+          {
+            "accession_version": "SYN005.1",
+            "intent": "fixed_low_complexity_control",
+            "role": "virus_helper",
+            "sequence_sha256": "043abc44db8f69527aa6e7a9dc243d4f013ebeb6e4d93e0ba59e931f24672141"
+          },
+          {
+            "accession_version": "SYN007.1",
+            "intent": "fixed_synthetic_background",
+            "role": "virus_helper",
+            "seed": 32032029,
+            "sequence_sha256": "13f04e1f24317666fa9ab92553dbe8953532c09ada9766721f6ef358d50ecea9"
+          }
+        ],
+        "reference_independent_case_ids": [
+          "held_out-m29-sequencing_errors"
+        ],
+        "reference_panel_status_by_case": {
+          "development-m29-positive_control": "PRESENT",
+          "development-m29-repeat_challenge": "NOT_APPLICABLE",
+          "held_out-m29-positive_control": "PRESENT",
+          "held_out-m29-sequencing_errors": "ABSENT",
+          "held_out-m29-target_absent_negative": "NOT_APPLICABLE",
+          "held_out-m32-target_absent_background": "NOT_APPLICABLE",
+          "tuning-m29-synthetic_background": "PRESENT"
+        },
+        "schema": "m32-preregistered-reference-design-v1",
+        "seed": 32032026,
+        "snapshot_digest": "603bd8f5fcd4aba918198477459a41aa3aa9e12d2d27b9093fb0f9cbdeca2357"
+      },
+      "runtime": {
+        "blastn": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/blastn",
+          "sha256": "33b64bc67d3149cee2459b2f7766b363323df632cf12c099546de00aea9698b5",
+          "status": "version_check_passed",
+          "tool": "blastn",
+          "version": "2.17.0+",
+          "version_output": "blastn: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "makeblastdb": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/makeblastdb",
+          "sha256": "c1ffdcf6f15d1d8d75377cc9f37afa42bc9fa06678903bad77c2641e60778fce",
+          "status": "version_check_passed",
+          "tool": "makeblastdb",
+          "version": "2.17.0+",
+          "version_output": "makeblastdb: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "platform": {
+          "machine": "x86_64",
+          "supported": true,
+          "system": "Linux"
+        },
+        "profile_id": "m8-blastn-linux-x86_64-v1",
+        "release": "2.17.0+",
+        "status": "available"
+      }
+    },
+    "repeat-r1": {
+      "panel_digest": "4bd62324a924138f927f6301c6daa32434b637de541117bd837c21d063a002a7",
+      "panel_preregistration": {
+        "design_digest": "7d9577d5f5087c67a78db011cd2d94f9ee301d286487404ca86e2c5c49f86429",
+        "panel_fasta_sha256": "80a723868519df090456410df6847e1de2a086cb6f41679c6f4e52a63d4b3d51",
+        "records": [
+          {
+            "accession_version": "SYN001.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33010101,
+            "sequence_sha256": "4a3e8cffbae4b33e5767a865f6f89635e929d75db00c9deb76cd82d8a8cd921e",
+            "source_case_id": "development-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN002.1",
+            "gc_fraction": 0.25,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33010707,
+            "sequence_sha256": "f2a45ada63709dba3984383ac05aa39b39ac8de2d5bcce90d6e725aab7a38c72",
+            "source_case_id": "tuning-m29-synthetic_background",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN006.1",
+            "gc_fraction": 0.75,
+            "intent": "known_reference_positive",
+            "repeat_complexity": "low",
+            "role": "satellite_subviral",
+            "seed": 33010909,
+            "sequence_sha256": "5be301a7ed7aec377de04993861684c4e95027d0ed2b8b67484df24fd4ccdad2",
+            "source_case_id": "held_out-m29-positive_control",
+            "target_length": 900
+          },
+          {
+            "accession_version": "SYN003.1",
+            "derived_from_accession": "SYN006.1",
+            "intent": "fixed_synthetic_near_reference",
+            "role": "satellite_subviral",
+            "seed": 32032026,
+            "sequence_sha256": "0f8337be13f08e0ade382035943ea5c50bf5c3c369cdfcbda4eef94b48e0ca13",
+            "source_case_id": "held_out-m29-positive_control",
+            "substitution_count": 24
+          },
+          {
+            "accession_version": "SYN004.1",
+            "intent": "fixed_synthetic_helper",
+            "role": "virus_helper",
+            "seed": 32032028,
+            "sequence_sha256": "8c0da9d2c26fb6132657306d5c3c0533e6d9aba1d464629f96ceb396f56e1337"
+          },
+          {
+            "accession_version": "SYN005.1",
+            "intent": "fixed_low_complexity_control",
+            "role": "virus_helper",
+            "sequence_sha256": "043abc44db8f69527aa6e7a9dc243d4f013ebeb6e4d93e0ba59e931f24672141"
+          },
+          {
+            "accession_version": "SYN007.1",
+            "intent": "fixed_synthetic_background",
+            "role": "virus_helper",
+            "seed": 32032029,
+            "sequence_sha256": "13f04e1f24317666fa9ab92553dbe8953532c09ada9766721f6ef358d50ecea9"
+          }
+        ],
+        "reference_independent_case_ids": [
+          "held_out-m29-sequencing_errors"
+        ],
+        "reference_panel_status_by_case": {
+          "development-m29-positive_control": "PRESENT",
+          "development-m29-repeat_challenge": "NOT_APPLICABLE",
+          "held_out-m29-positive_control": "PRESENT",
+          "held_out-m29-sequencing_errors": "ABSENT",
+          "held_out-m29-target_absent_negative": "NOT_APPLICABLE",
+          "held_out-m32-target_absent_background": "NOT_APPLICABLE",
+          "tuning-m29-synthetic_background": "PRESENT"
+        },
+        "schema": "m32-preregistered-reference-design-v1",
+        "seed": 32032026,
+        "snapshot_digest": "4bd62324a924138f927f6301c6daa32434b637de541117bd837c21d063a002a7"
+      },
+      "runtime": {
+        "blastn": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/blastn",
+          "sha256": "33b64bc67d3149cee2459b2f7766b363323df632cf12c099546de00aea9698b5",
+          "status": "version_check_passed",
+          "tool": "blastn",
+          "version": "2.17.0+",
+          "version_output": "blastn: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "makeblastdb": {
+          "hash_pinned": true,
+          "path": "/tmp/m33-runtime/blast/bin/makeblastdb",
+          "sha256": "c1ffdcf6f15d1d8d75377cc9f37afa42bc9fa06678903bad77c2641e60778fce",
+          "status": "version_check_passed",
+          "tool": "makeblastdb",
+          "version": "2.17.0+",
+          "version_output": "makeblastdb: 2.17.0+\n Package: blast 2.17.0, build Jul  1 2025 08:59:18"
+        },
+        "platform": {
+          "machine": "x86_64",
+          "supported": true,
+          "system": "Linux"
+        },
+        "profile_id": "m8-blastn-linux-x86_64-v1",
+        "release": "2.17.0+",
+        "status": "available"
+      }
+    }
+  },
+  "schema": "m33-independent-synthetic-robustness-v1",
+  "synthetic_only": true,
+  "synthetic_review_priority_false_alarm_rates": {
+    "by_experiment_type": {
+      "reference_absent_adversarial": {
+        "case_level": {
+          "eligible_denominator": 2,
+          "rate": 0.0,
+          "review_priority": 0,
+          "wilson_95": [
+            0.0,
+            0.6576197724933469
+          ]
+        },
+        "contig_level": {
+          "eligible_denominator": 11,
+          "rate": 0.0,
+          "review_priority": 0,
+          "wilson_95": [
+            0.0,
+            0.2588329669680317
+          ]
+        }
+      },
+      "target_absent_no_contig": {
+        "case_level": {
+          "eligible_denominator": 0,
+          "rate": null,
+          "review_priority": 0,
+          "wilson_95": null
+        },
+        "contig_level": {
+          "eligible_denominator": 0,
+          "rate": null,
+          "review_priority": 0,
+          "wilson_95": null
+        }
+      },
+      "target_absent_supported_background": {
+        "case_level": {
+          "eligible_denominator": 3,
+          "rate": 0.0,
+          "review_priority": 0,
+          "wilson_95": [
+            5.551115123125783e-17,
+            0.5614970317550454
+          ]
+        },
+        "contig_level": {
+          "eligible_denominator": 3,
+          "rate": 0.0,
+          "review_priority": 0,
+          "wilson_95": [
+            5.551115123125783e-17,
+            0.5614970317550454
+          ]
+        }
+      }
+    },
+    "case_level": {
+      "eligible_denominator": 5,
+      "rate": 0.0,
+      "review_priority": 0,
+      "wilson_95": [
+        0.0,
+        0.43448246478317476
+      ]
+    },
+    "contig_level": {
+      "eligible_denominator": 14,
+      "rate": 0.0,
+      "review_priority": 0,
+      "wilson_95": [
+        1.3877787807814457e-17,
+        0.2153108027376358
+      ]
+    },
+    "unevaluable": [
+      {
+        "case_id": "r1:held_out-m29-target_absent_negative",
+        "reason": "no supported contig or M8 incomplete"
+      },
+      {
+        "case_id": "r2:held_out-m29-target_absent_negative",
+        "reason": "no supported contig or M8 incomplete"
+      },
+      {
+        "case_id": "r3:development-m29-repeat_challenge",
+        "reason": "no supported contig or M8 incomplete"
+      },
+      {
+        "case_id": "r3:held_out-m29-target_absent_negative",
+        "reason": "no supported contig or M8 incomplete"
+      }
+    ]
+  },
+  "technical_summary": {
+    "completed_m8": 14,
+    "exact_supported_reconstructions": 7,
+    "no_assembly_cases": 4,
+    "positive_case_count": 15,
+    "positive_results_by_coverage_read_length_substitution_rate": [
+      {
+        "cases": 1,
+        "completed_m8": 0,
+        "coverage": 24,
+        "exact_supported": 0,
+        "read_length": 50,
+        "substitution_error_rate": 0.05
+      },
+      {
+        "cases": 1,
+        "completed_m8": 0,
+        "coverage": 24,
+        "exact_supported": 0,
+        "read_length": 100,
+        "substitution_error_rate": 0.02
+      },
+      {
+        "cases": 1,
+        "completed_m8": 0,
+        "coverage": 48,
+        "exact_supported": 0,
+        "read_length": 75,
+        "substitution_error_rate": 0.02
+      },
+      {
+        "cases": 1,
+        "completed_m8": 1,
+        "coverage": 48,
+        "exact_supported": 1,
+        "read_length": 100,
+        "substitution_error_rate": 0.0
+      },
+      {
+        "cases": 7,
+        "completed_m8": 7,
+        "coverage": 80,
+        "exact_supported": 6,
+        "read_length": 100,
+        "substitution_error_rate": 0.0
+      },
+      {
+        "cases": 2,
+        "completed_m8": 2,
+        "coverage": 80,
+        "exact_supported": 0,
+        "read_length": 100,
+        "substitution_error_rate": 0.02
+      },
+      {
+        "cases": 2,
+        "completed_m8": 1,
+        "coverage": 80,
+        "exact_supported": 0,
+        "read_length": 100,
+        "substitution_error_rate": 0.05
+      }
+    ],
+    "supported_exact_reconstruction_rate": 0.4666666666666667,
+    "triage_outcomes_by_contig": {
+      "INSUFFICIENT_EVIDENCE": 28,
+      "REVIEW_PRIORITY": 6
+    },
+    "validated_handoffs": 14
+  }
+}
