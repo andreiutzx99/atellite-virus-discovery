@@ -12,7 +12,7 @@ from unittest.mock import patch
 from . import m29_assembly_root_cause_recovery as m29
 from . import m32_end_to_end_synthetic_evidence as m32
 
-SCHEMA = "m33-independent-synthetic-robustness-v1"
+SCHEMA = "m33-independent-synthetic-robustness-v2"
 SEEDS = (33_010_101, 33_020_202, 33_030_303)
 REGISTERED_ROLES = {
     0: ("known_reference_positive", "REVIEW_PRIORITY"),
@@ -76,29 +76,38 @@ def wilson_interval(successes, total, z=1.959963984540054):
     return [max(0.0, center - margin), min(1.0, center + margin)]
 
 
-def false_alarm_metrics(case_rows):
-    """Score only negative/decoy cases with supported contigs and completed M8."""
+def _analysis_category(target_present, experiment_type):
+    if not target_present:
+        return "target_absent"
+    if experiment_type in {
+        "reference_absent_adversarial", "reference_independent_challenge",
+    }:
+        return "target_positive_adversarial"
+    return "positive_retrieval_control"
+
+
+def _review_priority_metrics(case_rows):
+    """Score the supplied truth category only when support and M8 are evaluable."""
     eligible_cases, eligible_contigs = [], []
     unevaluable = []
     for case in case_rows:
-        if not case.get("negative_or_decoy"):
-            continue
-        candidates = case.get("candidate_records", [])
-        supported = [row for row in candidates
+        supported = [row for row in case.get("candidate_records", [])
                      if row.get("read_support_status") == "READ_SUPPORTED_ASSEMBLY"]
         if not case.get("m8_search_complete") or not supported:
-            unevaluable.append({"case_id": case["case_id"],
-                                "reason": "no supported contig or M8 incomplete"})
+            unevaluable.append({
+                "case_id": case["case_id"],
+                "experiment_type": case.get("experiment_type", "unclassified"),
+                "reason": "no supported contig or M8 incomplete",
+            })
             continue
-        eligible_cases.append(case)
+        eligible_cases.append((case, supported))
         eligible_contigs.extend((case, row) for row in supported)
     case_hits = sum(any(row.get("triage_status") == "REVIEW_PRIORITY"
-                        for row in case["candidate_records"]
-                        if row.get("read_support_status") == "READ_SUPPORTED_ASSEMBLY")
-                    for case in eligible_cases)
+                        for row in supported)
+                    for _, supported in eligible_cases)
     contig_hits = sum(row.get("triage_status") == "REVIEW_PRIORITY"
                       for _, row in eligible_contigs)
-    result = {
+    return {
         "case_level": {
             "review_priority": case_hits, "eligible_denominator": len(eligible_cases),
             "rate": case_hits / len(eligible_cases) if eligible_cases else None,
@@ -111,44 +120,63 @@ def false_alarm_metrics(case_rows):
         },
         "unevaluable": unevaluable,
     }
-    result["by_experiment_type"] = {}
-    for kind in sorted({row.get("experiment_type", "unclassified") for row in case_rows
-                        if row.get("negative_or_decoy")}):
-        subset = [row for row in case_rows
-                  if row.get("negative_or_decoy")
-                  and row.get("experiment_type", "unclassified") == kind]
-        eligible = []
-        contigs = []
-        for case in subset:
-            supported = [row for row in case.get("candidate_records", [])
-                         if row.get("read_support_status") == "READ_SUPPORTED_ASSEMBLY"]
-            if case.get("m8_search_complete") and supported:
-                eligible.append((case, supported))
-                contigs.extend(supported)
-        case_hits = sum(any(row.get("triage_status") == "REVIEW_PRIORITY"
-                            for row in supported) for _, supported in eligible)
-        contig_hits = sum(row.get("triage_status") == "REVIEW_PRIORITY" for row in contigs)
-        result["by_experiment_type"][kind] = {
-            "case_level": {
-                "review_priority": case_hits, "eligible_denominator": len(eligible),
-                "rate": case_hits / len(eligible) if eligible else None,
-                "wilson_95": wilson_interval(case_hits, len(eligible)),
-            },
-            "contig_level": {
-                "review_priority": contig_hits, "eligible_denominator": len(contigs),
-                "rate": contig_hits / len(contigs) if contigs else None,
-                "wilson_95": wilson_interval(contig_hits, len(contigs)),
-            },
+
+
+def false_alarm_metrics(case_rows):
+    """Keep target-absent false alarms distinct from target-positive challenges."""
+    target_absent = [row for row in case_rows
+                     if row.get("analysis_category") == "target_absent"]
+    positive_adversarial = [
+        row for row in case_rows
+        if row.get("analysis_category") == "target_positive_adversarial"
+    ]
+
+    def summarize(cases):
+        summary = _review_priority_metrics(cases)
+        summary["by_experiment_type"] = {
+            kind: _review_priority_metrics([
+                row for row in cases
+                if row.get("experiment_type", "unclassified") == kind
+            ])
+            for kind in sorted({row.get("experiment_type", "unclassified")
+                                for row in cases})
         }
-    return result
+        return summary
+
+    # Retain the previous mixed subset for explicit comparison with the first
+    # M33 report; it is not a target-absent false-alarm estimate.
+    historical_mixed = [
+        row for row in case_rows
+        if not row.get("target_present_in_synthetic_truth", row.get("positive_control", False))
+        or row.get("experiment_type") == "reference_absent_adversarial"
+    ]
+    return {
+        "target_absent_synthetic_false_alarms": summarize(target_absent),
+        "target_positive_adversarial_triage": summarize(positive_adversarial),
+        "combined_diagnostic_stress": summarize(target_absent + positive_adversarial),
+        "historical_mixed_category_comparison": summarize(historical_mixed),
+    }
 
 
 def _reproducibility_signature(report):
-    reconstruction = {
-        row["case_id"]: (row["read_input_sha256"], row["assembly_status"],
-                         row["contig_count"], row["handoff"]["status"])
-        for row in report["reconstruction_and_handoffs"]
-    }
+    reconstruction = {}
+    graph_fields = (
+        "status", "sha256", "segment_count", "link_count", "branch_segment_count",
+        "dead_end_segment_count", "coverage_tag_count", "coverage_tag_min",
+        "coverage_tag_max",
+    )
+    for row in report["reconstruction_and_handoffs"]:
+        graph = row.get("assembly_graph", {})
+        reconstruction[row["case_id"]] = {
+            "read_input_sha256": row["read_input_sha256"],
+            "assembly_status": row["assembly_status"],
+            "contig_count": row["contig_count"],
+            "handoff_status": row["handoff"]["status"],
+            "handoff_candidate_count": row["handoff"].get("candidate_count"),
+            # M6 artifact digests include run-specific provenance. Compare the
+            # normalized graph evidence instead of those raw bundle digests.
+            "assembly_graph": {key: graph.get(key) for key in graph_fields},
+        }
     screening = {}
     alignments = {}
     for row in report["candidate_triage"]:
@@ -171,6 +199,39 @@ def _reproducibility_signature(report):
             sort_keys=True, separators=(",", ":")).encode())
     return {"reconstruction": reconstruction, "screening": screening,
             "normalized_alignment_sha256": alignments}
+
+
+class ReproducibilityMismatchError(RuntimeError):
+    """Raised after reports are saved when the same-seed repeat differs."""
+
+
+def compare_reproducibility(reference, repeat):
+    stage_keys = {
+        "reconstruction": "reconstruction",
+        "screening_triage": "screening",
+        "normalized_alignment": "normalized_alignment_sha256",
+    }
+    differences = {}
+    for stage, key in stage_keys.items():
+        left, right = reference[key], repeat[key]
+        differences[stage] = sorted(
+            case_id for case_id in set(left) | set(right)
+            if left.get(case_id) != right.get(case_id)
+        )
+    differences = {stage: cases for stage, cases in differences.items() if cases}
+    return {
+        "status": "REPRODUCIBILITY_MISMATCH" if differences else "REPRODUCIBLE",
+        "fully_reproducible": not differences,
+        "differing_stages": differences,
+    }
+
+
+def validate_reproducibility(outcome):
+    if not outcome["fully_reproducible"]:
+        raise ReproducibilityMismatchError(
+            "M33 same-seed repeat mismatch: "
+            + json.dumps(outcome["differing_stages"], sort_keys=True)
+        )
 
 
 def run(output, blastn, makeblastdb, blastdbcmd=None, replicates=3):
@@ -254,14 +315,15 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, replicates=3):
                     raise RuntimeError(f"M33 raw M8 output failed digest validation: {artifact['path']}")
         reports.append((trial["replicate"], result, trial_output))
 
-    reproducibility = {
+    reproducibility = compare_reproducibility(
+        _reproducibility_signature(reports[0][1]),
+        _reproducibility_signature(reports[-1][1]),
+    )
+    reproducibility.update({
         "repeat": "repeat-r1",
         "reference": "r1",
-        "reconstruction_and_screening_stable": (
-            _reproducibility_signature(reports[0][1])
-            == _reproducibility_signature(reports[-1][1])
-        ),
-    }
+        "result_bundles": {"reference": "r1", "repeat": "repeat-r1"},
+    })
 
     family_digests = {}
     for replicate, report, _ in reports[:-1]:
@@ -298,6 +360,9 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, replicates=3):
                 "split": metric["split"],
                 "experiment_type": metric["experiment_type"],
                 "positive_control": metric["positive_control"],
+                "target_present_in_synthetic_truth": bool(metric["positive_control"]),
+                "analysis_category": _analysis_category(
+                    bool(metric["positive_control"]), metric["experiment_type"]),
                 "coverage": design["coverage"],
                 "read_length": design["m25_read_length"],
                 "substitution_error_rate": design["error_rate"],
@@ -387,29 +452,59 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, replicates=3):
         json.dumps(report, sort_keys=True, indent=2) + "\n")
     (output / "M33_INDEPENDENT_SYNTHETIC_ROBUSTNESS.md").write_text(
         render_markdown(report), encoding="utf-8")
+    validate_reproducibility(reproducibility)
     return report
 
 
 def render_markdown(report):
-    rates = report["synthetic_review_priority_false_alarm_rates"]
     lines = [
         "# M33 — Independent synthetic robustness and false-alarm stress testing", "",
         "Synthetic-only diagnostic; biological satellite-virus discovery remains NOT_EVALUATED.", "",
         f"Cases: {report['case_count']} across {report['replicate_count']} independent seeded runs.", "",
-        "## Synthetic negative/decoy REVIEW_PRIORITY rates", "",
-        "| Unit | REVIEW_PRIORITY | Eligible denominator | Rate | Wilson 95% interval |",
-        "|---|---:|---:|---:|---|",
     ]
-    for label, key in (("Case", "case_level"), ("Contig", "contig_level")):
-        row = rates[key]
-        interval = row["wilson_95"]
-        lines.append(f"| {label} | {row['review_priority']} | {row['eligible_denominator']} | "
-                     f"{row['rate']} | {interval} |")
-    lines += ["", "## Unevaluable cases", ""]
-    lines.extend(f"- {row['case_id']}: {row['reason']}" for row in rates["unevaluable"])
-    lines += ["", "Unevaluable negative/decoy cases are retained with reasons in the JSON report.",
+    reproducibility = report["reproducibility"]
+    lines += [
+        "## Same-seed reproducibility",
+        "",
+        f"Status: **{reproducibility['status']}**.",
+        f"Fully reproducible: `{str(reproducibility['fully_reproducible']).lower()}`.",
+    ]
+    if reproducibility["differing_stages"]:
+        lines += ["", "Differing stages and cases:"]
+        for stage, case_ids in sorted(reproducibility["differing_stages"].items()):
+            lines.append(f"- {stage}: {', '.join(case_ids)}")
+    lines += ["", "Both result bundles are retained under the reference and repeat output directories.",
+              "", "## Synthetic triage outcomes by truth category", ""]
+    categories = report["synthetic_review_priority_false_alarm_rates"]
+    for key, title in (
+        ("target_absent_synthetic_false_alarms", "Target-absent synthetic false alarms"),
+        ("target_positive_adversarial_triage", "Target-positive adversarial triage"),
+        ("combined_diagnostic_stress", "Combined diagnostic stress (mixed categories)"),
+        ("historical_mixed_category_comparison", "Historical mixed-category comparison"),
+    ):
+        metrics = categories[key]
+        lines += [
+            f"### {title}", "",
+            "| Unit | REVIEW_PRIORITY | Eligible denominator | Rate | Wilson 95% interval |",
+            "|---|---:|---:|---:|---|",
+        ]
+        for label, field in (("Case", "case_level"), ("Contig", "contig_level")):
+            row = metrics[field]
+            lines.append(
+                f"| {label} | {row['review_priority']} | {row['eligible_denominator']} | "
+                f"{row['rate']} | {row['wilson_95']} |"
+            )
+        lines += ["", "Unevaluable cases:"]
+        if metrics["unevaluable"]:
+            lines.extend(f"- {row['case_id']}: {row['reason']}"
+                         for row in metrics["unevaluable"])
+        else:
+            lines.append("- None")
+        lines.append("")
+    lines += ["Unevaluable cases are retained with reasons in the JSON report.",
               "Substitution errors are exercised; insertion/deletion errors are not modeled by the reused generator.",
-              "These rates are synthetic triage false alarms, not biological false-positive estimates.", "",
+              "Target-positive challenges are not counted as target-absent false alarms. "
+              "These are synthetic triage outcomes, not biological false-positive estimates.", "",
               "```text", "decision=INCOMPLETE",
               "overall_state=BLOCKED_FOR_BENCHMARK_EXECUTION",
               "biological_execution_authorized=false", "```", ""]

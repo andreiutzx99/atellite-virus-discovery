@@ -2,6 +2,7 @@
   "case_count": 21,
   "cases": [
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -17,7 +18,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "12414a8abe527595784e80b2a0dc8a2c7cc7a53991c144fbb5eb87db6980169d",
+        "manifest_sha256": "5e53989b75787aa6a1e5dee613a1724a8f51d9ce6f6c4d2fa11a9c7c37c4920d",
         "tool": {
           "executables": [
             {
@@ -110,7 +111,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "ed9325edfcfdf4d6647c682e5168fd64e51f542a260c038336b57c8306731045",
+      "m6_reconstruction_sha256": "a7033d894cd4eb46e033966fc1b85be1f0fe4d93ac84a587d72d6f0edb8b605b",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -155,9 +156,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_positive_adversarial",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -173,7 +176,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "f531d61a71b3ab3b6b284bef3252757b71b3f4cb71debc2d2509b334da9993a9",
+        "manifest_sha256": "31a4b19cbebdb9f14004f76a68c8d06cbe1ee4e8afd93044cf443f3e40a1af54",
         "tool": {
           "executables": [
             {
@@ -968,7 +971,7 @@
       "experiment_type": "reference_absent_adversarial",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "07d9328e83177df50105e0fd85ec5155d7164f2d0ac9e6769827a9ee56262295",
+      "m6_reconstruction_sha256": "24a18bb75cfe012f0e0b413e8e77590ce98a4f96f8a18b68df92d36f28ad9673",
       "m8_search_complete": true,
       "negative_or_decoy": true,
       "positive_control": true,
@@ -1402,9 +1405,11 @@
         "NODE_8_length_111_cov_27.035714",
         "NODE_9_length_111_cov_26.964286"
       ],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -1420,7 +1425,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "014274be0f2dba65d4b4c2dbf2c957c9e5e5da0c3e4205009e1716a8b8d3ae04",
+        "manifest_sha256": "5a1b5ecc8d838b77bb9c8d71c9e3a03f99862e13313588e1e5b28a2b15ee4940",
         "tool": {
           "executables": [
             {
@@ -1513,7 +1518,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "230abf4cd7233939ad58d71d3b233c7117a6413b0eeab0252d09486448568c8c",
+      "m6_reconstruction_sha256": "0022c48e95d8dd33ffd4e8910111e7f339dfa95563a6f491f11410143cca3890",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -1558,9 +1563,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_23.005917"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -1576,7 +1583,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "0bd023533df9804eb3315ca4b8ab2b27f84ce1ea1002d4fd807746540092645d",
+        "manifest_sha256": "90642283aa22de09085fe21824b8f4eff3398d860b5261ebc53f9ceefb2b68ba",
         "tool": {
           "executables": [
             {
@@ -1669,7 +1676,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "31063cf6fd24d59080351a44c421ffeeee2c33166307d99e4dad247f21bbfccc",
+      "m6_reconstruction_sha256": "774e87f9a718bc10a18080d8ae1233b58b8a1d66a40b59eeb1b86754abf9e774",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -1714,9 +1721,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_positive_adversarial",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -1732,7 +1741,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "dcd3ce006e0b75edf0425011f4ffbd2a4316e7042677b25785307afa07521c43",
+        "manifest_sha256": "503689d65ed1c8db7c5bc5d382b3d35568b2ec374163d8940a81c3d5d91d27d3",
         "tool": {
           "executables": [
             {
@@ -1826,7 +1835,7 @@
       "experiment_type": "reference_independent_challenge",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "9a097d00af15f66a33935d41b17cc36750c11baa3068b9b75f018a994bb8d867",
+      "m6_reconstruction_sha256": "79036026c6c90dbe0ca7676d1257c2988afda1023d3547a1ddd839307e9a2fa8",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -1871,9 +1880,11 @@
       "supported_contig_ids": [
         "NODE_1_length_899_cov_7.473934"
       ],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_absent",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -1920,7 +1931,7 @@
       "experiment_type": "target_absent_no_contig",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "27edc709f5e4fe495dfc07ceed58239088a323484e5bf91fa023d4bfbcd26283",
+      "m6_reconstruction_sha256": "e2456a57696113739b8c33dd339e2f3356c8cc7dd302c274abeba5470e54ddc0",
       "m8_search_complete": false,
       "negative_or_decoy": true,
       "positive_control": false,
@@ -1942,9 +1953,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": false
     },
     {
+      "analysis_category": "target_absent",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -1960,7 +1973,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "436f1c13be682f13e83a61f0dd065b50e39341dd8facbb5c6f051743b79772b4",
+        "manifest_sha256": "2d26094947e69b3194b9f5d06caa3c5ad1568502c194ca400db6a5546c202117",
         "tool": {
           "executables": [
             {
@@ -2035,7 +2048,7 @@
       "experiment_type": "target_absent_supported_background",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "6a3045301aba67db1e218d363daf560b83eab465d043484c6fb5856f04b47e9d",
+      "m6_reconstruction_sha256": "0c918db514f5c1cef53baedf767cbb962ab9c0a0973f4d337567917c06225914",
       "m8_search_complete": true,
       "negative_or_decoy": true,
       "positive_control": false,
@@ -2080,9 +2093,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": false
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -2098,7 +2113,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "7a362a5693682934c7ab180ac5984ac0215ca0057e0540b597ab4670b966b652",
+        "manifest_sha256": "57817197ba7709dd0236b2a4c36b12f14fb599fefffe8504c104d63fcf38224c",
         "tool": {
           "executables": [
             {
@@ -2190,7 +2205,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "32d186f949fb2609d35d34bad3865b01f515d49aef2b4da762bbddfadaf5a099",
+      "m6_reconstruction_sha256": "9942483b498144a44737ee719807977d928462859567b988cb815fa8af09237e",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -2235,9 +2250,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_positive_adversarial",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -2253,7 +2270,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "63da83748a552e579655c940564bfc381b1ed5a9c752c5d5c5c0bfddf0ba5ba1",
+        "manifest_sha256": "7e8bba7df4a4686f495214bb2200193c009178691f741e32d30204dac3824454",
         "tool": {
           "executables": [
             {
@@ -2378,7 +2395,7 @@
       "experiment_type": "reference_absent_adversarial",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "0ff8b318b377c7196020e9ef0eba48a5737b12495e19ee00f018076ce49970ce",
+      "m6_reconstruction_sha256": "95108900dc8c5c621e62d7c5cce895bbe6d344555c9c92c897154048df48da09",
       "m8_search_complete": true,
       "negative_or_decoy": true,
       "positive_control": true,
@@ -2443,9 +2460,11 @@
       "supported_contig_ids": [
         "NODE_1_length_95_cov_2.950000"
       ],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -2492,7 +2511,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "b9686675d8cd1b35a941b1775dcf487190386adda58a3554ad2b1c9b2898fc8a",
+      "m6_reconstruction_sha256": "54ce203c88da7d77d06a51f39a9394fa4bb65a225cfe3af9f389d303f192de3e",
       "m8_search_complete": false,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -2514,9 +2533,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -2563,7 +2584,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "5b7bdc3f7946c8f4f5ef068774c065942156e96b6e08d8d72adbbf8052aadabb",
+      "m6_reconstruction_sha256": "f8e16cf80950f87b4df6e3bc88573fb174f0aca6045f7d558725a9dcc615dff2",
       "m8_search_complete": false,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -2585,9 +2606,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_positive_adversarial",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -2634,7 +2657,7 @@
       "experiment_type": "reference_independent_challenge",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "09097fb756bf9c4ae02887bf97d1f5c9ce19038da2ff6d5c2024f763353d6905",
+      "m6_reconstruction_sha256": "54009094f3571b5658d3bb9013ca3e07dc81cdac4a478b4cbf324c335b4de28b",
       "m8_search_complete": false,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -2656,9 +2679,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_absent",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -2705,7 +2730,7 @@
       "experiment_type": "target_absent_no_contig",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "2ccef71917c97c08cbb69613dd618eef7e9bac10d406be0270393c06ebc62c1a",
+      "m6_reconstruction_sha256": "4e69b7852dd6abaf77056c763e06019b9ad5084705da45701253d2df5f06a87b",
       "m8_search_complete": false,
       "negative_or_decoy": true,
       "positive_control": false,
@@ -2727,9 +2752,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": false
     },
     {
+      "analysis_category": "target_absent",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -2745,7 +2772,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "e700a7ae8a4f8c26f5ba602d795774d89abe0188857b48594dc4437d2de38d3a",
+        "manifest_sha256": "bf01243caef79b9e65d7a704f6eafe485d683038466962eb0b8ffe6a15f3ef0b",
         "tool": {
           "executables": [
             {
@@ -2816,7 +2843,7 @@
       "experiment_type": "target_absent_supported_background",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "a01cf22f3214a2e170305a37b0922ced65d1a27d2c5ea8bf804ed19fe8317ac2",
+      "m6_reconstruction_sha256": "eb38c5673377d5bceca9c7ed3e8ac4af97a024c69178f21f6425d7b73a8145c9",
       "m8_search_complete": true,
       "negative_or_decoy": true,
       "positive_control": false,
@@ -2861,9 +2888,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": false
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -2879,7 +2908,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "bb1e299c84f385dc7ed795c87cf0fedc0b009f28007d03528847d5d12551f70d",
+        "manifest_sha256": "a4d170c650c56de0b726e81d760c70e66538292b11f1bf418eeb82b25f1271ef",
         "tool": {
           "executables": [
             {
@@ -2972,7 +3001,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "1116b2a45500bda92f194df0fdab0d2087202f8935fb01d196179d7c6163daea",
+      "m6_reconstruction_sha256": "b642929140cf1731659b4973fccde3e72874ce4980d7e6431de602316ed37f3e",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -3017,9 +3046,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_positive_adversarial",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -3035,7 +3066,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "3594c2aa33e911a4fd32b383be946738077f636ebaceddff978d8f3d63d17e4f",
+        "manifest_sha256": "0e7ce6023752da650fb8678e11de92739c2657b09872b0657951fb141ab3e1bc",
         "tool": {
           "executables": [
             {
@@ -3125,7 +3156,7 @@
       "experiment_type": "reference_absent_adversarial",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "517920bff3de0d3916f4f813facf92cdc2cddfccd622c0ed220cbdd1c575b047",
+      "m6_reconstruction_sha256": "bedc1fbdd3d91e3c21ff4d5aea272ef68cb928fbc201b36daef39de2ab214898",
       "m8_search_complete": true,
       "negative_or_decoy": true,
       "positive_control": true,
@@ -3168,9 +3199,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -3186,7 +3219,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "2ab00d588299f2e4f0d09d9d578dc5dc97ddad912357349b0cfae7fd104986c7",
+        "manifest_sha256": "5aea1d9aae98663c469bb9f985ece908a6e88d1b21bd041b71bc03fb7f6fe52a",
         "tool": {
           "executables": [
             {
@@ -3281,7 +3314,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "394e530219677b92f06ac0b149728b528564751cf0307c9bc108e3daa2c9d76d",
+      "m6_reconstruction_sha256": "d2e10fbfaf1909d5cb72194cb574f6bd25cfdbfa691843032e3b15e351bb4ccc",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -3326,9 +3359,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "positive_retrieval_control",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -3375,7 +3410,7 @@
       "experiment_type": "known_reference_positive",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "61919b1739e5683c26bf1daee8073e57da0a1f0ecd3547122d6973b0b0321e4b",
+      "m6_reconstruction_sha256": "2951dfda1e300a1506d8536fb574af8a6403e53ac5ac250ed56921d8cbf08e3f",
       "m8_search_complete": false,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -3397,9 +3432,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_positive_adversarial",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -3415,7 +3452,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "a4a192c952c90c50e7c40f7f9ac2c49fd8d4387e2b66512477d78f539443ad81",
+        "manifest_sha256": "2c905d4db682b95adf72d564cb218773885ce39be6350f82d12690e2eb6d26ab",
         "tool": {
           "executables": [
             {
@@ -3508,7 +3545,7 @@
       "experiment_type": "reference_independent_challenge",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "e40ad29a7e2acc2f234257aa0d43c3e2f54a31122cbdd867600cc0b779fd3537",
+      "m6_reconstruction_sha256": "fdf29dc4374da63171d700f0efaa828dd3c2cbc65cb59c8626af4cd23c273a97",
       "m8_search_complete": true,
       "negative_or_decoy": false,
       "positive_control": true,
@@ -3553,9 +3590,11 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": true
+      "supported_exact_recovery": true,
+      "target_present_in_synthetic_truth": true
     },
     {
+      "analysis_category": "target_absent",
       "assembler": {
         "configuration": {
           "assembler": "spades",
@@ -3602,7 +3641,7 @@
       "experiment_type": "target_absent_no_contig",
       "failure_reason": "M6 produced no assembled contigs; M8 was not run.",
       "handoff_complete": false,
-      "m6_reconstruction_sha256": "686ce8f4c7bfa5bf7cb096d6319886c866aa6775da6c1b0f9ff2cc3756e5ca31",
+      "m6_reconstruction_sha256": "c3ae82f789c7304d22be70bed04c5e9cf74309baa9f0dbbb4180c03a61f9105d",
       "m8_search_complete": false,
       "negative_or_decoy": true,
       "positive_control": false,
@@ -3624,9 +3663,11 @@
         "min_sequence_identity": 0.95
       },
       "supported_contig_ids": [],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": false
     },
     {
+      "analysis_category": "target_absent",
       "assembler": {
         "adapter": {
           "kind": "assembly_spades",
@@ -3642,7 +3683,7 @@
           "memory_mb": 2048,
           "threads": 1
         },
-        "manifest_sha256": "af812ac0b949efbf0a78b8c3c759ea61b80ef06c456070b01a1d90038661dad7",
+        "manifest_sha256": "5691461399b1fbb969c3b4195278f63939c0f837b9ee99024e7664edde71a718",
         "tool": {
           "executables": [
             {
@@ -3713,7 +3754,7 @@
       "experiment_type": "target_absent_supported_background",
       "failure_reason": null,
       "handoff_complete": true,
-      "m6_reconstruction_sha256": "913f099450a55954ccfec918f19407a637439ce4fb06d66c15131fb089712716",
+      "m6_reconstruction_sha256": "6c71d9f16db3ad86784dc48534b16821588a97ab061320dc006dfbd29070c73f",
       "m8_search_complete": true,
       "negative_or_decoy": true,
       "positive_control": false,
@@ -3758,7 +3799,8 @@
       "supported_contig_ids": [
         "NODE_1_length_900_cov_38.343195"
       ],
-      "supported_exact_recovery": false
+      "supported_exact_recovery": false,
+      "target_present_in_synthetic_truth": false
     }
   ],
   "governance": {
@@ -3772,15 +3814,21 @@
   "repeat_run_count": 1,
   "replicate_count": 3,
   "reproducibility": {
-    "reconstruction_and_screening_stable": true,
+    "differing_stages": {},
+    "fully_reproducible": true,
     "reference": "r1",
-    "repeat": "repeat-r1"
+    "repeat": "repeat-r1",
+    "result_bundles": {
+      "reference": "r1",
+      "repeat": "repeat-r1"
+    },
+    "status": "REPRODUCIBLE"
   },
   "runtime_by_replicate": {
     "r1": {
-      "panel_digest": "91e56e430c0cbc3c5a813a356f8ecb5e935a8975fc13a3ce092f13f9ced217c0",
+      "panel_digest": "f5714aa52733a722ba7d57498f6a46d83e06ae2883b450807b265cc13745f23c",
       "panel_preregistration": {
-        "design_digest": "ad961ce1732316c49a83e934671de130d0598218ec7d4edfca57aa3dbadf69fa",
+        "design_digest": "449fd9fefce50fe34b38081547eafbf9f6264a1aebbde103b9c15d87a1623488",
         "panel_fasta_sha256": "80a723868519df090456410df6847e1de2a086cb6f41679c6f4e52a63d4b3d51",
         "records": [
           {
@@ -3861,7 +3909,7 @@
         },
         "schema": "m32-preregistered-reference-design-v1",
         "seed": 32032026,
-        "snapshot_digest": "91e56e430c0cbc3c5a813a356f8ecb5e935a8975fc13a3ce092f13f9ced217c0"
+        "snapshot_digest": "f5714aa52733a722ba7d57498f6a46d83e06ae2883b450807b265cc13745f23c"
       },
       "runtime": {
         "blastn": {
@@ -3893,9 +3941,9 @@
       }
     },
     "r2": {
-      "panel_digest": "d7455d89ea11b9edc15b86371da7e1dc3fbeae3b34dd46348a38ff22580bf675",
+      "panel_digest": "2277cb06ebd6cf20a8122f36415831c495dbec14a150ed522f82dbc02b1928b0",
       "panel_preregistration": {
-        "design_digest": "3c01111d59b8d4129fe17117d2ad91589894a0a5a4372d37cace440c4ce744a1",
+        "design_digest": "32f3f79f5d1a07729f4a938a80169db9ffedf09a3fdb0a78d093bfac38a3a4ed",
         "panel_fasta_sha256": "1dd174379866ec557721f0d2406c39ee77c499ee1b01bce114525ae2e7851bf8",
         "records": [
           {
@@ -3976,7 +4024,7 @@
         },
         "schema": "m32-preregistered-reference-design-v1",
         "seed": 32032026,
-        "snapshot_digest": "d7455d89ea11b9edc15b86371da7e1dc3fbeae3b34dd46348a38ff22580bf675"
+        "snapshot_digest": "2277cb06ebd6cf20a8122f36415831c495dbec14a150ed522f82dbc02b1928b0"
       },
       "runtime": {
         "blastn": {
@@ -4008,9 +4056,9 @@
       }
     },
     "r3": {
-      "panel_digest": "603bd8f5fcd4aba918198477459a41aa3aa9e12d2d27b9093fb0f9cbdeca2357",
+      "panel_digest": "7a78289113411ad377bcb93444548b9e8e734f80febbb9442d1d026feed761a5",
       "panel_preregistration": {
-        "design_digest": "40aa58bb1dc242c79309f3ae7bd7a2b71e3c7d69fbfd66401658286e77b3470c",
+        "design_digest": "494b70a11c19d58a1aeb85b5bb15e6a83b8151910cbb9065fc66b002f08fb7c3",
         "panel_fasta_sha256": "700f36ef51babd3cfa9c1f26cd1ff15f7db9dd6c5d6fbbf0f1d9a8507f6cf59c",
         "records": [
           {
@@ -4091,7 +4139,7 @@
         },
         "schema": "m32-preregistered-reference-design-v1",
         "seed": 32032026,
-        "snapshot_digest": "603bd8f5fcd4aba918198477459a41aa3aa9e12d2d27b9093fb0f9cbdeca2357"
+        "snapshot_digest": "7a78289113411ad377bcb93444548b9e8e734f80febbb9442d1d026feed761a5"
       },
       "runtime": {
         "blastn": {
@@ -4123,9 +4171,9 @@
       }
     },
     "repeat-r1": {
-      "panel_digest": "4bd62324a924138f927f6301c6daa32434b637de541117bd837c21d063a002a7",
+      "panel_digest": "6894b28303d2b3a6cf7c7753b220056080c33ab33b6be13928c59d7e34a8a925",
       "panel_preregistration": {
-        "design_digest": "7d9577d5f5087c67a78db011cd2d94f9ee301d286487404ca86e2c5c49f86429",
+        "design_digest": "e51e5497735cde51a848091559549e168f6cc1308289f56381d6a2653eb9564d",
         "panel_fasta_sha256": "80a723868519df090456410df6847e1de2a086cb6f41679c6f4e52a63d4b3d51",
         "records": [
           {
@@ -4206,7 +4254,7 @@
         },
         "schema": "m32-preregistered-reference-design-v1",
         "seed": 32032026,
-        "snapshot_digest": "4bd62324a924138f927f6301c6daa32434b637de541117bd837c21d063a002a7"
+        "snapshot_digest": "6894b28303d2b3a6cf7c7753b220056080c33ab33b6be13928c59d7e34a8a925"
       },
       "runtime": {
         "blastn": {
@@ -4238,101 +4286,466 @@
       }
     }
   },
-  "schema": "m33-independent-synthetic-robustness-v1",
+  "schema": "m33-independent-synthetic-robustness-v2",
   "synthetic_only": true,
   "synthetic_review_priority_false_alarm_rates": {
-    "by_experiment_type": {
-      "reference_absent_adversarial": {
-        "case_level": {
-          "eligible_denominator": 2,
-          "rate": 0.0,
-          "review_priority": 0,
-          "wilson_95": [
-            0.0,
-            0.6576197724933469
+    "combined_diagnostic_stress": {
+      "by_experiment_type": {
+        "reference_absent_adversarial": {
+          "case_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 11,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.2588329669680317
+            ]
+          },
+          "unevaluable": [
+            {
+              "case_id": "r3:development-m29-repeat_challenge",
+              "experiment_type": "reference_absent_adversarial",
+              "reason": "no supported contig or M8 incomplete"
+            }
           ]
         },
-        "contig_level": {
-          "eligible_denominator": 11,
-          "rate": 0.0,
-          "review_priority": 0,
-          "wilson_95": [
-            0.0,
-            0.2588329669680317
+        "reference_independent_challenge": {
+          "case_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "unevaluable": [
+            {
+              "case_id": "r2:held_out-m29-sequencing_errors",
+              "experiment_type": "reference_independent_challenge",
+              "reason": "no supported contig or M8 incomplete"
+            }
           ]
+        },
+        "target_absent_no_contig": {
+          "case_level": {
+            "eligible_denominator": 0,
+            "rate": null,
+            "review_priority": 0,
+            "wilson_95": null
+          },
+          "contig_level": {
+            "eligible_denominator": 0,
+            "rate": null,
+            "review_priority": 0,
+            "wilson_95": null
+          },
+          "unevaluable": [
+            {
+              "case_id": "r1:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            },
+            {
+              "case_id": "r2:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            },
+            {
+              "case_id": "r3:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            }
+          ]
+        },
+        "target_absent_supported_background": {
+          "case_level": {
+            "eligible_denominator": 3,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              5.551115123125783e-17,
+              0.5614970317550454
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 3,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              5.551115123125783e-17,
+              0.5614970317550454
+            ]
+          },
+          "unevaluable": []
         }
       },
-      "target_absent_no_contig": {
-        "case_level": {
-          "eligible_denominator": 0,
-          "rate": null,
-          "review_priority": 0,
-          "wilson_95": null
-        },
-        "contig_level": {
-          "eligible_denominator": 0,
-          "rate": null,
-          "review_priority": 0,
-          "wilson_95": null
-        }
+      "case_level": {
+        "eligible_denominator": 7,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          5.551115123125783e-17,
+          0.35433043506668743
+        ]
       },
-      "target_absent_supported_background": {
-        "case_level": {
-          "eligible_denominator": 3,
-          "rate": 0.0,
-          "review_priority": 0,
-          "wilson_95": [
-            5.551115123125783e-17,
-            0.5614970317550454
-          ]
+      "contig_level": {
+        "eligible_denominator": 16,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          0.0,
+          0.1936076805344365
+        ]
+      },
+      "unevaluable": [
+        {
+          "case_id": "r1:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
         },
-        "contig_level": {
-          "eligible_denominator": 3,
-          "rate": 0.0,
-          "review_priority": 0,
-          "wilson_95": [
-            5.551115123125783e-17,
-            0.5614970317550454
-          ]
+        {
+          "case_id": "r2:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r3:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r2:held_out-m29-sequencing_errors",
+          "experiment_type": "reference_independent_challenge",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r3:development-m29-repeat_challenge",
+          "experiment_type": "reference_absent_adversarial",
+          "reason": "no supported contig or M8 incomplete"
         }
-      }
-    },
-    "case_level": {
-      "eligible_denominator": 5,
-      "rate": 0.0,
-      "review_priority": 0,
-      "wilson_95": [
-        0.0,
-        0.43448246478317476
       ]
     },
-    "contig_level": {
-      "eligible_denominator": 14,
-      "rate": 0.0,
-      "review_priority": 0,
-      "wilson_95": [
-        1.3877787807814457e-17,
-        0.2153108027376358
+    "historical_mixed_category_comparison": {
+      "by_experiment_type": {
+        "reference_absent_adversarial": {
+          "case_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 11,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.2588329669680317
+            ]
+          },
+          "unevaluable": [
+            {
+              "case_id": "r3:development-m29-repeat_challenge",
+              "experiment_type": "reference_absent_adversarial",
+              "reason": "no supported contig or M8 incomplete"
+            }
+          ]
+        },
+        "target_absent_no_contig": {
+          "case_level": {
+            "eligible_denominator": 0,
+            "rate": null,
+            "review_priority": 0,
+            "wilson_95": null
+          },
+          "contig_level": {
+            "eligible_denominator": 0,
+            "rate": null,
+            "review_priority": 0,
+            "wilson_95": null
+          },
+          "unevaluable": [
+            {
+              "case_id": "r1:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            },
+            {
+              "case_id": "r2:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            },
+            {
+              "case_id": "r3:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            }
+          ]
+        },
+        "target_absent_supported_background": {
+          "case_level": {
+            "eligible_denominator": 3,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              5.551115123125783e-17,
+              0.5614970317550454
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 3,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              5.551115123125783e-17,
+              0.5614970317550454
+            ]
+          },
+          "unevaluable": []
+        }
+      },
+      "case_level": {
+        "eligible_denominator": 5,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          0.0,
+          0.43448246478317476
+        ]
+      },
+      "contig_level": {
+        "eligible_denominator": 14,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          1.3877787807814457e-17,
+          0.2153108027376358
+        ]
+      },
+      "unevaluable": [
+        {
+          "case_id": "r1:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r2:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r3:development-m29-repeat_challenge",
+          "experiment_type": "reference_absent_adversarial",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r3:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        }
       ]
     },
-    "unevaluable": [
-      {
-        "case_id": "r1:held_out-m29-target_absent_negative",
-        "reason": "no supported contig or M8 incomplete"
+    "target_absent_synthetic_false_alarms": {
+      "by_experiment_type": {
+        "target_absent_no_contig": {
+          "case_level": {
+            "eligible_denominator": 0,
+            "rate": null,
+            "review_priority": 0,
+            "wilson_95": null
+          },
+          "contig_level": {
+            "eligible_denominator": 0,
+            "rate": null,
+            "review_priority": 0,
+            "wilson_95": null
+          },
+          "unevaluable": [
+            {
+              "case_id": "r1:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            },
+            {
+              "case_id": "r2:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            },
+            {
+              "case_id": "r3:held_out-m29-target_absent_negative",
+              "experiment_type": "target_absent_no_contig",
+              "reason": "no supported contig or M8 incomplete"
+            }
+          ]
+        },
+        "target_absent_supported_background": {
+          "case_level": {
+            "eligible_denominator": 3,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              5.551115123125783e-17,
+              0.5614970317550454
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 3,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              5.551115123125783e-17,
+              0.5614970317550454
+            ]
+          },
+          "unevaluable": []
+        }
       },
-      {
-        "case_id": "r2:held_out-m29-target_absent_negative",
-        "reason": "no supported contig or M8 incomplete"
+      "case_level": {
+        "eligible_denominator": 3,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          5.551115123125783e-17,
+          0.5614970317550454
+        ]
       },
-      {
-        "case_id": "r3:development-m29-repeat_challenge",
-        "reason": "no supported contig or M8 incomplete"
+      "contig_level": {
+        "eligible_denominator": 3,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          5.551115123125783e-17,
+          0.5614970317550454
+        ]
       },
-      {
-        "case_id": "r3:held_out-m29-target_absent_negative",
-        "reason": "no supported contig or M8 incomplete"
-      }
-    ]
+      "unevaluable": [
+        {
+          "case_id": "r1:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r2:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r3:held_out-m29-target_absent_negative",
+          "experiment_type": "target_absent_no_contig",
+          "reason": "no supported contig or M8 incomplete"
+        }
+      ]
+    },
+    "target_positive_adversarial_triage": {
+      "by_experiment_type": {
+        "reference_absent_adversarial": {
+          "case_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 11,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.2588329669680317
+            ]
+          },
+          "unevaluable": [
+            {
+              "case_id": "r3:development-m29-repeat_challenge",
+              "experiment_type": "reference_absent_adversarial",
+              "reason": "no supported contig or M8 incomplete"
+            }
+          ]
+        },
+        "reference_independent_challenge": {
+          "case_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "contig_level": {
+            "eligible_denominator": 2,
+            "rate": 0.0,
+            "review_priority": 0,
+            "wilson_95": [
+              0.0,
+              0.6576197724933469
+            ]
+          },
+          "unevaluable": [
+            {
+              "case_id": "r2:held_out-m29-sequencing_errors",
+              "experiment_type": "reference_independent_challenge",
+              "reason": "no supported contig or M8 incomplete"
+            }
+          ]
+        }
+      },
+      "case_level": {
+        "eligible_denominator": 4,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "contig_level": {
+        "eligible_denominator": 13,
+        "rate": 0.0,
+        "review_priority": 0,
+        "wilson_95": [
+          0.0,
+          0.22809537235419838
+        ]
+      },
+      "unevaluable": [
+        {
+          "case_id": "r2:held_out-m29-sequencing_errors",
+          "experiment_type": "reference_independent_challenge",
+          "reason": "no supported contig or M8 incomplete"
+        },
+        {
+          "case_id": "r3:development-m29-repeat_challenge",
+          "experiment_type": "reference_absent_adversarial",
+          "reason": "no supported contig or M8 incomplete"
+        }
+      ]
+    }
   },
   "technical_summary": {
     "completed_m8": 14,

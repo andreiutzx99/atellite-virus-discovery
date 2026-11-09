@@ -1,9 +1,13 @@
 import unittest
 
 from satellite_discovery.m33_independent_synthetic_robustness import (
+    ReproducibilityMismatchError,
+    _analysis_category,
     _reproducibility_signature,
+    compare_reproducibility,
     false_alarm_metrics,
     preregistered_trials,
+    validate_reproducibility,
     wilson_interval,
 )
 
@@ -18,6 +22,10 @@ class M33RepeatabilityTests(unittest.TestCase):
                     "assembly_status": "ASSEMBLED",
                     "contig_count": 1,
                     "handoff": {"status": "COMPLETE"},
+                    "assembly_graph": {
+                        "status": "AVAILABLE", "sha256": "same-graph",
+                        "segment_count": 1, "link_count": 0,
+                    },
                 }],
                 "candidate_triage": [{
                     "case_id": "case-1",
@@ -45,6 +53,62 @@ class M33RepeatabilityTests(unittest.TestCase):
             _reproducibility_signature(report("repeat")),
         )
 
+    def test_changed_triage_result_is_a_validation_failure(self):
+        reference = {
+            "reconstruction": {"case-1": ("reads", "ASSEMBLED", 1, "COMPLETE")},
+            "screening": {"case-1": (("candidate-1", "INSUFFICIENT_EVIDENCE"),)},
+            "normalized_alignment_sha256": {"case-1": "same-alignment"},
+        }
+        repeat = {
+            **reference,
+            "screening": {"case-1": (("candidate-1", "REVIEW_PRIORITY"),)},
+        }
+        outcome = compare_reproducibility(reference, repeat)
+        self.assertEqual(outcome["status"], "REPRODUCIBILITY_MISMATCH")
+        self.assertEqual(outcome["differing_stages"], {"screening_triage": ["case-1"]})
+        with self.assertRaises(ReproducibilityMismatchError):
+            validate_reproducibility(outcome)
+
+    def test_changed_normalized_alignment_is_a_validation_failure(self):
+        reference = {
+            "reconstruction": {"case-1": ("reads", "ASSEMBLED", 1, "COMPLETE")},
+            "screening": {"case-1": (("candidate-1", "INSUFFICIENT_EVIDENCE"),)},
+            "normalized_alignment_sha256": {"case-1": "alignment-a"},
+        }
+        repeat = {
+            **reference,
+            "normalized_alignment_sha256": {"case-1": "alignment-b"},
+        }
+        outcome = compare_reproducibility(reference, repeat)
+        self.assertEqual(
+            outcome["differing_stages"],
+            {"normalized_alignment": ["case-1"]},
+        )
+        self.assertFalse(outcome["fully_reproducible"])
+        with self.assertRaises(ReproducibilityMismatchError):
+            validate_reproducibility(outcome)
+
+    def test_changed_normalized_assembly_graph_is_detected(self):
+        reference = {
+            "reconstruction": {"case-1": {
+                "assembly_graph": {"sha256": "graph-a"},
+            }},
+            "screening": {},
+            "normalized_alignment_sha256": {},
+        }
+        repeat = {
+            **reference,
+            "reconstruction": {"case-1": {
+                "assembly_graph": {"sha256": "graph-b"},
+            }},
+        }
+        outcome = compare_reproducibility(reference, repeat)
+        self.assertEqual(outcome["differing_stages"], {
+            "reconstruction": ["case-1"],
+        })
+        with self.assertRaises(ReproducibilityMismatchError):
+            validate_reproducibility(outcome)
+
 
 class M33DesignTests(unittest.TestCase):
     def test_design_has_independent_reproducible_trial_seeds(self):
@@ -65,10 +129,21 @@ class M33DesignTests(unittest.TestCase):
 
 
 class M33FalseAlarmTests(unittest.TestCase):
-    def test_only_supported_contigs_with_completed_m8_enter_denominators(self):
+    def test_truth_categories_keep_positive_adversarial_out_of_false_alarm_rate(self):
+        self.assertEqual(
+            _analysis_category(True, "reference_absent_adversarial"),
+            "target_positive_adversarial",
+        )
+        self.assertEqual(
+            _analysis_category(True, "reference_independent_challenge"),
+            "target_positive_adversarial",
+        )
+        self.assertEqual(_analysis_category(False, "target_absent_no_contig"),
+                         "target_absent")
         cases = [
             {
-                "case_id": "eligible", "negative_or_decoy": True,
+                "case_id": "target-absent", "analysis_category": "target_absent",
+                "target_present_in_synthetic_truth": False,
                 "experiment_type": "target_absent_supported_background",
                 "m8_search_complete": True,
                 "candidate_records": [
@@ -79,11 +154,26 @@ class M33FalseAlarmTests(unittest.TestCase):
                 ],
             },
             {
-                "case_id": "no-contig", "negative_or_decoy": True,
+                "case_id": "positive-adversarial",
+                "analysis_category": "target_positive_adversarial",
+                "target_present_in_synthetic_truth": True,
+                "experiment_type": "reference_absent_adversarial",
+                "m8_search_complete": True,
+                "candidate_records": [
+                    {"read_support_status": "READ_SUPPORTED_ASSEMBLY",
+                     "triage_status": "REVIEW_PRIORITY"},
+                ],
+            },
+            {
+                "case_id": "no-contig", "analysis_category": "target_absent",
+                "target_present_in_synthetic_truth": False,
+                "experiment_type": "target_absent_no_contig",
                 "m8_search_complete": False, "candidate_records": [],
             },
             {
-                "case_id": "incomplete", "negative_or_decoy": True,
+                "case_id": "incomplete", "analysis_category": "target_absent",
+                "target_present_in_synthetic_truth": False,
+                "experiment_type": "target_absent_supported_background",
                 "m8_search_complete": False,
                 "candidate_records": [
                     {"read_support_status": "READ_SUPPORTED_ASSEMBLY",
@@ -91,7 +181,9 @@ class M33FalseAlarmTests(unittest.TestCase):
                 ],
             },
             {
-                "case_id": "positive", "negative_or_decoy": False,
+                "case_id": "positive", "analysis_category": "positive_retrieval_control",
+                "target_present_in_synthetic_truth": True,
+                "experiment_type": "known_reference_positive",
                 "m8_search_complete": True,
                 "candidate_records": [
                     {"read_support_status": "READ_SUPPORTED_ASSEMBLY",
@@ -100,21 +192,29 @@ class M33FalseAlarmTests(unittest.TestCase):
             },
         ]
         result = false_alarm_metrics(cases)
-        self.assertEqual(result["case_level"]["eligible_denominator"], 1)
-        self.assertEqual(result["case_level"]["review_priority"], 1)
-        self.assertEqual(result["contig_level"]["eligible_denominator"], 1)
-        self.assertEqual(result["contig_level"]["review_priority"], 1)
-        self.assertEqual(len(result["unevaluable"]), 2)
-        category = result["by_experiment_type"]["target_absent_supported_background"]
-        self.assertEqual(category["case_level"]["eligible_denominator"], 1)
+        absent = result["target_absent_synthetic_false_alarms"]
+        adversarial = result["target_positive_adversarial_triage"]
+        self.assertEqual(absent["case_level"]["eligible_denominator"], 1)
+        self.assertEqual(absent["case_level"]["review_priority"], 1)
+        self.assertEqual(absent["contig_level"]["eligible_denominator"], 1)
+        self.assertEqual(len(absent["unevaluable"]), 2)
+        self.assertEqual(adversarial["case_level"]["eligible_denominator"], 1)
+        self.assertEqual(adversarial["case_level"]["review_priority"], 1)
+        self.assertEqual(adversarial["contig_level"]["eligible_denominator"], 1)
+        self.assertEqual(
+            result["historical_mixed_category_comparison"]["case_level"]["eligible_denominator"],
+            2,
+        )
 
     def test_empty_denominator_is_not_reported_as_zero_rate(self):
         result = false_alarm_metrics([{
-            "case_id": "no-contig", "negative_or_decoy": True,
+            "case_id": "no-contig", "analysis_category": "target_absent",
+            "target_present_in_synthetic_truth": False,
             "m8_search_complete": False, "candidate_records": [],
         }])
-        self.assertIsNone(result["case_level"]["rate"])
-        self.assertIsNone(result["case_level"]["wilson_95"])
+        absent = result["target_absent_synthetic_false_alarms"]
+        self.assertIsNone(absent["case_level"]["rate"])
+        self.assertIsNone(absent["case_level"]["wilson_95"])
 
     def test_wilson_interval_bounds_and_zero_denominator(self):
         interval = wilson_interval(1, 10)
