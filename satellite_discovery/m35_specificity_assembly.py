@@ -452,7 +452,6 @@ def _candidate_features(triage_rows, report, design, target, sequence_by_id,
             ),
             "candidates": candidates,
             "raw_m8_outputs": outcome.get("raw_outputs", []),
-            "raw_m8_outputs": outcome.get("raw_outputs", []),
             "decoy_sequence_features": (
                 _sequence_features(sequence, target) if sequence else None
             ),

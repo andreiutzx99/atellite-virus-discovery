@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from . import m25_read_coverage as m25
+from . import m19_benchmark as m19
 from . import m29_assembly_root_cause_recovery as m29
 from . import m32_end_to_end_synthetic_evidence as m32
 from . import m33_independent_synthetic_robustness as m33
@@ -288,7 +289,7 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     original_seed = m29._case_seed
     original_fastq = m25._make_fastq
     original_target_sequence = m32._target_sequence_from_design
-    original_truth_sequence = m29.m19._sequence
+    original_truth_sequence = m19._sequence
     target_reference = m32._target_sequence_from_design(
         next(c for c in cases if c["case_id"] == "held_out-m29-positive_control")
     )
@@ -302,7 +303,7 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
         )
 
     def truth_sequence_for(rng, length, gc_fraction):
-        case = m29.m19.CASES[0] if m29.m19.CASES else {}
+        case = m19.CASES[0] if m19.CASES else {}
         registered = design.get("target_sequence_by_id", {}).get(case.get("case_id"))
         if registered is not None:
             return registered
@@ -328,7 +329,7 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
          patch.object(m29, "_case_seed", side_effect=seed_for), \
          patch.object(m29, "_run_case", side_effect=run_case), \
          patch.object(m25, "_make_fastq", side_effect=fastq), \
-         patch.object(m29.m19, "_sequence", side_effect=truth_sequence_for), \
+         patch.object(m19, "_sequence", side_effect=truth_sequence_for), \
          patch.object(m32, "_target_sequence_from_design", side_effect=target_sequence_for), \
          patch.object(m32, "_benchmark_design",
                       return_value=(list(cases), design["contracts"])), \
