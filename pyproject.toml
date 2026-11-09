@@ -21,6 +21,7 @@ satellite-controlled-fastq = "satellite_discovery.controlled_fastq_acquisition:m
 satellite-controlled-exploratory-fastq = "satellite_discovery.trusted_single_run_acquisition:main"
 satellite-m21-readiness = "satellite_discovery.m21_benchmark_readiness:main"
 satellite-m21-phase7b-replay = "satellite_discovery.m21_phase7b_replay:main"
+satellite-m34 = "satellite_discovery.m34_negative_control_indel_robustness:main"
 
 [tool.setuptools.packages.find]
 include = ["satellite_discovery*"]

@@ -163,13 +163,71 @@ def _make_controls(split, offset):
 def _make_fastq(case, truth, reference, params, backgrounds=()):
     """M25 read generator; read coordinates remain outside the workflow inputs."""
     read_length = case.get("m25_read_length", m19.READ_LENGTH)
+    insertion_rate = case.get("insertion_rate", 0.0)
+    deletion_rate = case.get("deletion_rate", 0.0)
+    background_errors = case.get("m25_apply_background_errors", False)
+    background_read_coverage = case.get("m25_background_read_coverage", False)
+    if any(not isinstance(rate, (int, float)) or not math.isfinite(rate)
+           or rate < 0 or rate > 1 for rate in (insertion_rate, deletion_rate)):
+        raise ValueError("Insertion and deletion rates must be finite values from 0 to 1")
     rng = random.Random(m19.SEED + sum(case["analysis_id"].encode()))
     reads = []
+    read_provenance = {}
     for bg_index, seq in enumerate((reference, *backgrounds)):
-        for i in range(8):
-            start = round(i * (len(seq) - read_length) / 7)
+        if background_read_coverage:
+            bg_starts = _make_starts(
+                len(seq), read_length, params["coverage"], "uniform", rng
+            )
+        else:
+            bg_starts = [round(i * (len(seq) - read_length) / 7) for i in range(8)]
+        for i, start in enumerate(bg_starts):
             rid = f"{case['analysis_id']}-ref-{bg_index}-{i}"
-            reads.append((rid, seq[start:start + read_length], "I" * read_length))
+            source = seq[start:start + read_length]
+            if insertion_rate == 0 and deletion_rate == 0 \
+                    and not (background_errors and params["error_rate"] > 0):
+                observed, quality = list(source), ["I"] * len(source)
+                substitutions = insertions = deletions = 0
+                origins = list(range(start, start + len(source)))
+            else:
+                deleted = {pos for pos in range(len(source))
+                           if rng.random() < deletion_rate}
+                survivors = [pos for pos in range(len(source)) if pos not in deleted]
+                substitutions = min(round(len(source) * params["error_rate"]), len(survivors))
+                substitution_positions = set(rng.sample(survivors, substitutions))
+                observed, quality, origins = [], [], []
+                insertions = 0
+                for pos, base in enumerate(source):
+                    if pos in deleted:
+                        continue
+                    if pos in substitution_positions:
+                        base = rng.choice("ACGT".replace(base, ""))
+                        q = "5"
+                    else:
+                        q = "I"
+                    observed.append(base)
+                    quality.append(q)
+                    origins.append(start + pos)
+                    if rng.random() < insertion_rate:
+                        observed.append(rng.choice("ACGT"))
+                        quality.append("5")
+                        origins.append(None)
+                        insertions += 1
+                deletions = len(deleted)
+                if not observed:
+                    raise ValueError("Indel model generated an empty background read")
+            sequence = "".join(observed)
+            quality_string = "".join(quality)
+            reads.append((rid, sequence, quality_string))
+            read_provenance[rid] = {
+                "source_role": "technical_reference" if bg_index == 0 else "synthetic_background",
+                "source_index": bg_index,
+                "source_interval": [start, start + len(source)],
+                "source_sequence_sha256": _sha(source.encode("ascii")),
+                "source_record_sha256": _sha(seq.encode("ascii")),
+                "read_length": len(sequence), "substitutions": substitutions,
+                "insertions": insertions, "deletions": deletions,
+                "base_origins": origins,
+            }
     starts = []
     error_counts = []
     target_read_ids = {}
@@ -177,18 +235,64 @@ def _make_fastq(case, truth, reference, params, backgrounds=()):
         starts = _make_starts(len(truth), read_length, params["coverage"],
                               case["read_start_mode"], rng)
         for i, start in enumerate(starts):
-            seq = list(truth[start:start + read_length])
-            quality = ["I"] * len(seq)
-            errors = round(len(seq) * params["error_rate"])
-            error_counts.append(errors)
-            for position in rng.sample(range(len(seq)), errors):
-                seq[position] = rng.choice("ACGT".replace(seq[position], ""))
-                quality[position] = "5"
+            source = truth[start:start + read_length]
+            read_id = f"{case['analysis_id']}-r{i:05d}"
+            if insertion_rate == 0 and deletion_rate == 0:
+                # Preserve historical M25 substitution-only bytes and RNG calls.
+                seq = list(source)
+                quality = ["I"] * len(seq)
+                substitutions = round(len(seq) * params["error_rate"])
+                for position in rng.sample(range(len(seq)), substitutions):
+                    seq[position] = rng.choice("ACGT".replace(seq[position], ""))
+                    quality[position] = "5"
+                insertions = deletions = 0
+                origins = list(range(start, start + len(source)))
+            else:
+                deleted = {pos for pos in range(len(source))
+                           if rng.random() < deletion_rate}
+                survivors = [pos for pos in range(len(source)) if pos not in deleted]
+                substitutions = min(round(len(source) * params["error_rate"]), len(survivors))
+                substitution_positions = set(rng.sample(survivors, substitutions))
+                seq, quality, origins = [], [], []
+                insertions = 0
+                for pos, base in enumerate(source):
+                    if pos in deleted:
+                        continue
+                    if pos in substitution_positions:
+                        base = rng.choice("ACGT".replace(base, ""))
+                        q = "5"
+                    else:
+                        q = "I"
+                    seq.append(base)
+                    quality.append(q)
+                    origins.append(start + pos)
+                    if rng.random() < insertion_rate:
+                        seq.append(rng.choice("ACGT"))
+                        quality.append("5")
+                        origins.append(None)
+                        insertions += 1
+                deletions = len(deleted)
+                if not seq:
+                    raise ValueError("Indel model generated an empty read")
             read_id = f"{case['analysis_id']}-r{i:05d}"
             target_read_ids[read_id] = start
             reads.append((read_id, "".join(seq), "".join(quality)))
-    case["_m25_layout"] = {"starts": starts, "error_counts": error_counts,
-                           "read_length": read_length, "target_read_ids": target_read_ids}
+            error_counts.append(substitutions + insertions + deletions)
+            read_provenance[read_id] = {
+                "source_role": "target_truth",
+                "source_interval": [start, start + len(source)],
+                "source_sequence_sha256": _sha(source.encode("ascii")),
+                "source_record_sha256": _sha(truth.encode("ascii")),
+                "read_length": len(seq),
+                "substitutions": substitutions,
+                "insertions": insertions,
+                "deletions": deletions,
+                "base_origins": origins,
+            }
+    case["_m25_layout"] = {
+        "starts": starts, "error_counts": error_counts, "read_length": read_length,
+        "target_read_ids": target_read_ids, "read_provenance": read_provenance,
+    }
     return m19._gzip_fastq(reads) if hasattr(m19, "_gzip_fastq") else _gzip_fastq(reads)
 
 
