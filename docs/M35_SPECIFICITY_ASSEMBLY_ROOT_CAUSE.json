@@ -1,0 +1,109 @@
+{
+  "schema": "m35-diagnostic-status-v1",
+  "status": "INCOMPLETE",
+  "governance": {
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+    "biological_execution_authorized": false
+  },
+  "baseline_provenance": {
+    "source_milestone": "M34",
+    "source_workflow_run_id": 42609565425,
+    "source_artifact_id": 13670022421,
+    "source_artifact_name": "m34-negative-control-indel-robustness",
+    "source_artifact_sha256": null,
+    "note": "Raw evidence was inspected from the Actions artifact; large raw files are not copied into this repository."
+  },
+  "frozen_constraints": {
+    "m6_settings_changed": false,
+    "m8_settings_changed": false,
+    "m31_thresholds_changed": false,
+    "biological_data_executed": false,
+    "external_biological_reference_data_used": false,
+    "production_promotion": false
+  },
+  "preregistered_design": {
+    "similarity_levels": [1.0, 0.98, 0.95, 0.92, 0.9, 0.85, 0.8, 0.7],
+    "target_absent_decoy_levels": [0.98, 0.95, 0.92, 0.9, 0.85, 0.8, 0.7],
+    "independent_seeds": [35100001, 35100101, 35100201],
+    "split_assignment": "one independent family per development, tuning, and held-out split",
+    "held_out_truth_in_screening_inputs": false,
+    "truth_definition": "registered synthetic source truth, independent of sequence similarity",
+    "panel_sha256": "ced54090aadd76a48642cce73ee72bb749b198f5a2be90ab921ad489744140df",
+    "execution_status": "NOT_RUN"
+  },
+  "m34_false_alarm_baseline": {
+    "target_absent_eligible": 35,
+    "review_priority_cases": 5,
+    "near_target_divergence_eligible": 5,
+    "near_target_divergence_review_priority": 5,
+    "biological_false_discovery_rate_claimed": false,
+    "case_ids": [
+      "development-m34-c0049",
+      "tuning-m34-c0050",
+      "held_out-m34-c0051",
+      "development-m34-c0052",
+      "tuning-m34-c0056"
+    ],
+    "interpretation": "The five cases had target-absent synthetic truth and strong full-length similarity to frozen synthetic satellite-role panel entries. This is a synthetic specificity limitation, not a biological false-discovery rate.",
+    "m35_reproduction": "NOT_RUN"
+  },
+  "m34_assembler_failure_baseline": {
+    "failed_cases": [
+      {
+        "case_id": "tuning-m34-i002",
+        "condition": "substitution_only",
+        "read_length": 100,
+        "nominal_coverage": 48,
+        "realized_errors": {"substitutions": 864, "insertions": 0, "deletions": 0},
+        "classification": "ASSEMBLER_EXECUTION_FAILURE",
+        "spades_exit_code": 21,
+        "observed_error": "invalid kmer coverage histogram"
+      },
+      {
+        "case_id": "tuning-m34-i005",
+        "condition": "combined_low",
+        "read_length": 75,
+        "nominal_coverage": 24,
+        "realized_errors": {"substitutions": 304, "insertions": 113, "deletions": 120},
+        "classification": "ASSEMBLER_EXECUTION_FAILURE",
+        "spades_exit_code": 21,
+        "observed_error": "invalid kmer coverage histogram"
+      },
+      {
+        "case_id": "held_out-m34-i006",
+        "condition": "combined_moderate",
+        "read_length": 100,
+        "nominal_coverage": 48,
+        "realized_errors": {"substitutions": 896, "insertions": 451, "deletions": 449},
+        "classification": "ASSEMBLER_EXECUTION_FAILURE",
+        "spades_exit_code": 21,
+        "observed_error": "invalid kmer coverage histogram"
+      },
+      {
+        "case_id": "development-m34-i007",
+        "condition": "combined_higher",
+        "read_length": 150,
+        "nominal_coverage": 80,
+        "realized_errors": {"substitutions": 3968, "insertions": 2132, "deletions": 2233},
+        "classification": "ASSEMBLER_EXECUTION_FAILURE",
+        "spades_exit_code": 21,
+        "observed_error": "invalid kmer coverage histogram"
+      }
+    ],
+    "execution_failures_scored_as_reconstruction_losses": false,
+    "m35_controlled_root_cause_experiments": "NOT_RUN"
+  },
+  "m35_results": {
+    "similarity_gradient": "NOT_RUN",
+    "feature_comparisons": "NOT_RUN",
+    "diagnostic_alternatives": "NOT_RUN",
+    "fresh_directory_repeatability": "NOT_RUN",
+    "final_head_ci": "NOT_RUN"
+  },
+  "limitations": [
+    "M34 findings are a baseline summary, not independent M35 reproductions.",
+    "The similarity gradient, controlled SPAdes experiments, and alternative configurations have not been executed.",
+    "No causal assembler mechanism or biological specificity claim is established."
+  ]
+}
