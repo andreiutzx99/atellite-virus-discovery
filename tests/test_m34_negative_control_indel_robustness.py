@@ -177,7 +177,8 @@ class M34FalseAlarmTests(unittest.TestCase):
         frozen = summary["frozen_scientific_settings"]
         self.assertFalse(frozen["production_or_historical_settings_changed"])
         self.assertFalse(frozen["m31"]["thresholds_changed"])
-        self.assertEqual(frozen["m6"]["memory_mb"], 2048)
+        self.assertFalse(frozen["m6"]["settings_changed"])
+        self.assertFalse(frozen["m8"]["search_settings_changed"])
 
     def test_panel_comparison_uses_content_not_context_bound_snapshot_digest(self):
         full = {"panel_preregistration": {

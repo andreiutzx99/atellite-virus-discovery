@@ -178,8 +178,8 @@
   },
   "frozen_scientific_settings": {
     "production_or_historical_settings_changed": false,
-    "m6": {"assembler": "SPAdes 3.15.5", "layout": "single-end", "memory_mb": 2048, "threads": 1, "minimum_alignment_fraction": 0.8, "minimum_coverage_breadth": 0.8, "minimum_distinct_fragments": 2, "minimum_mapq": 20, "minimum_mean_depth": 2, "minimum_sequence_identity": 0.95},
-    "m8": {"blast_release": "2.17.0+", "panel": "registered M32 synthetic panel"},
+    "m6": {"settings_changed": false, "note": "Existing M6 execution and support-scoring settings were preserved."},
+    "m8": {"blast_release": "2.17.0+", "panel": "registered M32 synthetic panel", "search_settings_changed": false},
     "m31": {"thresholds_changed": false}
   },
   "governance": {
