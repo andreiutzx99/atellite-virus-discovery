@@ -100,6 +100,9 @@ jobs:
   optional-tools:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -264,11 +267,60 @@ jobs:
           report = json.loads((run_dir / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json").read_text())
           validate_review_summary(summary, report)
           PY
+      - name: Verify original M34 artifact metadata
+        id: m35-m34-artifact
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const expectedId = 13670022421;
+            const expectedRun = 42609565425;
+            const expectedName = "m34-negative-control-indel-robustness";
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: expectedRun,
+              per_page: 100,
+            });
+            const matches = data.artifacts.filter((artifact) => artifact.id === expectedId);
+            if (matches.length !== 1) {
+              core.setFailed(`Expected artifact ${expectedId} was not uniquely listed for run ${expectedRun}.`);
+              return;
+            }
+            const artifact = matches[0];
+            if (artifact.name !== expectedName || artifact.expired || artifact.size_in_bytes <= 0) {
+              core.setFailed(`Artifact metadata mismatch: id=${artifact.id}, name=${artifact.name}, expired=${artifact.expired}, size=${artifact.size_in_bytes}.`);
+              return;
+            }
+            core.setOutput("artifact-id", String(artifact.id));
+            core.info(`Verified artifact ${artifact.id} (${artifact.name}), ${artifact.size_in_bytes} bytes.`);
+      - name: Download the exact original M34 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: m34-negative-control-indel-robustness
+          repository: ${{ github.repository }}
+          run-id: 42609565425
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/m35-source-m34
+      - name: Validate original M34 source evidence
+        shell: bash
+        env:
+          M35_M34_ARTIFACT_DIR: ${{ runner.temp }}/m35-source-m34
+        run: |
+          python -m scripts.validate_m35_source_artifact "$M35_M34_ARTIFACT_DIR" \
+            --output "$RUNNER_TEMP/m35-m34-source-validation.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: m34-negative-control-indel-robustness
           path: ${{ runner.temp }}/m34-negative-control-indel-robustness/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m35-source-m34-verified
+          path: |
+            ${{ runner.temp }}/m35-source-m34/
+            ${{ runner.temp }}/m35-m34-source-validation.json
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()

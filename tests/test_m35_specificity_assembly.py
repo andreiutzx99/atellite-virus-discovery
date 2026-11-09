@@ -1,6 +1,12 @@
 import copy
+import hashlib
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from scripts import validate_m35_source_artifact as source_artifact
 from satellite_discovery.m35_specificity_assembly import (
     DECOY_SIMILARITY_LEVELS,
     GOVERNANCE,
@@ -200,6 +206,160 @@ class M35PreregisteredDesignTests(unittest.TestCase):
         bad_stage["cases"][0]["assembly_status"] = "SPADES_ERROR"
         with self.assertRaisesRegex(ValueError, "stage-level"):
             validate_evidence_bundle(self.design, bad_stage)
+
+
+class M35SourceArtifactTests(unittest.TestCase):
+    def test_artifact_metadata_is_bound_to_the_registered_run(self):
+        source_artifact.validate_artifact_metadata(
+            13670022421, 42609565425, "m34-negative-control-indel-robustness"
+        )
+        for args in (
+            (1, 42609565425, "m34-negative-control-indel-robustness"),
+            (13670022421, 2, "m34-negative-control-indel-robustness"),
+            (13670022421, 42609565425, "other-artifact"),
+        ):
+            with self.subTest(args=args), self.assertRaises(ValueError):
+                source_artifact.validate_artifact_metadata(*args)
+
+    def test_source_artifact_rejects_missing_and_corrupted_raw_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            evidence = root / "evidence.tsv"
+            evidence.write_text("verified evidence\n", encoding="utf-8")
+            digest = hashlib.sha256(evidence.read_bytes()).hexdigest()
+            source_artifact._check_digest(evidence, digest)
+            with self.assertRaisesRegex(ValueError, "digest mismatch"):
+                source_artifact._check_digest(evidence, "0" * 64)
+            with self.assertRaisesRegex(ValueError, "missing"):
+                source_artifact._check_digest(root / "missing.tsv", digest)
+
+    def test_end_to_end_source_validation_rejects_changed_m8_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact = root / "artifact"
+            benchmark = artifact / "benchmark"
+            benchmark.mkdir(parents=True)
+            panel = benchmark / "reference" / "panel.fasta"
+            panel.parent.mkdir(parents=True, exist_ok=True)
+            panel.write_bytes(b">synthetic-panel\nACGT\n")
+            panel_digest = hashlib.sha256(panel.read_bytes()).hexdigest()
+            summary_path = root / "summary.json"
+            cases = sorted(source_artifact.REQUIRED_CASES)
+            source_rows, metrics, triage, read_index, truth_cases = [], [], [], {}, {}
+            for index, case_id in enumerate(cases):
+                sequence = f"candidate-{index}"
+                candidate_sha = hashlib.sha256(sequence.encode()).hexdigest()
+                analysis_id = f"m34x{index:04d}"
+                candidate_id = f"contig-{index}"
+                stage = (
+                    benchmark / "reconstruction" / case_id / "stages"
+                    / f"m6_{analysis_id}"
+                )
+                (stage / "assembly").mkdir(parents=True, exist_ok=True)
+                (stage / "assembly" / "contigs.fasta").write_text(
+                    f">{candidate_id}\n{sequence}\n", encoding="ascii"
+                )
+                (stage / "read_support.json").write_text(
+                    json.dumps({"contigs": [{
+                        "contig_id": candidate_id,
+                        "status": "READ_SUPPORTED_ASSEMBLY",
+                    }]}),
+                    encoding="utf-8",
+                )
+                read_bytes = b'{"read_count": 1}\n'
+                read_path = benchmark / "read_provenance" / f"{case_id}.json"
+                read_path.parent.mkdir(parents=True, exist_ok=True)
+                read_path.write_bytes(read_bytes)
+                read_digest = hashlib.sha256(read_bytes).hexdigest()
+                read_index[case_id] = {
+                    "path": f"read_provenance/{case_id}.json",
+                    "sha256": read_digest,
+                }
+
+                truth_bytes = json.dumps(
+                    {"cases": [{"candidate_sequence": None}]}
+                ).encode()
+                truth_path = benchmark / "reconstruction" / case_id / "heldout_truth.json"
+                truth_path.parent.mkdir(parents=True, exist_ok=True)
+                truth_path.write_bytes(truth_bytes)
+                truth_digest = hashlib.sha256(truth_bytes).hexdigest()
+                truth_cases[case_id] = {
+                    "candidate_sequence_absent": True,
+                    "source_truth_sidecar_sha256": truth_digest,
+                }
+
+                raw_path = benchmark / "m8" / f"{case_id}.tsv"
+                raw_path.parent.mkdir(parents=True, exist_ok=True)
+                raw_path.write_text("alignment\n", encoding="utf-8")
+                raw_digest = hashlib.sha256(raw_path.read_bytes()).hexdigest()
+                source_rows.append({
+                    "case_id": case_id,
+                    "synthetic_truth_target_present": False,
+                    "analysis_id": analysis_id,
+                })
+                metrics.append({"case_id": case_id, "m8_search_complete": True})
+                triage.append({
+                    "case_id": case_id,
+                    "candidate_records": [{
+                        "candidate_id": candidate_id,
+                        "query_sha256": candidate_sha,
+                        "read_support_status": "READ_SUPPORTED_ASSEMBLY",
+                        "m8_aggregate_status": "COMPLETE",
+                        "triage_status": "REVIEW_PRIORITY",
+                    }],
+                    "raw_outputs": [{
+                        "path": f"m8/{case_id}.tsv",
+                        "sha256": raw_digest,
+                    }],
+                })
+            summary = {
+                "provenance": {
+                    "artifact_id": source_artifact.EXPECTED_ARTIFACT_ID,
+                    "workflow_run_id": source_artifact.EXPECTED_RUN_ID,
+                    "artifact_name": source_artifact.EXPECTED_ARTIFACT_NAME,
+                },
+                "false_alarm_investigations": [
+                    {"case_id": case_id, "candidate": {
+                        "sha256": triage[index]["candidate_records"][0]["query_sha256"]
+                    }} for index, case_id in enumerate(cases)
+                ],
+                "reference_panel": {"panel_fasta_sha256": panel_digest},
+            }
+            summary_path.write_text(json.dumps(summary), encoding="utf-8")
+            (artifact / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json").write_text(
+                json.dumps({
+                    "case_level_results": source_rows,
+                    "governance": {
+                        "decision": "INCOMPLETE",
+                        "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+                        "biological_execution_authorized": False,
+                    },
+                }),
+                encoding="utf-8",
+            )
+            (benchmark / "M32_END_TO_END_SYNTHETIC_EVIDENCE.json").write_text(
+                json.dumps({
+                    "panel_preregistration": {"panel_fasta_sha256": panel_digest},
+                    "benchmark_metrics": {"cases": metrics},
+                    "candidate_triage": triage,
+                }),
+                encoding="utf-8",
+            )
+            (benchmark / "M34_READ_PROVENANCE_INDEX.json").write_text(
+                json.dumps(read_index), encoding="utf-8"
+            )
+            (benchmark / "M34_TARGET_ABSENCE_VALIDATION.json").write_text(
+                json.dumps({"cases": truth_cases}), encoding="utf-8"
+            )
+            with patch.object(source_artifact, "validate_review_summary"):
+                validated = source_artifact.validate_source_artifact(artifact, summary_path)
+                self.assertEqual(validated["rerun_status"], "NOT_RUN")
+                self.assertEqual(len(validated["cases"]), 5)
+                (benchmark / "m8" / f"{cases[0]}.tsv").write_text(
+                    "tampered\n", encoding="utf-8"
+                )
+                with self.assertRaisesRegex(ValueError, "digest mismatch"):
+                    source_artifact.validate_source_artifact(artifact, summary_path)
 
 
 if __name__ == "__main__":
