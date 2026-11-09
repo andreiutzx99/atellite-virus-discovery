@@ -679,13 +679,7 @@ def validate_review_summary(summary, report):
         if any(expected_metrics[key] != value for key, value in values.items()):
             raise ValueError(f"M34 summary error-condition mismatch: {condition}")
     positive = summary["positive_indel_outcomes"]
-    actual_positive = report["positive_indel_recovery"]
-    if any(positive[key] != actual_positive[source] for key, source in (
-        ("generated_cases", "generated_cases"), ("exact_supported", "exact_supported"),
-        ("partial_supported", "partial_supported"), ("evaluable_cases", "evaluable_cases"),
-        ("assembler_execution_failures", "assembler_execution_failures"),
-    )):
-        raise ValueError("M34 summary positive-indel totals mismatch")
+    validate_positive_indel_summary(positive, report)
     rows = {row["case_id"]: row for row in report["case_level_results"]}
     source_truth = report["target_absence_source_truth"]["benchmark"]
     for investigation in summary["false_alarm_investigations"]:
@@ -729,6 +723,53 @@ def validate_review_summary(summary, report):
     if report["reproducibility"]["status"] != summary["reproducibility"]["status"]:
         raise ValueError("M34 summary reproducibility status mismatch")
     return True
+
+
+def validate_positive_indel_summary(summary, report):
+    """Compare positive-indel totals, deriving absent legacy aggregates from cases.
+
+    The retained original M34 artifact predates the addition of
+    ``evaluable_cases`` and ``assembler_execution_failures`` to its aggregate
+    object. Its case-level records already preserve assembly status and
+    reconstruction outcomes, so those counts are derived from those records
+    without modifying or supplementing the source JSON.
+    """
+    rows = [row for row in report.get("case_level_results", [])
+            if row.get("indel_condition")]
+    if not rows:
+        raise ValueError("M34 report has no positive-indel case-level evidence")
+    evaluable = [row for row in rows if row.get("assembly_status") != "EXECUTION_FAILED"]
+    derived = {
+        "generated_cases": len(rows),
+        "evaluable_cases": len(evaluable),
+        "assembler_execution_failures": len(rows) - len(evaluable),
+    }
+    aggregate = report.get("positive_indel_recovery", {})
+    if not isinstance(aggregate, dict):
+        raise ValueError("M34 positive-indel aggregate is invalid")
+    for key in ("generated_cases",):
+        if key in aggregate and aggregate[key] != derived[key]:
+            raise ValueError(f"M34 positive-indel aggregate disagrees with case evidence: {key}")
+    for key, case_field in (
+        ("exact_supported", "exact_supported_reconstruction"),
+        ("partial_supported", "partial_reconstruction"),
+    ):
+        if key in aggregate:
+            derived[key] = aggregate[key]
+            if all(case_field in row for row in rows):
+                case_total = sum(bool(row[case_field]) for row in rows)
+                if case_total != aggregate[key]:
+                    raise ValueError(
+                        f"M34 positive-indel aggregate disagrees with case evidence: {key}"
+                    )
+        elif all(case_field in row for row in rows):
+            derived[key] = sum(bool(row[case_field]) for row in rows)
+        else:
+            raise ValueError(f"M34 positive-indel total is unavailable: {key}")
+    for key, value in derived.items():
+        if summary.get(key) != value:
+            raise ValueError(f"M34 summary positive-indel total mismatch: {key}")
+    return derived
 
 
 def main(argv=None):

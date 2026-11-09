@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from satellite_discovery.m34_negative_control_indel_robustness import (
-    validate_review_summary,
+    validate_positive_indel_summary,
 )
 
 EXPECTED_ARTIFACT_ID = 13670022421
@@ -65,6 +65,44 @@ def validate_artifact_metadata(artifact_id: int, run_id: int, name: str) -> None
         raise ValueError("M34 artifact name does not match the registered source")
 
 
+def _validate_summary_totals(summary: dict, result: dict) -> None:
+    """Compare tracked totals using the archived report's actual schema."""
+    target_summary = summary["target_absent_statistics"]
+    target_result = result["target_absent_false_alarm_rates"]["case_level"]
+    expected = {
+        "generated_cases": result["target_absent_generated"],
+        "eligible_cases": target_result["eligible_denominator"],
+        "false_alarm_cases": target_result["review_priority"],
+        "false_alarm_rate": target_result["rate"],
+        "wilson_95": target_result["wilson_95"],
+    }
+    if any(target_summary[key] != value for key, value in expected.items()):
+        raise ValueError("M34 summary target-absent totals mismatch")
+
+    for category, values in target_summary["by_category"].items():
+        actual = result["target_absent_by_category"][category]
+        observed = {
+            "generated": actual["generated_cases"],
+            "eligible": actual["case_level"]["eligible_denominator"],
+            "false_alarms": actual["case_level"]["review_priority"],
+        }
+        if any(values[key] != value for key, value in observed.items()):
+            raise ValueError(f"M34 summary category mismatch: {category}")
+    for condition, values in target_summary["by_error_condition"].items():
+        actual = result["target_absent_by_error_condition"][condition]
+        observed = {
+            "generated": actual["generated_cases"],
+            "eligible": actual["case_level"]["eligible_denominator"],
+            "false_alarms": actual["case_level"]["review_priority"],
+        }
+        if any(values[key] != value for key, value in observed.items()):
+            raise ValueError(f"M34 summary error-condition mismatch: {condition}")
+
+    validate_positive_indel_summary(summary["positive_indel_outcomes"], result)
+    if result["reproducibility"]["status"] != summary["reproducibility"]["status"]:
+        raise ValueError("M34 summary reproducibility status mismatch")
+
+
 def validate_source_artifact(artifact_dir: Path, summary_path: Path) -> dict:
     artifact_dir = artifact_dir.resolve()
     summary = _read_json(summary_path)
@@ -76,7 +114,7 @@ def validate_source_artifact(artifact_dir: Path, summary_path: Path) -> dict:
     )
 
     result = _read_json(artifact_dir / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json")
-    validate_review_summary(summary, result)
+    _validate_summary_totals(summary, result)
     if result.get("governance") != {
         "decision": "INCOMPLETE",
         "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
@@ -104,9 +142,21 @@ def validate_source_artifact(artifact_dir: Path, summary_path: Path) -> dict:
         summary_case = case_rows[case_id]
         if summary_case.get("synthetic_truth_target_present") is not False:
             raise ValueError(f"{case_id}: source summary does not establish target absence")
+        investigation = next(
+            item for item in summary["false_alarm_investigations"]
+            if item["case_id"] == case_id
+        )
+        if summary_case.get("background_category") != investigation["background"]["category"]:
+            raise ValueError(f"{case_id}: source background category mismatch")
+        if summary_case.get("target_absent_error_condition") != \
+                investigation["background"]["error_condition"]:
+            raise ValueError(f"{case_id}: source error-condition mismatch")
         source_truth = truth_rows.get(case_id)
         if not source_truth or source_truth.get("candidate_sequence_absent") is not True:
             raise ValueError(f"{case_id}: target-absence sidecar evidence is missing")
+        if source_truth.get("source_truth_sidecar_sha256") != \
+                investigation["source_truth"]["sidecar_sha256"]:
+            raise ValueError(f"{case_id}: source truth digest differs from tracked evidence")
         truth_path = benchmark / "reconstruction" / case_id / "heldout_truth.json"
         _check_digest(truth_path, source_truth["source_truth_sidecar_sha256"])
         truth_doc = _read_json(truth_path)
@@ -120,19 +170,20 @@ def validate_source_artifact(artifact_dir: Path, summary_path: Path) -> dict:
         _check_digest(
             benchmark / read_provenance["path"], read_provenance["sha256"]
         )
+        read_evidence = _read_json(benchmark / read_provenance["path"])
+        background_digest = investigation["background"]["source_record_sha256"]
+        if not any(
+            read.get("source_role") == "synthetic_background"
+            and read.get("source_record_sha256") == background_digest
+            for read in read_evidence.get("read_provenance", {}).values()
+        ):
+            raise ValueError(f"{case_id}: registered background record is absent from read provenance")
 
         metric = m32_metrics[case_id]
         triage_case = triage.get(case_id)
         if not metric.get("m8_search_complete") or triage_case is None:
             raise ValueError(f"{case_id}: original M8 evidence is incomplete")
-        candidate_sha = next(
-            (
-                item["candidate"]["sha256"]
-                for item in summary["false_alarm_investigations"]
-                if item["case_id"] == case_id
-            ),
-            None,
-        )
+        candidate_sha = investigation["candidate"]["sha256"]
         matching_candidates = [
             item for item in triage_case.get("candidate_records", [])
             if item.get("query_sha256") == candidate_sha
@@ -182,7 +233,7 @@ def validate_source_artifact(artifact_dir: Path, summary_path: Path) -> dict:
     panel_digest = hashlib.sha256(panel_path.read_bytes()).hexdigest() \
         if panel_path.is_file() else None
     if panel_digest != m32.get("panel_preregistration", {}).get("panel_fasta_sha256") \
-            or panel_digest != summary.get("reference_panel", {}).get("panel_fasta_sha256"):
+            or panel_digest != result.get("reference_panel", {}).get("panel_fasta_sha256"):
         raise ValueError("M34 source panel digest mismatch")
     return {
         "schema": "m35-m34-source-artifact-validation-v1",

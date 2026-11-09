@@ -7,6 +7,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts import validate_m35_source_artifact as source_artifact
+from satellite_discovery.m34_negative_control_indel_robustness import (
+    validate_positive_indel_summary,
+)
 from satellite_discovery.m35_specificity_assembly import (
     DECOY_SIMILARITY_LEVELS,
     GOVERNANCE,
@@ -209,6 +212,29 @@ class M35PreregisteredDesignTests(unittest.TestCase):
 
 
 class M35SourceArtifactTests(unittest.TestCase):
+    def test_archived_m34_report_derives_missing_indel_aggregates_from_cases(self):
+        fixture = Path(__file__).parent / "fixtures/m35/m34-original-indel-report-excerpt.json"
+        archived_report = json.loads(fixture.read_text(encoding="utf-8"))
+        summary = {
+            "generated_cases": 7,
+            "exact_supported": 0,
+            "partial_supported": 3,
+            "evaluable_cases": 3,
+            "assembler_execution_failures": 4,
+        }
+        aggregate_before = copy.deepcopy(archived_report["positive_indel_recovery"])
+        self.assertNotIn("evaluable_cases", aggregate_before)
+        self.assertNotIn("assembler_execution_failures", aggregate_before)
+        self.assertEqual(
+            validate_positive_indel_summary(summary, archived_report), summary
+        )
+        self.assertEqual(archived_report["positive_indel_recovery"], aggregate_before)
+
+        corrupted = copy.deepcopy(archived_report)
+        corrupted["case_level_results"][0]["partial_reconstruction"] = False
+        with self.assertRaisesRegex(ValueError, "case evidence"):
+            validate_positive_indel_summary(summary, corrupted)
+
     def test_artifact_metadata_is_bound_to_the_registered_run(self):
         source_artifact.validate_artifact_metadata(
             13670022421, 42609565425, "m34-negative-control-indel-robustness"
@@ -266,7 +292,18 @@ class M35SourceArtifactTests(unittest.TestCase):
                     }]}),
                     encoding="utf-8",
                 )
-                read_bytes = b'{"read_count": 1}\n'
+                background_sha = hashlib.sha256(f"background-{index}".encode()).hexdigest()
+                read_bytes = (
+                    json.dumps({
+                        "read_count": 1,
+                        "read_provenance": {
+                            "read-1": {
+                                "source_role": "synthetic_background",
+                                "source_record_sha256": background_sha,
+                            }
+                        },
+                    }) + "\n"
+                ).encode()
                 read_path = benchmark / "read_provenance" / f"{case_id}.json"
                 read_path.parent.mkdir(parents=True, exist_ok=True)
                 read_path.write_bytes(read_bytes)
@@ -296,6 +333,8 @@ class M35SourceArtifactTests(unittest.TestCase):
                     "case_id": case_id,
                     "synthetic_truth_target_present": False,
                     "analysis_id": analysis_id,
+                    "background_category": "near_target_divergence",
+                    "target_absent_error_condition": "zero_error",
                 })
                 metrics.append({"case_id": case_id, "m8_search_complete": True})
                 triage.append({
@@ -318,17 +357,29 @@ class M35SourceArtifactTests(unittest.TestCase):
                     "workflow_run_id": source_artifact.EXPECTED_RUN_ID,
                     "artifact_name": source_artifact.EXPECTED_ARTIFACT_NAME,
                 },
-                "false_alarm_investigations": [
-                    {"case_id": case_id, "candidate": {
+                "false_alarm_investigations": [{
+                    "case_id": case_id,
+                    "candidate": {
                         "sha256": triage[index]["candidate_records"][0]["query_sha256"]
-                    }} for index, case_id in enumerate(cases)
-                ],
+                    },
+                    "source_truth": {
+                        "sidecar_sha256": truth_cases[case_id]["source_truth_sidecar_sha256"]
+                    },
+                    "background": {
+                        "category": "near_target_divergence",
+                        "error_condition": "zero_error",
+                        "source_record_sha256": hashlib.sha256(
+                            f"background-{index}".encode()
+                        ).hexdigest(),
+                    },
+                } for index, case_id in enumerate(cases)],
                 "reference_panel": {"panel_fasta_sha256": panel_digest},
             }
             summary_path.write_text(json.dumps(summary), encoding="utf-8")
             (artifact / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json").write_text(
                 json.dumps({
                     "case_level_results": source_rows,
+                    "reference_panel": {"panel_fasta_sha256": panel_digest},
                     "governance": {
                         "decision": "INCOMPLETE",
                         "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
@@ -351,7 +402,7 @@ class M35SourceArtifactTests(unittest.TestCase):
             (benchmark / "M34_TARGET_ABSENCE_VALIDATION.json").write_text(
                 json.dumps({"cases": truth_cases}), encoding="utf-8"
             )
-            with patch.object(source_artifact, "validate_review_summary"):
+            with patch.object(source_artifact, "_validate_summary_totals"):
                 validated = source_artifact.validate_source_artifact(artifact, summary_path)
                 self.assertEqual(validated["rerun_status"], "NOT_RUN")
                 self.assertEqual(len(validated["cases"]), 5)
