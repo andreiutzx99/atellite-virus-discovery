@@ -1,0 +1,197 @@
+{
+  "schema": "m34-scientific-review-summary-v1",
+  "provenance": {
+    "pull_request": 101,
+    "benchmark_head_sha": "5bfc11463389d226567277677344d7e58d14c142",
+    "workflow_run_id": 42609565425,
+    "workflow_event": "pull_request",
+    "artifact_id": 13670022421,
+    "artifact_name": "m34-negative-control-indel-robustness",
+    "raw_evidence_retention_days": 14,
+    "raw_fastq_blast_assembly_and_provenance": "Retained in the GitHub Actions artifact, not copied into this summary."
+  },
+  "registered_conditions": {
+    "target_absent": {
+      "categories": [
+        "random",
+        "gc_rich",
+        "gc_poor",
+        "low_complexity",
+        "repetitive",
+        "partial_reference_similarity",
+        "near_target_divergence",
+        "mixed_background"
+      ],
+      "replicates_per_category": 8,
+      "error_conditions": [
+        "zero_error",
+        "substitution_only",
+        "insertion_only",
+        "deletion_only",
+        "combined_low",
+        "combined_moderate",
+        "combined_higher"
+      ],
+      "near_target_divergence": {
+        "source": "registered held-out synthetic target reference",
+        "forced_substitutions": 90,
+        "source_length": 900,
+        "divergence_fraction": 0.1
+      }
+    },
+    "target_positive_indel": [
+      {"condition": "zero_error", "substitution_rate": 0, "insertion_rate": 0, "deletion_rate": 0, "coverage": 48, "read_length": 100},
+      {"condition": "substitution_only", "substitution_rate": 0.02, "insertion_rate": 0, "deletion_rate": 0, "coverage": 48, "read_length": 100},
+      {"condition": "insertion_only", "substitution_rate": 0, "insertion_rate": 0.01, "deletion_rate": 0, "coverage": 48, "read_length": 100},
+      {"condition": "deletion_only", "substitution_rate": 0, "insertion_rate": 0, "deletion_rate": 0.01, "coverage": 48, "read_length": 100},
+      {"condition": "combined_low", "substitution_rate": 0.01, "insertion_rate": 0.005, "deletion_rate": 0.005, "coverage": 24, "read_length": 75},
+      {"condition": "combined_moderate", "substitution_rate": 0.02, "insertion_rate": 0.01, "deletion_rate": 0.01, "coverage": 48, "read_length": 100},
+      {"condition": "combined_higher", "substitution_rate": 0.05, "insertion_rate": 0.03, "deletion_rate": 0.03, "coverage": 80, "read_length": 150}
+    ]
+  },
+  "target_absent_statistics": {
+    "generated_cases": 64,
+    "eligible_cases": 35,
+    "false_alarm_cases": 5,
+    "false_alarm_rate": 0.14285714285714285,
+    "wilson_95": [0.06260231079433715, 0.29375554086595146],
+    "unevaluable_cases": 29,
+    "eligibility": "A truth-absent case with at least one read-supported contig and completed M8 search.",
+    "by_category": {
+      "random": {"generated": 8, "eligible": 4, "false_alarms": 0, "unevaluable": 4},
+      "gc_rich": {"generated": 8, "eligible": 4, "false_alarms": 0, "unevaluable": 4},
+      "gc_poor": {"generated": 8, "eligible": 5, "false_alarms": 0, "unevaluable": 3},
+      "low_complexity": {"generated": 8, "eligible": 0, "false_alarms": 0, "unevaluable": 8},
+      "repetitive": {"generated": 8, "eligible": 5, "false_alarms": 0, "unevaluable": 3},
+      "partial_reference_similarity": {"generated": 8, "eligible": 5, "false_alarms": 0, "unevaluable": 3},
+      "near_target_divergence": {
+        "generated": 8, "eligible": 5, "false_alarms": 5, "unevaluable": 3,
+        "rate": 1.0, "wilson_95": [0.5655175352168251, 1.0]
+      },
+      "mixed_background": {"generated": 8, "eligible": 7, "false_alarms": 0, "unevaluable": 1}
+    },
+    "by_error_condition": {
+      "zero_error": {"generated": 16, "eligible": 12, "false_alarms": 2, "unevaluable": 4},
+      "substitution_only": {"generated": 8, "eligible": 5, "false_alarms": 1, "unevaluable": 3},
+      "insertion_only": {"generated": 8, "eligible": 7, "false_alarms": 1, "unevaluable": 1},
+      "deletion_only": {"generated": 8, "eligible": 7, "false_alarms": 1, "unevaluable": 1},
+      "combined_low": {"generated": 8, "eligible": 2, "false_alarms": 0, "unevaluable": 6},
+      "combined_moderate": {"generated": 8, "eligible": 2, "false_alarms": 0, "unevaluable": 6},
+      "combined_higher": {"generated": 8, "eligible": 0, "false_alarms": 0, "unevaluable": 8}
+    }
+  },
+  "false_alarm_interpretation": {
+    "overall": "5/35 eligible target-absent cases (14.3%; case-level Wilson 95% interval 6.3%–29.4%).",
+    "near_target_divergence": "5/5 eligible cases (100%; Wilson 95% interval 56.6%–100%); three of eight generated cases were unevaluable.",
+    "finding": "Expected similarity from deliberately 10%-diverged synthetic backgrounds exposed limited specificity of the frozen role-similarity triage for this difficult category. This is not evidence of a biological false-discovery rate."
+  },
+  "false_alarm_investigations": [
+    {
+      "case_id": "development-m34-c0049",
+      "source_truth": {"candidate_sequence_absent": true, "sidecar_sha256": "97b402590691b67f21d9feaf2cbfa6c6b799c70e9c6865c464bcec4dbd73f121"},
+      "background": {"category": "near_target_divergence", "source_record_sha256": "1ce1cc959bc23754fc1c59ad4d0e8a08703a1951d4bb790020f6eef6ab605a3a", "divergence_fraction": 0.1, "error_condition": "zero_error", "realized_read_errors": {"substitutions": 0, "insertions": 0, "deletions": 0}},
+      "candidate": {"sha256": "3c6ef127330b8b4ca7a3bdf73047b902aa826b87791c2324209b96cfc684d81d", "length": 900, "read_support": "READ_SUPPORTED_ASSEMBLY", "supporting_reads": 432, "mean_depth": 48.0, "breadth": 1.0},
+      "panel_matches": [
+        {"accession": "SYN006.1", "identity_percent": 90.268, "query_coverage": 0.993333, "query_coordinates": [7, 900], "reference_coordinates": [894, 1], "strand": "-", "evalue": 0.0},
+        {"accession": "SYN003.1", "identity_percent": 87.95, "query_coverage": 0.986667, "query_coordinates": [13, 900], "reference_coordinates": [888, 1], "strand": "-", "evalue": 0.0}
+      ],
+      "m8": "COMPLETE",
+      "triage": "REVIEW_PRIORITY",
+      "explanation": "Strong full-length similarity to synthetic satellite-role panel entries supports the frozen REVIEW_PRIORITY rule; target truth is absent. Expected near-target similarity and insufficient category-level specificity, not a demonstrated biological discovery."
+    },
+    {
+      "case_id": "tuning-m34-c0050",
+      "source_truth": {"candidate_sequence_absent": true, "sidecar_sha256": "8d50d78ad65fbb668c22debe3d46c9793010e397817f4d55846dd16fe6e59783"},
+      "background": {"category": "near_target_divergence", "source_record_sha256": "b8d6b051eb2e22bca8fd37a238a4b027917d1f9b593d63976fef581906ed7d6b", "divergence_fraction": 0.1, "error_condition": "substitution_only", "realized_read_errors": {"substitutions": 2592, "insertions": 0, "deletions": 0}},
+      "candidate": {"sha256": "86092db2a9703356d52d77e00316b13bca6c45c0ac1000cd5aff73cf4f9e9847", "length": 900, "read_support": "READ_SUPPORTED_ASSEMBLY", "supporting_reads": 432, "mean_depth": 47.996667, "breadth": 1.0},
+      "panel_matches": [
+        {"accession": "SYN006.1", "identity_percent": 90.0, "query_coverage": 1.0, "query_coordinates": [1, 900], "reference_coordinates": [1, 900], "strand": "+", "evalue": 0.0},
+        {"accession": "SYN003.1", "identity_percent": 87.333, "query_coverage": 1.0, "query_coordinates": [1, 900], "reference_coordinates": [1, 900], "strand": "+", "evalue": 0.0}
+      ],
+      "m8": "COMPLETE",
+      "triage": "REVIEW_PRIORITY",
+      "explanation": "The read-supported contig retains 90% full-length identity to SYN006.1 despite registered 10% background divergence and 2% read substitutions; frozen similarity triage therefore prioritizes it. Target truth remains absent."
+    },
+    {
+      "case_id": "held_out-m34-c0051",
+      "source_truth": {"candidate_sequence_absent": true, "sidecar_sha256": "fa98502a548aa225fdbfc0632cc44b7445d33ea7e204654d155e6c84169988af"},
+      "background": {"category": "near_target_divergence", "source_record_sha256": "e9dbfc0916556f7dcde6fc40c22e2da90c6c96dcab90c539b491cf231b45f3d5", "divergence_fraction": 0.1, "error_condition": "insertion_only", "realized_read_errors": {"substitutions": 0, "insertions": 1255, "deletions": 0}},
+      "candidate": {"sha256": "e970dbe7abbef5a9b50fcd06bae2dce7ca039308772920fd02766f61d29f8428", "length": 898, "read_support": "READ_SUPPORTED_ASSEMBLY", "supporting_reads": 429, "mean_depth": 47.732739, "breadth": 1.0},
+      "panel_matches": [
+        {"accession": "SYN006.1", "identity_percent": 90.089, "query_coverage": 1.0, "query_coordinates": [1, 898], "reference_coordinates": [1, 898], "strand": "+", "evalue": 0.0},
+        {"accession": "SYN003.1", "identity_percent": 87.973, "query_coverage": 1.0, "query_coordinates": [1, 898], "reference_coordinates": [1, 898], "strand": "+", "evalue": 0.0}
+      ],
+      "m8": "COMPLETE",
+      "triage": "REVIEW_PRIORITY",
+      "explanation": "Near-target background remains 90.089% identical to SYN006.1 across the full assembled query; insertion errors do not remove role similarity. This is the same expected similarity/specificity limitation under target-absent truth."
+    },
+    {
+      "case_id": "development-m34-c0052",
+      "source_truth": {"candidate_sequence_absent": true, "sidecar_sha256": "624173f1e17ea31a1a2e1e473e2f2ba12d3644d744c66ccbd22b60172830966a"},
+      "background": {"category": "near_target_divergence", "source_record_sha256": "f1f965bde64e7760b6c3e38b92047995097f21dabdec7f014bee94a0680aee23", "divergence_fraction": 0.1, "error_condition": "deletion_only", "realized_read_errors": {"substitutions": 0, "insertions": 0, "deletions": 1283}},
+      "candidate": {"sha256": "9cc29c0a2e9c3c0f4de8f591dbaa00800b77b0fc936e88e85c29f6200dd8f9df", "length": 900, "read_support": "READ_SUPPORTED_ASSEMBLY", "supporting_reads": 426, "mean_depth": 46.847778, "breadth": 1.0},
+      "panel_matches": [
+        {"accession": "SYN006.1", "identity_percent": 90.0, "query_coverage": 1.0, "query_coordinates": [1, 900], "reference_coordinates": [900, 1], "strand": "-", "evalue": 0.0},
+        {"accession": "SYN003.1", "identity_percent": 87.667, "query_coverage": 1.0, "query_coordinates": [1, 900], "reference_coordinates": [900, 1], "strand": "-", "evalue": 0.0}
+      ],
+      "m8": "COMPLETE",
+      "triage": "REVIEW_PRIORITY",
+      "explanation": "Full-length reverse-strand similarity to SYN006.1 remains 90% under target-absent truth. The result is consistent with near-target sequence similarity, not a target-positive case."
+    },
+    {
+      "case_id": "tuning-m34-c0056",
+      "source_truth": {"candidate_sequence_absent": true, "sidecar_sha256": "8904b1be48d03c3ae4317d20b06173abf5e452b1f346e4718b42ce5c1ecc477c"},
+      "background": {"category": "near_target_divergence", "source_record_sha256": "953f03f3e85e19152f74079f6c3ae3dbfb915ca1bb79851bfdf892ff585179a6", "divergence_fraction": 0.1, "error_condition": "zero_error", "realized_read_errors": {"substitutions": 0, "insertions": 0, "deletions": 0}},
+      "candidate": {"sha256": "67ee39923d85d4c2564ae99f4bcbe21c0e008191f4db951115da4847907a54ac", "length": 900, "read_support": "READ_SUPPORTED_ASSEMBLY", "supporting_reads": 432, "mean_depth": 48.0, "breadth": 1.0},
+      "panel_matches": [
+        {"accession": "SYN006.1", "identity_percent": 90.0, "query_coverage": 1.0, "query_coordinates": [1, 900], "reference_coordinates": [900, 1], "strand": "-", "evalue": 0.0},
+        {"accession": "SYN003.1", "identity_percent": 87.889, "query_coverage": 1.0, "query_coordinates": [1, 900], "reference_coordinates": [900, 1], "strand": "-", "evalue": 0.0}
+      ],
+      "m8": "COMPLETE",
+      "triage": "REVIEW_PRIORITY",
+      "explanation": "The zero-read-error near-target contig still has full-length 90% identity to SYN006.1. The alarm is explained by designed background similarity and frozen role triage, with target absence preserved."
+    }
+  ],
+  "positive_indel_outcomes": {
+    "generated_cases": 7,
+    "exact_supported": 0,
+    "partial_supported": 3,
+    "assembler_execution_failures": 4,
+    "evaluable_cases": 3,
+    "exact_supported_evaluable": 0,
+    "partial_supported_evaluable": 3,
+    "condition_results": [
+      {"condition": "zero_error", "case_id": "development-m34-i001", "m6_status": "READ_SUPPORTED_ASSEMBLY", "generated_reads": 448, "target_reads": 432, "m6_input_reads": 432, "input_read_length_range": [100, 100], "realized_errors": {"substitutions": 0, "insertions": 0, "deletions": 0}, "source_coverage": {"gaps": 1, "first_base_depth": 0, "last_base_depth": 2}, "spades_exit_status": 0, "contig_length": 899, "truth_alignment": {"truth_length": 900, "missing_target_prefix_bases": 1, "missing_target_suffix_bases": 0, "substitutions": 0, "local_identity": 1.0, "target_coverage": 0.998889}, "read_support": "READ_SUPPORTED_ASSEMBLY", "m8": "COMPLETE", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "Partial assembly; the first truth base had zero generated-read coverage, matching the one-base missing prefix. The zero-error result is a coverage-design limitation, not indel loss."},
+      {"condition": "substitution_only", "case_id": "tuning-m34-i002", "m6_status": "EXECUTION_FAILED", "generated_reads": 448, "target_reads": 432, "m6_input_reads": 432, "input_read_length_range": [100, 100], "realized_errors": {"substitutions": 864, "insertions": 0, "deletions": 0}, "source_coverage": {"gaps": 0, "first_base_depth": 1, "last_base_depth": 1}, "spades_core_return_value": 21, "spades_error": "Invalid kmer coverage histogram, make sure that the coverage is indeed uniform", "contig_length": null, "read_support": "NOT_EVALUATED", "m8": "NOT_RUN", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "SPAdes execution failure before contig/read-support/M8 production. No indels were configured, so this failure is not indel-specific and is not a measured reconstruction loss."},
+      {"condition": "insertion_only", "case_id": "held_out-m34-i003", "m6_status": "READ_SUPPORTED_ASSEMBLY", "generated_reads": 448, "target_reads": 432, "m6_input_reads": 432, "input_read_length_range": [100, 105], "realized_errors": {"substitutions": 0, "insertions": 438, "deletions": 0}, "source_coverage": {"gaps": 0, "first_base_depth": 2, "last_base_depth": 2}, "spades_exit_status": 0, "contig_length": 901, "truth_alignment": {"truth_length": 900, "candidate_extra_suffix_bases": 1, "missing_target_suffix_bases": 1, "insertions": 1, "substitutions": 1, "local_identity": 0.998889, "target_coverage": 0.99889}, "read_support": "READ_SUPPORTED_ASSEMBLY", "m8": "COMPLETE", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "Supported partial contig with a terminal discrepancy; reads covered both termini. The output does not isolate a single insertion event as the cause; M8 completed and did not prioritize it."},
+      {"condition": "deletion_only", "case_id": "development-m34-i004", "m6_status": "READ_SUPPORTED_ASSEMBLY", "generated_reads": 448, "target_reads": 432, "m6_input_reads": 432, "input_read_length_range": [95, 100], "realized_errors": {"substitutions": 0, "insertions": 0, "deletions": 430}, "source_coverage": {"gaps": 2, "first_base_depth": 1, "last_base_depth": 0}, "spades_exit_status": 0, "contig_length": 898, "truth_alignment": {"truth_length": 900, "missing_target_prefix_bases": 0, "missing_target_suffix_bases": 2, "deletions": 2, "local_identity": 1.0, "target_coverage": 0.997778}, "read_support": "READ_SUPPORTED_ASSEMBLY", "m8": "COMPLETE", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "Supported partial contig; the final two truth bases had zero generated-read coverage after simulated deletions and are the two bases missing from the assembly."},
+      {"condition": "combined_low", "case_id": "tuning-m34-i005", "m6_status": "EXECUTION_FAILED", "generated_reads": 304, "target_reads": 288, "m6_input_reads": 289, "input_read_length_range": [72, 78], "realized_errors": {"substitutions": 304, "insertions": 113, "deletions": 120}, "source_coverage": {"gaps": 0, "first_base_depth": 1, "last_base_depth": 1}, "spades_core_return_value": 21, "spades_error": "Invalid kmer coverage histogram, make sure that the coverage is indeed uniform", "contig_length": null, "read_support": "NOT_EVALUATED", "m8": "NOT_RUN", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "SPAdes execution failure before reconstruction evaluation; no evidence to score the indel challenge as a reconstruction miss."},
+      {"condition": "combined_moderate", "case_id": "held_out-m34-i006", "m6_status": "EXECUTION_FAILED", "generated_reads": 448, "target_reads": 432, "m6_input_reads": 432, "input_read_length_range": [96, 103], "realized_errors": {"substitutions": 896, "insertions": 451, "deletions": 449}, "source_coverage": {"gaps": 0, "first_base_depth": 1, "last_base_depth": 3}, "spades_core_return_value": 21, "spades_error": "Invalid kmer coverage histogram, make sure that the coverage is indeed uniform", "contig_length": null, "read_support": "NOT_EVALUATED", "m8": "NOT_RUN", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "SPAdes execution failure before reconstruction evaluation; no evidence to score the indel challenge as a reconstruction miss."},
+      {"condition": "combined_higher", "case_id": "development-m34-i007", "m6_status": "EXECUTION_FAILED", "generated_reads": 496, "target_reads": 480, "m6_input_reads": 492, "input_read_length_range": [140, 159], "realized_errors": {"substitutions": 3968, "insertions": 2132, "deletions": 2233}, "source_coverage": {"gaps": 3, "first_base_depth": 0, "last_base_depth": 2}, "spades_core_return_value": 21, "spades_error": "Invalid kmer coverage histogram, make sure that the coverage is indeed uniform", "contig_length": null, "read_support": "NOT_EVALUATED", "m8": "NOT_RUN", "triage": "INSUFFICIENT_EVIDENCE", "assessment": "SPAdes execution failure before reconstruction evaluation; the read model also left terminal gaps, but no contig was produced to assess them."}
+    ],
+    "root_cause": "Four SPAdes core failures occurred for substitution-only and combined-error inputs, all with return value 21 and the same invalid k-mer coverage histogram message. Because substitution-only also fails, this is not attributable solely to indels. It is a synthetic read-profile/assembler-configuration compatibility failure; the artifact does not establish a biological or indel-specific causal effect."
+  },
+  "reproducibility": {
+    "status": "REPRODUCIBLE",
+    "fully_reproducible": true,
+    "differing_stages": {}
+  },
+  "frozen_scientific_settings": {
+    "production_or_historical_settings_changed": false,
+    "m6": {"assembler": "SPAdes 3.15.5", "layout": "single-end", "memory_mb": 2048, "threads": 1, "minimum_alignment_fraction": 0.8, "minimum_coverage_breadth": 0.8, "minimum_distinct_fragments": 2, "minimum_mapq": 20, "minimum_mean_depth": 2, "minimum_sequence_identity": 0.95},
+    "m8": {"blast_release": "2.17.0+", "panel": "registered M32 synthetic panel"},
+    "m31": {"thresholds_changed": false}
+  },
+  "governance": {
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+    "biological_execution_authorized": false
+  },
+  "limitations": [
+    "All cases and panel sequences are synthetic; these results do not estimate biological false-discovery rate, sensitivity, or specificity.",
+    "The near-target false-alarm denominator is only five eligible cases; three of eight generated cases were unevaluable.",
+    "Four positive conditions failed inside SPAdes and are not reconstruction-evaluable; their outcome is not scored as a biological or indel-caused reconstruction loss.",
+    "The three successful assemblies are one synthetic case per condition; they do not estimate population-level recovery.",
+    "The registered error rates are not validated sequencing-platform error distributions."
+  ]
+}

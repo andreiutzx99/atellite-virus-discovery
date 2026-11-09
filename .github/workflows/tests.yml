@@ -246,6 +246,22 @@ jobs:
               --blastn "$M8_BLASTN_EXECUTABLE" \
               --makeblastdb "$M8_MAKEBLASTDB_EXECUTABLE" \
               --negative-per-category 8
+      - name: Validate tracked M34 summary against this run
+        shell: bash
+        env:
+          M34_RUN_DIR: ${{ runner.temp }}/m34-negative-control-indel-robustness
+        run: |
+          PYTHONPATH=. python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from satellite_discovery.m34_negative_control_indel_robustness import validate_review_summary
+
+          run_dir = Path(os.environ["M34_RUN_DIR"])
+          summary = json.loads(Path("docs/M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json").read_text())
+          report = json.loads((run_dir / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json").read_text())
+          validate_review_summary(summary, report)
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:

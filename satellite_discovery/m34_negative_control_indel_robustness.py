@@ -276,6 +276,12 @@ def _panel_content_signature(report):
     }
 
 
+def _require_reproducible(result):
+    if not result.get("fully_reproducible"):
+        raise RuntimeError("REPRODUCIBILITY_MISMATCH: " + json.dumps(
+            result.get("differing_stages", {}), sort_keys=True))
+
+
 def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     captured = {}
     original_run_case = m29._run_case
@@ -423,6 +429,11 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, negative_per_category=8):
                 op: sum(r.get(op, 0) for r in provenance.get("read_provenance", {}).values())
                 for op in ("substitutions", "insertions", "deletions")},
             "read_provenance_count": len(provenance.get("read_provenance", {})),
+            "source_records": sorted({
+                (item.get("source_role"), item.get("source_index"),
+                 item.get("source_record_sha256"))
+                for item in provenance.get("read_provenance", {}).values()
+            }),
             "assembly_status": executed["assembly_status"],
             "assembly_graph": executed.get("assembly_graph"),
             "read_support_outcomes": triage_row.get("support_by_contig", {}),
@@ -525,6 +536,21 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, negative_per_category=8):
         "exact_supported": sum(row["exact_supported_reconstruction"] for row in indel_rows),
         "partial_supported": sum(row["partial_reconstruction"] for row in indel_rows),
     }
+    evaluable_indels = [row for row in indel_rows
+                        if row["assembly_status"] != "EXECUTION_FAILED"]
+    positive_recovery["evaluable_cases"] = len(evaluable_indels)
+    positive_recovery["assembler_execution_failures"] = (
+        len(indel_rows) - len(evaluable_indels))
+    positive_recovery["exact_supported_evaluable"] = sum(
+        row["exact_supported_reconstruction"] for row in evaluable_indels)
+    positive_recovery["partial_supported_evaluable"] = sum(
+        row["partial_reconstruction"] for row in evaluable_indels)
+    positive_recovery["exact_rate_evaluable"] = (
+        positive_recovery["exact_supported_evaluable"] / len(evaluable_indels)
+        if evaluable_indels else None)
+    positive_recovery["partial_rate_evaluable"] = (
+        positive_recovery["partial_supported_evaluable"] / len(evaluable_indels)
+        if evaluable_indels else None)
     positive_recovery["exact_rate"] = (
         positive_recovery["exact_supported"] / len(indel_rows) if indel_rows else None)
     positive_recovery["exact_wilson_95"] = _wilson(
@@ -567,9 +593,7 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, negative_per_category=8):
         json.dumps(result, sort_keys=True, indent=2) + "\n")
     (output / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.md").write_text(
         render_markdown(result), encoding="utf-8")
-    if not reproducibility["fully_reproducible"]:
-        raise RuntimeError("REPRODUCIBILITY_MISMATCH: " + json.dumps(
-            reproducibility["differing_stages"], sort_keys=True))
+    _require_reproducible(reproducibility)
     return result
 
 
@@ -622,6 +646,89 @@ def render_markdown(report):
               "overall_state=BLOCKED_FOR_BENCHMARK_EXECUTION",
               "biological_execution_authorized=false", "```", ""]
     return "\n".join(lines)
+
+
+def validate_review_summary(summary, report):
+    """Ensure the tracked scientific summary agrees with the fresh CI result."""
+    stats = summary["target_absent_statistics"]
+    expected = {
+        "generated_cases": report["target_absent_generated"],
+        "eligible_cases": report["target_absent_eligible"],
+        "false_alarm_cases": report["target_absent_false_alarm_rates"]["case_level"]["review_priority"],
+        "false_alarm_rate": report["target_absent_false_alarm_rates"]["case_level"]["rate"],
+        "wilson_95": report["target_absent_false_alarm_rates"]["case_level"]["wilson_95"],
+    }
+    for key, value in expected.items():
+        if stats[key] != value:
+            raise ValueError(f"M34 summary target-absent statistic mismatch: {key}")
+    for category, expected_metrics in summary["target_absent_statistics"]["by_category"].items():
+        actual = report["target_absent_by_category"][category]
+        for key, source in (("generated", "generated_cases"),
+                            ("eligible", None), ("false_alarms", None)):
+            value = actual[source] if source else actual["case_level"][
+                "eligible_denominator" if key == "eligible" else "review_priority"]
+            if expected_metrics[key] != value:
+                raise ValueError(f"M34 summary category mismatch: {category}.{key}")
+    for condition, expected_metrics in summary["target_absent_statistics"]["by_error_condition"].items():
+        actual = report["target_absent_by_error_condition"][condition]
+        values = {
+            "generated": actual["generated_cases"],
+            "eligible": actual["case_level"]["eligible_denominator"],
+            "false_alarms": actual["case_level"]["review_priority"],
+        }
+        if any(expected_metrics[key] != value for key, value in values.items()):
+            raise ValueError(f"M34 summary error-condition mismatch: {condition}")
+    positive = summary["positive_indel_outcomes"]
+    actual_positive = report["positive_indel_recovery"]
+    if any(positive[key] != actual_positive[source] for key, source in (
+        ("generated_cases", "generated_cases"), ("exact_supported", "exact_supported"),
+        ("partial_supported", "partial_supported"), ("evaluable_cases", "evaluable_cases"),
+        ("assembler_execution_failures", "assembler_execution_failures"),
+    )):
+        raise ValueError("M34 summary positive-indel totals mismatch")
+    rows = {row["case_id"]: row for row in report["case_level_results"]}
+    source_truth = report["target_absence_source_truth"]["benchmark"]
+    for investigation in summary["false_alarm_investigations"]:
+        case_id = investigation["case_id"]
+        row = rows.get(case_id)
+        truth = source_truth["cases"].get(case_id)
+        if (row is None or row["synthetic_truth_target_present"]
+                or row["background_category"] != investigation["background"]["category"]
+                or not truth or not truth["candidate_sequence_absent"]):
+            raise ValueError(f"M34 false-alarm truth mismatch: {case_id}")
+        if truth.get("source_truth_sidecar_sha256") != investigation["source_truth"]["sidecar_sha256"]:
+            raise ValueError(f"M34 false-alarm truth digest mismatch: {case_id}")
+        if not any(candidate["query_sha256"] == investigation["candidate"]["sha256"]
+                   and candidate["triage_status"] == "REVIEW_PRIORITY"
+                   for candidate in row["candidate_records"]):
+            raise ValueError(f"M34 false-alarm candidate mismatch: {case_id}")
+        expected_background = investigation["background"]["source_record_sha256"]
+        if not any(record[0] == "synthetic_background" and record[2] == expected_background
+                   for record in row["source_records"]):
+            raise ValueError(f"M34 false-alarm background digest mismatch: {case_id}")
+    for condition in positive["condition_results"]:
+        row = rows.get(condition["case_id"])
+        if (row is None or row["indel_condition"] != condition["condition"]
+                or row["realized_error_totals"] != condition["realized_errors"]
+                or row["assembly_status"] != condition["m6_status"]
+                or row["m8_search_complete"] != (condition["m8"] == "COMPLETE")):
+            raise ValueError(
+                f"M34 positive-indel stage summary mismatch: {condition['condition']}"
+            )
+        candidates = row["candidate_records"]
+        if condition["m6_status"] == "EXECUTION_FAILED":
+            if candidates or condition["read_support"] != "NOT_EVALUATED" or condition["m8"] != "NOT_RUN":
+                raise ValueError(
+                    f"M34 assembler failure was scored as a reconstruction outcome: {condition['condition']}"
+                )
+        elif (not candidates or candidates[0]["query_length"] != condition["contig_length"]
+              or candidates[0]["retrospective_truth_comparison"]["comparison"] is None):
+            raise ValueError(
+                f"M34 partial reconstruction evidence missing: {condition['condition']}"
+            )
+    if report["reproducibility"]["status"] != summary["reproducibility"]["status"]:
+        raise ValueError("M34 summary reproducibility status mismatch")
+    return True
 
 
 def main(argv=None):
