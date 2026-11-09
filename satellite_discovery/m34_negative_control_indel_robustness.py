@@ -287,6 +287,8 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     original_run_case = m29._run_case
     original_seed = m29._case_seed
     original_fastq = m25._make_fastq
+    original_target_sequence = m32._target_sequence_from_design
+    original_truth_sequence = m29.m19._sequence
     target_reference = m32._target_sequence_from_design(
         next(c for c in cases if c["case_id"] == "held_out-m29-positive_control")
     )
@@ -294,8 +296,23 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     def seed_for(case):
         return design["seed_by_id"].get(case["case_id"], original_seed(case))
 
+    def target_sequence_for(case):
+        return design.get("target_sequence_by_id", {}).get(
+            case["case_id"], original_target_sequence(case)
+        )
+
+    def truth_sequence_for(rng, length, gc_fraction):
+        case = m29.m19.CASES[0] if m29.m19.CASES else {}
+        registered = design.get("target_sequence_by_id", {}).get(case.get("case_id"))
+        if registered is not None:
+            return registered
+        return original_truth_sequence(rng, length, gc_fraction)
+
     def fastq(case, truth, reference, params, backgrounds=()):
         category = design["category_by_id"].get(case["case_id"])
+        sequence = design.get("background_sequence_by_id", {}).get(case["case_id"])
+        if sequence:
+            backgrounds = (*backgrounds, sequence)
         if category:
             bg = _background(category, design["seed_by_id"][case["case_id"]], 900,
                              target_reference)
@@ -311,6 +328,8 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
          patch.object(m29, "_case_seed", side_effect=seed_for), \
          patch.object(m29, "_run_case", side_effect=run_case), \
          patch.object(m25, "_make_fastq", side_effect=fastq), \
+         patch.object(m29.m19, "_sequence", side_effect=truth_sequence_for), \
+         patch.object(m32, "_target_sequence_from_design", side_effect=target_sequence_for), \
          patch.object(m32, "_benchmark_design",
                       return_value=(list(cases), design["contracts"])), \
          patch.object(m32, "validate_success_criteria",

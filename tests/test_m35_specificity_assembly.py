@@ -15,7 +15,12 @@ from satellite_discovery.m35_specificity_assembly import (
     GOVERNANCE,
     SEEDS,
     SIMILARITY_LEVELS,
+    _oat_settings,
+    _feature_diagnostics,
+    _oat_factor_comparisons,
+    _summarize_gradient,
     preregistered_design,
+    reproduce_m34,
     validate_evidence_bundle,
     validate_design,
 )
@@ -411,6 +416,100 @@ class M35SourceArtifactTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(ValueError, "digest mismatch"):
                     source_artifact.validate_source_artifact(artifact, summary_path)
+
+
+class M35ResultAnalysisTests(unittest.TestCase):
+    def test_similarity_summary_uses_positive_control_at_one_hundred_percent(self):
+        rows = []
+        for split in ("development", "tuning", "held_out"):
+            rows.append({
+                "similarity_level": 1.0, "condition": "known_target_positive_control",
+                "split": split, "m8_search_complete": True,
+                "read_supported_candidate_count": 1, "review_priority": True,
+            })
+            rows.append({
+                "similarity_level": 0.9, "condition": "target_absent_near_target_decoy",
+                "split": split, "m8_search_complete": True,
+                "read_supported_candidate_count": 1, "review_priority": split != "held_out",
+            })
+        summary = _summarize_gradient(rows)
+        positive = summary[0]
+        self.assertEqual(positive["truth_stratum"], "positive_control")
+        self.assertEqual(
+            (positive["review_priority_cases"], positive["eligible_cases"]), (3, 3)
+        )
+        decoy = next(row for row in summary if row["similarity_level"] == 0.9)
+        self.assertEqual(
+            (decoy["review_priority_cases"], decoy["eligible_cases"]), (2, 3)
+        )
+        self.assertEqual(len(_oat_settings()), 14)
+
+    def test_feature_diagnostics_reuse_frozen_m31_qualifier(self):
+        rows = [{
+            "similarity_level": 0.9,
+            "condition": "target_absent_near_target_decoy",
+            "case_id": "held_out-case",
+            "candidates": [{
+                "triage_status": "REVIEW_PRIORITY",
+                "distinct_reference_count": 2,
+                "secondary_match_count": 1,
+                "all_alignment_matches": [{
+                    "panel_role": "satellite_subviral",
+                    "alignment": {"percent_identity": 91, "query_coverage": 0.31},
+                }],
+            }],
+        }]
+        summary = _feature_diagnostics(rows)
+        level = next(row for row in summary if row["similarity_level"] == 0.9)
+        self.assertEqual(level["qualifying_cases"], 1)
+        self.assertEqual(level["review_priority_with_qualifying_alignment"], 1)
+        self.assertEqual(level["multiple_reference_candidates"], 1)
+        self.assertEqual(level["secondary_alignment_count"], 1)
+
+    def test_oat_comparisons_are_descriptive_against_the_registered_baseline(self):
+        results = [{
+            "factor": "baseline", "level": "combined_moderate",
+            "execution_failure_count": 2, "execution_denominator": 2,
+            "repetitions": [],
+        }, {
+            "factor": "coverage", "level": 80,
+            "execution_failure_count": 1, "execution_denominator": 2,
+            "repetitions": [{"assembly_status": "NOT_RUN"}],
+        }]
+        comparison = _oat_factor_comparisons(results)[0]
+        self.assertEqual(comparison["difference_from_baseline"], -0.5)
+        self.assertEqual(comparison["not_run_replicates"], 1)
+        self.assertIn("not a causal", comparison["interpretation"])
+
+    def test_m34_rerun_is_distinguished_from_archived_inspection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            current, archive = Path(tmp) / "current", Path(tmp) / "archive"
+            current.mkdir()
+            archive.mkdir()
+            cases = {}
+            for case_id in source_artifact.REQUIRED_CASES:
+                cases[case_id] = {
+                    "case_id": case_id,
+                    "candidate_records": [{"triage_status": "REVIEW_PRIORITY"}],
+                }
+            failure_ids = (
+                "tuning-m34-i002", "tuning-m34-i005",
+                "held_out-m34-i006", "development-m34-i007",
+            )
+            for case_id in failure_ids:
+                cases[case_id] = {
+                    "case_id": case_id, "assembly_status": "EXECUTION_FAILED",
+                    "candidate_records": [],
+                }
+            for root in (current, archive):
+                (root / "M34_NEGATIVE_CONTROL_INDEL_ROBUSTNESS.json").write_text(
+                    json.dumps({"case_level_results": list(cases.values())})
+                )
+            result = reproduce_m34(current, archive)
+            self.assertEqual(result["source_kind"], "fresh M34 pipeline execution in this Actions run")
+            self.assertEqual(result["archived_source_kind"], "inspection of frozen M34 Actions artifact")
+            self.assertEqual(result["false_alarm_denominator"], {"reproduced": 5, "registered": 5})
+            self.assertEqual(result["spades_failure_denominator"], {"reproduced": 4, "registered": 4})
 
 
 if __name__ == "__main__":
