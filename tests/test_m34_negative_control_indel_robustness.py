@@ -7,6 +7,7 @@ from satellite_discovery.m34_negative_control_indel_robustness import (
     ERROR_CONDITIONS,
     NEGATIVE_CATEGORIES,
     _metrics,
+    _panel_content_signature,
     _validate_target_absence_truth,
     preregistered_design,
     render_markdown,
@@ -56,6 +57,20 @@ class M34DesignTests(unittest.TestCase):
 
 
 class M34FalseAlarmTests(unittest.TestCase):
+    def test_panel_comparison_uses_content_not_context_bound_snapshot_digest(self):
+        full = {"panel_preregistration": {
+            "schema": "m32-panel-v1", "seed": 10, "panel_fasta_sha256": "same",
+            "records": [{"accession": "SYN001.1"}], "design_digest": "full",
+            "snapshot_digest": "snapshot-full",
+        }}
+        repeat = {"panel_preregistration": {
+            **full["panel_preregistration"], "design_digest": "repeat",
+            "snapshot_digest": "snapshot-repeat",
+        }}
+        self.assertEqual(_panel_content_signature(full), _panel_content_signature(repeat))
+        repeat["panel_preregistration"]["panel_fasta_sha256"] = "different"
+        self.assertNotEqual(_panel_content_signature(full), _panel_content_signature(repeat))
+
     def test_target_absence_is_verified_from_registered_source_truth(self):
         with tempfile.TemporaryDirectory() as folder:
             case = {"case_id": "held_out-m34-c0001", "positive": False}

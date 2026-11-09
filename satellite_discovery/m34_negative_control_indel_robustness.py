@@ -266,6 +266,16 @@ def _validate_target_absence_truth(output, cases):
     }
 
 
+def _panel_content_signature(report):
+    panel = report.get("panel_preregistration", {})
+    return {
+        "schema": panel.get("schema"),
+        "seed": panel.get("seed"),
+        "panel_fasta_sha256": panel.get("panel_fasta_sha256"),
+        "records": panel.get("records"),
+    }
+
+
 def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     captured = {}
     original_run_case = m29._run_case
@@ -500,8 +510,8 @@ def run(output, blastn, makeblastdb, blastdbcmd=None, negative_per_category=8):
         differences["read_provenance"] = provenance_differences
     if truth_differences:
         differences["source_truth"] = truth_differences
-    if report.get("panel_digest") != repeat.get("panel_digest"):
-        differences["frozen_panel"] = ["panel_digest"]
+    if _panel_content_signature(report) != _panel_content_signature(repeat):
+        differences["frozen_panel"] = ["panel_content"]
     if report.get("runtime") != repeat.get("runtime"):
         differences["runtime"] = ["runtime"]
     reproducibility.update({
