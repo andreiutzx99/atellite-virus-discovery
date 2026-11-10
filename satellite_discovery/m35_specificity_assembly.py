@@ -268,6 +268,24 @@ def _support_semantics_sha256(path):
     ).encode("utf-8")).hexdigest()
 
 
+def _spades_failure_summary(stage, manifest, evidence):
+    log = Path(stage) / "assembly" / "raw" / "spades.log"
+    if log.is_file():
+        text = log.read_text(encoding="utf-8", errors="replace")
+        if "Invalid kmer coverage histogram" in text:
+            return "Invalid kmer coverage histogram; SPAdes advises checking coverage uniformity."
+        match = re.search(r"finished abnormally, OS return value:\s*(\d+)", text)
+        if match:
+            return f"SPAdes core exited with OS return value {match.group(1)}."
+        errors = [line.split("ERROR", 1)[-1].strip()
+                  for line in text.splitlines() if "ERROR" in line]
+        if errors:
+            return errors[-1]
+    if manifest.get("status") == "failed" and manifest.get("exit_status") is not None:
+        return f"SPAdes exited with status {manifest['exit_status']}."
+    return evidence.get("failure_reason")
+
+
 def _case_map(report):
     return {row["case_id"]: row for row in report.get("case_level_results", [])}
 
@@ -380,6 +398,10 @@ def _sequence_features(sequence, target):
     }
 
 
+def _gradient_analysis_id(case_id):
+    return "m35" + hashlib.sha256(case_id.encode("utf-8")).hexdigest()[:9]
+
+
 def _gradient_cases(design, target, controls, control_contracts):
     from . import m32_end_to_end_synthetic_evidence as m32
     from . import m25_read_coverage as m25
@@ -392,9 +414,7 @@ def _gradient_cases(design, target, controls, control_contracts):
         case = m25._case_design(split, 1 + len(cases) % 3)
         case.update({
             "case_id": registered["case_id"],
-            "analysis_id": "m35" + hashlib.sha256(
-                registered["case_id"].encode("utf-8")
-            ).hexdigest()[:9],
+            "analysis_id": _gradient_analysis_id(registered["case_id"]),
             "positive": registered["condition"] == "known_target_positive_control",
             "target_length": len(target), "coverage": 48,
             "m25_read_length": 100, "error_rate": 0.0,
@@ -451,7 +471,8 @@ def _candidate_features(triage_rows, report, design, target, sequence_by_id,
         if bundle_dir is not None:
             fasta_path = (
                 Path(bundle_dir) / "reconstruction" / case_id / "stages"
-                / f"m6_{execution_row['analysis_id']}" / "assembly" / "contigs.fasta"
+                / f"m6_{execution_row.get('analysis_id') or _gradient_analysis_id(case_id)}"
+                / "assembly" / "contigs.fasta"
             )
             if fasta_path.is_file():
                 from . import m32_end_to_end_synthetic_evidence as m32
@@ -683,14 +704,6 @@ def _run_oat(output):
                 contigs = stage / "assembly" / "contigs.fasta"
                 support = stage / "read_support.json"
                 spades_log = stage / "assembly" / "raw" / "spades.log"
-                error_lines = []
-                if spades_log.is_file():
-                    error_lines = [
-                        line.strip() for line in spades_log.read_text(
-                            encoding="utf-8", errors="replace"
-                        ).splitlines()
-                        if re.search(r"\bERROR\b", line, re.IGNORECASE)
-                    ]
                 support_semantics_sha256 = _support_semantics_sha256(support)
                 exit_status = assembly_manifest.get("exit_status")
                 repetitions.append({
@@ -700,8 +713,8 @@ def _run_oat(output):
                     "configuration": evidence.get("configuration"),
                     "assembly_manifest_status": assembly_manifest.get("status"),
                     "assembler_exit_status": exit_status,
-                    "failure_reason": (
-                        error_lines[-1] if error_lines else evidence.get("failure_reason")
+                    "failure_reason": _spades_failure_summary(
+                        stage, assembly_manifest, evidence
                     ),
                     "evidence_sha256": {
                         "reads": _file_hash(reads) if reads.is_file() else None,

@@ -19,6 +19,7 @@ from satellite_discovery.m35_specificity_assembly import (
     _feature_diagnostics,
     _m35_handoff,
     _oat_factor_comparisons,
+    _spades_failure_summary,
     _support_semantics_sha256,
     _summarize_gradient,
     preregistered_design,
@@ -521,6 +522,26 @@ class M35ResultAnalysisTests(unittest.TestCase):
             body["contigs"][0]["supporting_read_count"] = 4
             path.write_text(json.dumps(body), encoding="utf-8")
             self.assertNotEqual(first, _support_semantics_sha256(path))
+
+    def test_spades_failure_summary_is_stable_across_run_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = Path(tmp) / "stage"
+            log = stage / "assembly" / "raw" / "spades.log"
+            log.parent.mkdir(parents=True)
+            manifest = {"status": "failed", "exit_status": 21}
+            log.write_text(
+                "== Error == system call for: ['/run/one/config.info'] "
+                "finished abnormally, OS return value: 21\n",
+                encoding="utf-8",
+            )
+            first = _spades_failure_summary(stage, manifest, {})
+            log.write_text(
+                "== Error == system call for: ['/run/two/config.info'] "
+                "finished abnormally, OS return value: 21\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(first, _spades_failure_summary(stage, manifest, {}))
+            self.assertEqual(first, "SPAdes core exited with OS return value 21.")
 
     def test_m34_rerun_is_distinguished_from_archived_inspection(self):
         with tempfile.TemporaryDirectory() as tmp:
