@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from . import m25_read_coverage as m25
+from . import m19_benchmark as m19
 from . import m29_assembly_root_cause_recovery as m29
 from . import m32_end_to_end_synthetic_evidence as m32
 from . import m33_independent_synthetic_robustness as m33
@@ -282,11 +283,26 @@ def _require_reproducible(result):
             result.get("differing_stages", {}), sort_keys=True))
 
 
+def _truth_sequence_for_m35(case, design, rng, length, gc_fraction, original):
+    case_id = case.get("case_id")
+    registered = design.get("target_sequence_by_id", {}).get(case_id)
+    if registered is None:
+        return original(rng, length, gc_fraction)
+    if registered is not None and case.get("positive") is True:
+        return registered
+    seed = design.get("seed_by_id", {}).get(case_id)
+    if type(seed) is not int:
+        raise ValueError(f"{case_id}: registered M35 seed is missing for technical reference")
+    return original(random.Random(seed ^ 0x4D3139), length, gc_fraction)
+
+
 def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     captured = {}
     original_run_case = m29._run_case
     original_seed = m29._case_seed
     original_fastq = m25._make_fastq
+    original_target_sequence = m32._target_sequence_from_design
+    original_truth_sequence = m19._sequence
     target_reference = m32._target_sequence_from_design(
         next(c for c in cases if c["case_id"] == "held_out-m29-positive_control")
     )
@@ -294,8 +310,22 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     def seed_for(case):
         return design["seed_by_id"].get(case["case_id"], original_seed(case))
 
+    def target_sequence_for(case):
+        return design.get("target_sequence_by_id", {}).get(
+            case["case_id"], original_target_sequence(case)
+        )
+
+    def truth_sequence_for(rng, length, gc_fraction):
+        case = m19.CASES[0] if m19.CASES else {}
+        return _truth_sequence_for_m35(
+            case, design, rng, length, gc_fraction, original_truth_sequence
+        )
+
     def fastq(case, truth, reference, params, backgrounds=()):
         category = design["category_by_id"].get(case["case_id"])
+        sequence = design.get("background_sequence_by_id", {}).get(case["case_id"])
+        if sequence:
+            backgrounds = (*backgrounds, sequence)
         if category:
             bg = _background(category, design["seed_by_id"][case["case_id"]], 900,
                              target_reference)
@@ -311,6 +341,8 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
          patch.object(m29, "_case_seed", side_effect=seed_for), \
          patch.object(m29, "_run_case", side_effect=run_case), \
          patch.object(m25, "_make_fastq", side_effect=fastq), \
+         patch.object(m19, "_sequence", side_effect=truth_sequence_for), \
+         patch.object(m32, "_target_sequence_from_design", side_effect=target_sequence_for), \
          patch.object(m32, "_benchmark_design",
                       return_value=(list(cases), design["contracts"])), \
          patch.object(m32, "validate_success_criteria",
@@ -679,13 +711,7 @@ def validate_review_summary(summary, report):
         if any(expected_metrics[key] != value for key, value in values.items()):
             raise ValueError(f"M34 summary error-condition mismatch: {condition}")
     positive = summary["positive_indel_outcomes"]
-    actual_positive = report["positive_indel_recovery"]
-    if any(positive[key] != actual_positive[source] for key, source in (
-        ("generated_cases", "generated_cases"), ("exact_supported", "exact_supported"),
-        ("partial_supported", "partial_supported"), ("evaluable_cases", "evaluable_cases"),
-        ("assembler_execution_failures", "assembler_execution_failures"),
-    )):
-        raise ValueError("M34 summary positive-indel totals mismatch")
+    validate_positive_indel_summary(positive, report)
     rows = {row["case_id"]: row for row in report["case_level_results"]}
     source_truth = report["target_absence_source_truth"]["benchmark"]
     for investigation in summary["false_alarm_investigations"]:
@@ -729,6 +755,53 @@ def validate_review_summary(summary, report):
     if report["reproducibility"]["status"] != summary["reproducibility"]["status"]:
         raise ValueError("M34 summary reproducibility status mismatch")
     return True
+
+
+def validate_positive_indel_summary(summary, report):
+    """Compare positive-indel totals, deriving absent legacy aggregates from cases.
+
+    The retained original M34 artifact predates the addition of
+    ``evaluable_cases`` and ``assembler_execution_failures`` to its aggregate
+    object. Its case-level records already preserve assembly status and
+    reconstruction outcomes, so those counts are derived from those records
+    without modifying or supplementing the source JSON.
+    """
+    rows = [row for row in report.get("case_level_results", [])
+            if row.get("indel_condition")]
+    if not rows:
+        raise ValueError("M34 report has no positive-indel case-level evidence")
+    evaluable = [row for row in rows if row.get("assembly_status") != "EXECUTION_FAILED"]
+    derived = {
+        "generated_cases": len(rows),
+        "evaluable_cases": len(evaluable),
+        "assembler_execution_failures": len(rows) - len(evaluable),
+    }
+    aggregate = report.get("positive_indel_recovery", {})
+    if not isinstance(aggregate, dict):
+        raise ValueError("M34 positive-indel aggregate is invalid")
+    for key in ("generated_cases",):
+        if key in aggregate and aggregate[key] != derived[key]:
+            raise ValueError(f"M34 positive-indel aggregate disagrees with case evidence: {key}")
+    for key, case_field in (
+        ("exact_supported", "exact_supported_reconstruction"),
+        ("partial_supported", "partial_reconstruction"),
+    ):
+        if key in aggregate:
+            derived[key] = aggregate[key]
+            if all(case_field in row for row in rows):
+                case_total = sum(bool(row[case_field]) for row in rows)
+                if case_total != aggregate[key]:
+                    raise ValueError(
+                        f"M34 positive-indel aggregate disagrees with case evidence: {key}"
+                    )
+        elif all(case_field in row for row in rows):
+            derived[key] = sum(bool(row[case_field]) for row in rows)
+        else:
+            raise ValueError(f"M34 positive-indel total is unavailable: {key}")
+    for key, value in derived.items():
+        if summary.get(key) != value:
+            raise ValueError(f"M34 summary positive-indel total mismatch: {key}")
+    return derived
 
 
 def main(argv=None):
