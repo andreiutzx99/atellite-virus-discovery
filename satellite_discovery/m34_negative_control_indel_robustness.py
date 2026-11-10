@@ -283,6 +283,13 @@ def _require_reproducible(result):
             result.get("differing_stages", {}), sort_keys=True))
 
 
+def _truth_sequence_for_m35(case, design, rng, length, gc_fraction, original):
+    registered = design.get("target_sequence_by_id", {}).get(case.get("case_id"))
+    if registered is not None and case.get("positive") is True:
+        return registered
+    return original(rng, length, gc_fraction)
+
+
 def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
     captured = {}
     original_run_case = m29._run_case
@@ -304,10 +311,9 @@ def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
 
     def truth_sequence_for(rng, length, gc_fraction):
         case = m19.CASES[0] if m19.CASES else {}
-        registered = design.get("target_sequence_by_id", {}).get(case.get("case_id"))
-        if registered is not None:
-            return registered
-        return original_truth_sequence(rng, length, gc_fraction)
+        return _truth_sequence_for_m35(
+            case, design, rng, length, gc_fraction, original_truth_sequence
+        )
 
     def fastq(case, truth, reference, params, backgrounds=()):
         category = design["category_by_id"].get(case["case_id"])
