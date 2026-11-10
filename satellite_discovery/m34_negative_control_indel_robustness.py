@@ -284,10 +284,16 @@ def _require_reproducible(result):
 
 
 def _truth_sequence_for_m35(case, design, rng, length, gc_fraction, original):
-    registered = design.get("target_sequence_by_id", {}).get(case.get("case_id"))
+    case_id = case.get("case_id")
+    registered = design.get("target_sequence_by_id", {}).get(case_id)
+    if registered is None:
+        return original(rng, length, gc_fraction)
     if registered is not None and case.get("positive") is True:
         return registered
-    return original(rng, length, gc_fraction)
+    seed = design.get("seed_by_id", {}).get(case_id)
+    if type(seed) is not int:
+        raise ValueError(f"{case_id}: registered M35 seed is missing for technical reference")
+    return original(random.Random(seed ^ 0x4D3139), length, gc_fraction)
 
 
 def _execute_bundle(output, design, cases, blastn, makeblastdb, blastdbcmd):
