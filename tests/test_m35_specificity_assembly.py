@@ -17,7 +17,9 @@ from satellite_discovery.m35_specificity_assembly import (
     SIMILARITY_LEVELS,
     _oat_settings,
     _feature_diagnostics,
+    _m35_handoff,
     _oat_factor_comparisons,
+    _support_semantics_sha256,
     _summarize_gradient,
     preregistered_design,
     reproduce_m34,
@@ -480,6 +482,41 @@ class M35ResultAnalysisTests(unittest.TestCase):
         self.assertEqual(comparison["difference_from_baseline"], -0.5)
         self.assertEqual(comparison["not_run_replicates"], 1)
         self.assertIn("not a causal", comparison["interpretation"])
+
+    def test_empty_m6_fasta_is_not_misclassified_as_a_manifest_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assembly = root / "source" / "assembly"
+            assembly.mkdir(parents=True)
+            contigs = assembly / "contigs.fasta"
+            contigs.write_bytes(b"")
+            handoff = lambda *_args: self.fail("empty contigs must not be handed off")
+            self.assertIsNone(_m35_handoff(handoff, assembly.parent, root / "out", "case"))
+            contigs.write_text(">candidate\nACGT\n", encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "manifest"):
+                _m35_handoff(
+                    lambda *_args: (_ for _ in ()).throw(
+                        ValueError("assembly manifest missing")
+                    ),
+                    assembly.parent, root / "out", "case",
+                )
+
+    def test_support_repeatability_ignores_raw_sam_digest_but_keeps_semantics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "support.json"
+            body = {
+                "status": "READ_SUPPORTED_ASSEMBLY",
+                "contigs": [{"contig_id": "c1", "supporting_read_count": 3}],
+                "provenance": {"support_sam_sha256": "a"},
+            }
+            path.write_text(json.dumps(body), encoding="utf-8")
+            first = _support_semantics_sha256(path)
+            body["provenance"]["support_sam_sha256"] = "b"
+            path.write_text(json.dumps(body), encoding="utf-8")
+            self.assertEqual(first, _support_semantics_sha256(path))
+            body["contigs"][0]["supporting_read_count"] = 4
+            path.write_text(json.dumps(body), encoding="utf-8")
+            self.assertNotEqual(first, _support_semantics_sha256(path))
 
     def test_m34_rerun_is_distinguished_from_archived_inspection(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -11,7 +11,9 @@ import json
 import argparse
 import copy
 import random
+import re
 from pathlib import Path
+from unittest.mock import patch
 
 SCHEMA = "m35-preregistered-design-v1"
 SIMILARITY_LEVELS = (1.00, 0.98, 0.95, 0.92, 0.90, 0.85, 0.80, 0.70)
@@ -223,6 +225,43 @@ def _artifact_hashes(root):
         str(path.relative_to(root)): _file_hash(path)
         for path in sorted(root.rglob("*")) if path.is_file()
     }
+
+
+def _m35_handoff(handoff, source_stage, out, case_id):
+    """Treat an empty M6 FASTA as no assembly; preserve strict nonempty checks."""
+    contigs = Path(source_stage) / "assembly" / "contigs.fasta"
+    if contigs.is_file() and contigs.stat().st_size == 0:
+        return None
+    return handoff(source_stage, out, case_id)
+
+
+def _execute_m35_bundle(m34, m32, output, design, cases, blastn, makeblastdb,
+                        blastdbcmd):
+    original_handoff = m32._handoff
+    with patch.object(
+        m32, "_handoff",
+        side_effect=lambda stage, out, case_id: _m35_handoff(
+            original_handoff, stage, out, case_id
+        ),
+    ):
+        return m34._execute_bundle(
+            output, design, cases, blastn, makeblastdb, blastdbcmd
+        )
+
+
+def _support_semantics_sha256(path):
+    path = Path(path)
+    if not path.is_file():
+        return None
+    document = _read_json(path)
+    if not document:
+        return None
+    semantic_fields = {
+        key: value for key, value in document.items() if key != "provenance"
+    }
+    return hashlib.sha256(json.dumps(
+        semantic_fields, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")).hexdigest()
 
 
 def _case_map(report):
@@ -631,22 +670,48 @@ def _run_oat(output):
                 stage = case_root / "stages" / f"m6_{analysis_id}"
                 reconstruction_path = stage / "reconstruction_evidence.json"
                 evidence = _read_json(reconstruction_path) if reconstruction_path.is_file() else {}
+                assembly_manifest_path = stage / "assembly" / "manifest.json"
+                assembly_manifest = (
+                    _read_json(assembly_manifest_path)
+                    if assembly_manifest_path.is_file() else {}
+                )
                 reads = case_root / "inputs" / "datasets" / analysis_id / "reads.fastq.gz"
                 contigs = stage / "assembly" / "contigs.fasta"
                 support = stage / "read_support.json"
+                spades_log = stage / "assembly" / "raw" / "spades.log"
+                error_lines = []
+                if spades_log.is_file():
+                    error_lines = [
+                        line.strip() for line in spades_log.read_text(
+                            encoding="utf-8", errors="replace"
+                        ).splitlines()
+                        if re.search(r"\bERROR\b", line, re.IGNORECASE)
+                    ]
+                support_semantics_sha256 = _support_semantics_sha256(support)
+                exit_status = assembly_manifest.get("exit_status")
                 repetitions.append({
                     "replicate": replicate,
                     "assembly_status": evidence.get("status", "NOT_EVALUATED"),
                     "assembler": evidence.get("assembler"),
                     "configuration": evidence.get("configuration"),
-                    "failure_reason": evidence.get("failure_reason"),
+                    "assembly_manifest_status": assembly_manifest.get("status"),
+                    "assembler_exit_status": exit_status,
+                    "failure_reason": (
+                        error_lines[-1] if error_lines else evidence.get("failure_reason")
+                    ),
                     "evidence_sha256": {
                         "reads": _file_hash(reads) if reads.is_file() else None,
                         "contigs": _file_hash(contigs) if contigs.is_file() else None,
                         "read_support": _file_hash(support) if support.is_file() else None,
+                        "read_support_semantic": support_semantics_sha256,
                         "reconstruction": (
                             _file_hash(reconstruction_path) if reconstruction_path.is_file() else None
                         ),
+                        "assembly_manifest": (
+                            _file_hash(assembly_manifest_path)
+                            if assembly_manifest_path.is_file() else None
+                        ),
+                        "spades_log": _file_hash(spades_log) if spades_log.is_file() else None,
                     },
                     "raw_evidence_sha256": _artifact_hashes(case_root),
                 })
@@ -659,7 +724,7 @@ def _run_oat(output):
             row["assembly_status"],
             row["evidence_sha256"].get("reads"),
             row["evidence_sha256"].get("contigs"),
-            row["evidence_sha256"].get("read_support"),
+            row["evidence_sha256"].get("read_support_semantic"),
             row.get("failure_reason"),
         )
         reproducible = signature(repetitions[0]) == signature(repetitions[1])
@@ -759,8 +824,9 @@ def run(output, blastn, makeblastdb, blastdbcmd, m34_current_dir,
     gradient_dir = output / "similarity-gradient"
     gradient_dir.mkdir()
     try:
-        m34_report, _captured = m34._execute_bundle(
-            gradient_dir, bundle_design, cases, blastn, makeblastdb, blastdbcmd
+        m34_report, _captured = _execute_m35_bundle(
+            m34, m32, gradient_dir, bundle_design, cases,
+            blastn, makeblastdb, blastdbcmd,
         )
         gradient_rows = _candidate_features(
             m34_report["candidate_triage"], m34_report, design, target,
@@ -781,8 +847,9 @@ def run(output, blastn, makeblastdb, blastdbcmd, m34_current_dir,
             )
             repeat_dir = output / "similarity-gradient-repeat"
             repeat_dir.mkdir()
-            repeat_report, _ = m34._execute_bundle(
-                repeat_dir, repeat_bundle, repeat_cases, blastn, makeblastdb, blastdbcmd
+            repeat_report, _ = _execute_m35_bundle(
+                m34, m32, repeat_dir, repeat_bundle, repeat_cases,
+                blastn, makeblastdb, blastdbcmd,
             )
             first_case_rows = {
                 row["case_id"]: row for row in gradient_rows if row["split"] == "held_out"
