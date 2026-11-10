@@ -23,6 +23,7 @@ from satellite_discovery.m35_specificity_assembly import (
     _spades_failure_summary,
     _support_semantics_sha256,
     _summarize_gradient,
+    _gradient_cases,
     preregistered_design,
     reproduce_m34,
     validate_evidence_bundle,
@@ -423,6 +424,36 @@ class M35SourceArtifactTests(unittest.TestCase):
 
 
 class M35ResultAnalysisTests(unittest.TestCase):
+    def test_gradient_input_parameters_match_for_full_and_repeat_bundles(self):
+        target = "ACGT" * 100
+        design = preregistered_design(b">synthetic-panel\nACGT\n", target)
+        full_cases, _contracts, _bundle = _gradient_cases(
+            design, target, [], {}
+        )
+        repeat_design = dict(
+            design,
+            cases=[row for row in design["cases"] if row["split"] == "held_out"],
+        )
+        repeat_cases, _contracts, _bundle = _gradient_cases(
+            repeat_design, target, [], {}
+        )
+        full_by_id = {row["case_id"]: row for row in full_cases}
+        repeat_by_id = {row["case_id"]: row for row in repeat_cases}
+        fields = (
+            "m25_replicate", "gc_fraction", "background_gc_fraction",
+            "target_length", "coverage", "m25_read_length", "error_rate",
+            "insertion_rate", "deletion_rate", "divergence",
+        )
+        self.assertEqual(set(repeat_by_id), {
+            row["case_id"] for row in design["cases"] if row["split"] == "held_out"
+        })
+        for case_id, repeat in repeat_by_id.items():
+            with self.subTest(case_id=case_id):
+                self.assertEqual(
+                    {field: full_by_id[case_id][field] for field in fields},
+                    {field: repeat[field] for field in fields},
+                )
+
     def test_similarity_summary_uses_positive_control_at_one_hundred_percent(self):
         rows = []
         for split in ("development", "tuning", "held_out"):
