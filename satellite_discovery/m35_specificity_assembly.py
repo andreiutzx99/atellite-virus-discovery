@@ -229,8 +229,12 @@ def _artifact_hashes(root):
 
 def _m35_handoff(handoff, source_stage, out, case_id):
     """Treat an empty M6 FASTA as no assembly; preserve strict nonempty checks."""
-    contigs = Path(source_stage) / "assembly" / "contigs.fasta"
+    assembly = Path(source_stage) / "assembly"
+    contigs = assembly / "contigs.fasta"
     if contigs.is_file() and contigs.stat().st_size == 0:
+        return None
+    stage_manifest = assembly / "manifest.json"
+    if stage_manifest.is_file() and _read_json(stage_manifest).get("status") != "complete":
         return None
     return handoff(source_stage, out, case_id)
 

@@ -493,6 +493,10 @@ class M35ResultAnalysisTests(unittest.TestCase):
             handoff = lambda *_args: self.fail("empty contigs must not be handed off")
             self.assertIsNone(_m35_handoff(handoff, assembly.parent, root / "out", "case"))
             contigs.write_text(">candidate\nACGT\n", encoding="ascii")
+            manifest = assembly / "manifest.json"
+            manifest.write_text(json.dumps({"status": "failed"}), encoding="utf-8")
+            self.assertIsNone(_m35_handoff(handoff, assembly.parent, root / "out", "case"))
+            manifest.unlink()
             with self.assertRaisesRegex(ValueError, "manifest"):
                 _m35_handoff(
                     lambda *_args: (_ for _ in ()).throw(
