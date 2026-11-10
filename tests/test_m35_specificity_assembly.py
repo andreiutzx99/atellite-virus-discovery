@@ -545,23 +545,35 @@ class M35ResultAnalysisTests(unittest.TestCase):
             self.assertEqual(first, "SPAdes core exited with OS return value 21.")
 
     def test_target_absent_cases_keep_independent_m19_reference_sequence(self):
-        design = {"target_sequence_by_id": {"positive": "A" * 100, "decoy": "A" * 100}}
+        design = {
+            "target_sequence_by_id": {"positive": "A" * 100, "decoy": "A" * 100},
+            "seed_by_id": {"decoy": 35100001},
+        }
         fallback_calls = []
 
         def fallback(rng, length, gc_fraction):
-            fallback_calls.append((length, gc_fraction))
-            return "C" * length
+            sequence = "".join(rng.choice("ACGT") for _ in range(length))
+            fallback_calls.append((length, gc_fraction, sequence))
+            return sequence
 
         positive = _truth_sequence_for_m35(
             {"case_id": "positive", "positive": True}, design, None, 100, 0.5, fallback
         )
         decoy_reference = _truth_sequence_for_m35(
-            {"case_id": "decoy", "positive": False}, design, None, 100, 0.5, fallback
+            {"case_id": "decoy", "positive": False}, design, object(), 100, 0.5, fallback
+        )
+        repeated_reference = _truth_sequence_for_m35(
+            {"case_id": "decoy", "positive": False}, design, object(), 100, 0.5, fallback
         )
 
         self.assertEqual(positive, "A" * 100)
-        self.assertEqual(decoy_reference, "C" * 100)
-        self.assertEqual(fallback_calls, [(100, 0.5)])
+        self.assertEqual(decoy_reference, repeated_reference)
+        self.assertNotEqual(decoy_reference, "A" * 100)
+        self.assertEqual(len(fallback_calls), 2)
+        self.assertEqual(
+            [(length, gc) for length, gc, _sequence in fallback_calls],
+            [(100, 0.5), (100, 0.5)],
+        )
 
     def test_m34_rerun_is_distinguished_from_archived_inspection(self):
         with tempfile.TemporaryDirectory() as tmp:
