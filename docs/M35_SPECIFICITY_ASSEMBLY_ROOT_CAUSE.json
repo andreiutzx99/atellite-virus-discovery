@@ -1,9 +1,9 @@
 {
   "schema": "m35-diagnostic-status-v1",
-  "status": "INCOMPLETE",
+  "status": "INCOMPLETE_PENDING_INDEPENDENT_REVIEW",
   "governance": {
     "decision": "INCOMPLETE",
-    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+    "overall_state": "INCOMPLETE_PENDING_INDEPENDENT_REVIEW",
     "biological_execution_authorized": false
   },
   "baseline_provenance": {
@@ -13,6 +13,19 @@
     "source_artifact_name": "m34-negative-control-indel-robustness",
     "source_artifact_sha256": null,
     "note": "Raw evidence was inspected from the Actions artifact; large raw files are not copied into this repository."
+  },
+  "m35_evidence_provenance": {
+    "source_workflow_run_id": 42815490595,
+    "source_commit_sha": "41962cc3a5bef690b8715feb7e35b74381860f40",
+    "source_artifact_id": 13765202624,
+    "source_artifact_name": "m35-synthetic-investigation",
+    "source_artifact_sha256": "3abf0833ec7f21b879748024072c73fc9170987548a3fa9adc61cab341a8cf49",
+    "preregistered_design_sha256": "ce1e5ebbc112416023cec48735977ee676012172974523d7109e3f19ca0ba54a",
+    "raw_m32_report_sha256": "d219ab29546495a9040b3952a2b5b2864f9841a0ad1afd83295ee738bb154a01",
+    "read_provenance_index_sha256": "03706b62bf133df69d0e3629af86d2a075095b51ce2abda086245b583c924bcc",
+    "target_absence_validation_sha256": "330c26876d3acee9b42b5d73c22085a5672bdc6f5300c71a13660b22beb2727e",
+    "panel_fasta_sha256": "ced54090aadd76a48642cce73ee72bb749b198f5a2be90ab921ad489744140df",
+    "m31_screening_source_sha256": "51a3179574f9b532b316f2106db2f48d3b225068adb4d76f16ff6171375ba7f0"
   },
   "frozen_constraints": {
     "m6_settings_changed": false,
@@ -30,7 +43,9 @@
     "held_out_truth_in_screening_inputs": false,
     "truth_definition": "registered synthetic source truth, independent of sequence similarity",
     "panel_sha256": "ced54090aadd76a48642cce73ee72bb749b198f5a2be90ab921ad489744140df",
-    "execution_status": "NOT_RUN"
+    "execution_status": "EXECUTED",
+    "design_sha256": "ce1e5ebbc112416023cec48735977ee676012172974523d7109e3f19ca0ba54a",
+    "target_sequence_sha256": "e0d6019b8aa02d314cc35fea6e92edff9556e7da68c1ca354ea3f17c2d3cab25"
   },
   "m34_false_alarm_baseline": {
     "target_absent_eligible": 35,
@@ -46,7 +61,19 @@
       "tuning-m34-c0056"
     ],
     "interpretation": "The five cases had target-absent synthetic truth and strong full-length similarity to frozen synthetic satellite-role panel entries. This is a synthetic specificity limitation, not a biological false-discovery rate.",
-    "m35_reproduction": "NOT_RUN"
+    "m35_reproduction": {
+      "status": "REPRODUCED",
+      "registered": 5,
+      "reproduced": 5,
+      "wilson_95": [0.5655175352168251, 1.0],
+      "case_ids": [
+        "development-m34-c0049",
+        "development-m34-c0052",
+        "held_out-m34-c0051",
+        "tuning-m34-c0050",
+        "tuning-m34-c0056"
+      ]
+    }
   },
   "m34_assembler_failure_baseline": {
     "failed_cases": [
@@ -92,18 +119,101 @@
       }
     ],
     "execution_failures_scored_as_reconstruction_losses": false,
-    "m35_controlled_root_cause_experiments": "NOT_RUN"
+    "m35_controlled_root_cause_experiments": {
+      "status": "EXECUTED",
+      "settings_including_baseline": 14,
+      "factor_comparisons_to_baseline": 13,
+      "technical_replicates_per_setting": 2,
+      "execution_failures": 26,
+      "total_executions": 28,
+      "not_run_replicates": 0,
+      "read_supported_assemblies": 2,
+      "read_supported_setting": "substitutions=0.0; 2/2 replicates",
+      "failure_status": "SPAdes execution failure with Invalid kmer coverage histogram",
+      "interpretation": "Descriptive one-factor associations only; these results do not identify a causal assembler mechanism."
+    }
   },
   "m35_results": {
-    "similarity_gradient": "NOT_RUN",
-    "feature_comparisons": "NOT_RUN",
-    "diagnostic_alternatives": "NOT_RUN",
-    "fresh_directory_repeatability": "NOT_RUN",
-    "final_head_ci": "NOT_RUN"
+    "similarity_gradient": {
+      "status": "EXECUTED",
+      "generated_cases": 24,
+      "positive_controls": 3,
+      "positive_control_eligible": 0,
+      "positive_control_unevaluable": 3,
+      "target_absent_decoy_cases": 21,
+      "levels": [
+        {"similarity": 0.98, "eligible": 3, "unevaluable": 0, "review_priority": 3, "wilson_95": [0.4385029682449546, 1.0]},
+        {"similarity": 0.95, "eligible": 3, "unevaluable": 0, "review_priority": 3, "wilson_95": [0.4385029682449546, 1.0]},
+        {"similarity": 0.92, "eligible": 3, "unevaluable": 0, "review_priority": 3, "wilson_95": [0.4385029682449546, 1.0]},
+        {"similarity": 0.9, "eligible": 3, "unevaluable": 0, "review_priority": 3, "wilson_95": [0.4385029682449546, 1.0]},
+        {"similarity": 0.85, "eligible": 3, "unevaluable": 0, "review_priority": 0, "wilson_95": [5.551115123125783e-17, 0.5614970317550454]},
+        {"similarity": 0.8, "eligible": 3, "unevaluable": 0, "review_priority": 0, "wilson_95": [5.551115123125783e-17, 0.5614970317550454]},
+        {"similarity": 0.7, "eligible": 3, "unevaluable": 0, "review_priority": 0, "wilson_95": [5.551115123125783e-17, 0.5614970317550454]}
+      ],
+      "uncertainty_unit": "Independent sequence-family case; Wilson 95% intervals exclude unevaluable cases."
+    },
+    "feature_comparisons": {
+      "status": "EXECUTED",
+      "by_similarity": [
+        {"similarity": 0.98, "target_role_alignments": 20, "qualifying_target_alignments": 12, "qualifying_cases": 3, "review_priority_candidates": 3},
+        {"similarity": 0.95, "target_role_alignments": 24, "qualifying_target_alignments": 12, "qualifying_cases": 3, "review_priority_candidates": 3},
+        {"similarity": 0.92, "target_role_alignments": 18, "qualifying_target_alignments": 6, "qualifying_cases": 3, "review_priority_candidates": 3},
+        {"similarity": 0.9, "target_role_alignments": 24, "qualifying_target_alignments": 6, "qualifying_cases": 3, "review_priority_candidates": 3},
+        {"similarity": 0.85, "target_role_alignments": 28, "qualifying_target_alignments": 0, "qualifying_cases": 0, "review_priority_candidates": 0},
+        {"similarity": 0.8, "target_role_alignments": 26, "qualifying_target_alignments": 0, "qualifying_cases": 0, "review_priority_candidates": 0},
+        {"similarity": 0.7, "target_role_alignments": 30, "qualifying_target_alignments": 0, "qualifying_cases": 0, "review_priority_candidates": 0}
+      ],
+      "interpretation": "Descriptive alignment-feature counts; the frozen triage behavior was not changed."
+    },
+    "diagnostic_alternatives": {
+      "status": "NOT_RUN",
+      "blocker": "No separately namespaced alternative assembler configuration was registered in the M35 design. The executed comparison was limited to the 14-setting SPAdes one-factor-at-a-time matrix; adding an alternative requires a separately registered design."
+    },
+    "spades_one_factor_at_a_time": {
+      "status": "EXECUTED",
+      "settings_including_baseline": 14,
+      "technical_replicates_per_setting": 2,
+      "execution_failures": 26,
+      "total_executions": 28,
+      "not_run_replicates": 0,
+      "failure_settings": [
+        "baseline combined_moderate",
+        "coverage 24",
+        "coverage 80",
+        "read_length 75",
+        "read_length 150",
+        "substitutions 0.01",
+        "substitutions 0.05",
+        "insertions 0.0",
+        "insertions 0.005",
+        "insertions 0.03",
+        "deletions 0.0",
+        "deletions 0.005",
+        "deletions 0.03"
+      ],
+      "read_supported_setting": {"factor": "substitutions", "level": 0.0, "read_supported_replicates": 2, "denominator": 2},
+      "failure_message": "Invalid kmer coverage histogram; SPAdes advises checking coverage uniformity.",
+      "interpretation": "Descriptive one-factor associations only; not causal."
+    },
+    "fresh_directory_repeatability": {
+      "status": "REPRODUCIBLE",
+      "reproduced": 8,
+      "denominator": 8,
+      "same_read_provenance": 8,
+      "same_pipeline_outcomes": 8,
+      "scope": "The full held-out seed family: one positive control and seven target-absent decoys."
+    },
+    "final_head_ci": {
+      "status": "PASSED",
+      "workflow_run_id": 42815487458,
+      "commit_sha": "41962cc3a5bef690b8715feb7e35b74381860f40",
+      "note": "Full CI passed on the M35 implementation head; the report-only update is being validated on its resulting PR head."
+    }
   },
   "limitations": [
-    "M34 findings are a baseline summary, not independent M35 reproductions.",
-    "The similarity gradient, controlled SPAdes experiments, and alternative configurations have not been executed.",
-    "No causal assembler mechanism or biological specificity claim is established."
+    "M35 is synthetic-only and does not estimate biological false-discovery rates.",
+    "The three exact positive controls were unevaluable because none had supported assembly.",
+    "SPAdes one-factor results are descriptive, not causal; separate alternative configurations remain NOT_RUN because none was registered.",
+    "Independent review is pending; no biological or production promotion is authorized."
   ]
 }
