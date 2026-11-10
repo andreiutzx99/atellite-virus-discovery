@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from scripts import validate_m35_source_artifact as source_artifact
 from satellite_discovery.m34_negative_control_indel_robustness import (
+    _truth_sequence_for_m35,
     validate_positive_indel_summary,
 )
 from satellite_discovery.m35_specificity_assembly import (
@@ -542,6 +543,25 @@ class M35ResultAnalysisTests(unittest.TestCase):
             )
             self.assertEqual(first, _spades_failure_summary(stage, manifest, {}))
             self.assertEqual(first, "SPAdes core exited with OS return value 21.")
+
+    def test_target_absent_cases_keep_independent_m19_reference_sequence(self):
+        design = {"target_sequence_by_id": {"positive": "A" * 100, "decoy": "A" * 100}}
+        fallback_calls = []
+
+        def fallback(rng, length, gc_fraction):
+            fallback_calls.append((length, gc_fraction))
+            return "C" * length
+
+        positive = _truth_sequence_for_m35(
+            {"case_id": "positive", "positive": True}, design, None, 100, 0.5, fallback
+        )
+        decoy_reference = _truth_sequence_for_m35(
+            {"case_id": "decoy", "positive": False}, design, None, 100, 0.5, fallback
+        )
+
+        self.assertEqual(positive, "A" * 100)
+        self.assertEqual(decoy_reference, "C" * 100)
+        self.assertEqual(fallback_calls, [(100, 0.5)])
 
     def test_m34_rerun_is_distinguished_from_archived_inspection(self):
         with tempfile.TemporaryDirectory() as tmp:
