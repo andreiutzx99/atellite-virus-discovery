@@ -411,12 +411,14 @@ def _gradient_cases(design, target, controls, control_contracts):
     sequence_by_id, target_by_id, seed_by_id = {}, {}, {}
     for registered in design["cases"]:
         split = registered["split"]
-        case = m25._case_design(split, 1 + len(cases) % 3)
+        case = m25._case_design(split, 1)
         case.update({
             "case_id": registered["case_id"],
             "analysis_id": _gradient_analysis_id(registered["case_id"]),
             "positive": registered["condition"] == "known_target_positive_control",
             "target_length": len(target), "coverage": 48,
+            "gc_fraction": 0.5, "background_gc_fraction": 0.5,
+            "m25_replicate": 1,
             "m25_read_length": 100, "error_rate": 0.0,
             "insertion_rate": 0.0, "deletion_rate": 0.0,
             "divergence": 0.45, "repeat_complexity": "low",
