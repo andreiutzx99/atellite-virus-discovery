@@ -268,6 +268,10 @@ def audit_m25_generator(*, seed: int = 360001, target_to_background: str | None 
 
 def create_restricted_sidecar(path: str | Path, entries: list[dict]) -> dict:
     """Write evaluator-only mappings with restrictive file permissions."""
+    if os.name == "nt":
+        raise PermissionError(
+            "Windows ACL ownership cannot be verified by this sidecar writer"
+        )
     destination = Path(path)
     if not isinstance(entries, list) or not entries:
         raise ValueError("sidecar entries are required")
@@ -305,6 +309,10 @@ def create_restricted_sidecar(path: str | Path, entries: list[dict]) -> dict:
 
 def preserve_restricted_raw_evidence(root: str | Path, artifacts: dict[str, bytes]) -> dict:
     """Store raw evidence bytes unchanged in a private tree and return digests."""
+    if os.name == "nt":
+        raise PermissionError(
+            "Windows ACL ownership cannot be verified by this raw-evidence writer"
+        )
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     if root.stat().st_mode & 0o077:

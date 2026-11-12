@@ -1,5 +1,6 @@
 import gzip
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -62,6 +63,19 @@ class M36PreparationTests(unittest.TestCase):
     def test_sidecar_is_opaque_and_owner_only(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "restricted" / "evaluator.json"
+            if os.name == "nt":
+                with self.assertRaisesRegex(PermissionError, "ACL"):
+                    create_restricted_sidecar(path, [{
+                        "family_id": "f01", "split": "held_out",
+                        "truth": "synthetic", "factor": "coverage_24",
+                        "condition": "c01",
+                    }])
+                with self.assertRaisesRegex(PermissionError, "ACL"):
+                    preserve_restricted_raw_evidence(
+                        Path(folder) / "raw", {"raw/tool.log": b"restricted"}
+                    )
+                self.assertFalse(path.exists())
+                return
             result = create_restricted_sidecar(path, [{
                 "family_id": "f01", "split": "held_out", "truth": "synthetic",
                 "factor": "coverage_24", "condition": "c01",
