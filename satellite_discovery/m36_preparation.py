@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import subprocess
 
 
 CASE_ID = re.compile(r"case-[a-f0-9]{24}\Z")
@@ -417,12 +418,57 @@ def validate_truth_support_crosswalk(
     if not supported or not supported_contigs:
         return {"generation": "PASS", "assembly": "CONTIGS_EMITTED",
                 "support": "NO_SUPPORTED_ASSEMBLY", "downstream_handoff": "NOT_EVALUATED"}
+    placements = support_evidence.get("read_placements")
+    if not isinstance(placements, list) or not placements:
+        raise ValueError("support evidence lacks read-to-contig alignment placements")
+    placed_reads = set()
+    for placement in placements:
+        if not isinstance(placement, dict):
+            raise ValueError("malformed read-placement row")
+        read_id, contig_id = placement.get("read_id"), placement.get("contig_id")
+        start, cigar = placement.get("start"), placement.get("cigar")
+        if (read_id not in supported or contig_id not in supported_contigs
+                or read_id in placed_reads or type(start) is not int or start < 0
+                or not isinstance(cigar, str)):
+            raise ValueError("read placement has invalid identity or coordinates")
+        ops = re.findall(r"(\d+)([M=XID])", cigar)
+        if not ops or "".join(count + op for count, op in ops) != cigar:
+            raise ValueError("read placement has malformed CIGAR")
+        query_pos = 0
+        ref_pos = start
+        read = read_sequences[read_id].upper()
+        contig = contigs[contig_id].upper()
+        for count_text, operation in ops:
+            count = int(count_text)
+            if count <= 0:
+                raise ValueError("read placement has non-positive CIGAR length")
+            if operation in "M=X":
+                query_part = read[query_pos:query_pos + count]
+                ref_part = contig[ref_pos:ref_pos + count]
+                if len(query_part) != count or len(ref_part) != count:
+                    raise ValueError("read placement extends beyond its read or contig")
+                if operation == "=" and query_part != ref_part:
+                    raise ValueError("read placement '=' operation disagrees with sequences")
+                if operation == "X" and query_part == ref_part:
+                    raise ValueError("read placement 'X' operation has no mismatch")
+                query_pos += count
+                ref_pos += count
+            elif operation == "I":
+                query_pos += count
+            else:
+                ref_pos += count
+        if query_pos != len(read):
+            raise ValueError("read placement does not account for the complete read")
+        placed_reads.add(read_id)
+    if not supported <= placed_reads:
+        raise ValueError("not every supported read has an actual contig placement")
     return {
         "generation": "PASS",
         "assembly": "CONTIGS_EMITTED",
         "support": "READ_SUPPORTED_ASSEMBLY",
         "supported_read_count": len(supported),
         "supported_contig_count": len(supported_contigs),
+        "verified_read_placement_count": len(placed_reads),
         "downstream_handoff": "NOT_EVALUATED",
     }
 
@@ -472,8 +518,79 @@ def inspect_assembler_provenance() -> dict:
     }
 
 
-def validate_readiness(design: dict, evidence: dict) -> dict:
-    """Evaluate preparation gates. A PASS here never authorizes matrix execution."""
+def _actual_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_revision(root: Path) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True, timeout=10,
+        )
+        value = result.stdout.strip()
+        return value if re.fullmatch(r"[0-9a-f]{40,64}", value) else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _checkout_is_clean(root: Path) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain=v1", "--untracked-files=no"],
+            check=True, capture_output=True, text=True, timeout=10,
+        )
+        return not result.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def verify_evidence_files(evidence: dict, *, root: str | Path) -> dict:
+    """Recompute manifest-bound evidence digests from regular files under root."""
+    root = Path(root).resolve()
+    manifest = evidence.get("evidence_files")
+    if not isinstance(manifest, list) or not manifest:
+        return {"status": "BLOCKED", "files": [], "reason": "evidence file manifest is missing"}
+    verified = []
+    seen = set()
+    for row in manifest:
+        if not isinstance(row, dict):
+            return {"status": "BLOCKED", "files": verified, "reason": "malformed evidence manifest row"}
+        relative, expected = row.get("path"), row.get("sha256")
+        if (not isinstance(relative, str) or not relative
+                or not isinstance(expected, str) or not SHA256.fullmatch(expected)):
+            return {"status": "BLOCKED", "files": verified, "reason": "invalid path or expected digest"}
+        candidate = Path(relative)
+        if candidate.is_absolute() or any(part in ("", ".", "..") for part in candidate.parts):
+            return {"status": "BLOCKED", "files": verified, "reason": "unsafe evidence path"}
+        raw_path = root / candidate
+        path = raw_path.resolve()
+        has_symlink_component = any(
+            (root.joinpath(*candidate.parts[:index])).is_symlink()
+            for index in range(1, len(candidate.parts) + 1)
+        )
+        if (has_symlink_component or not path.is_relative_to(root)
+                or not path.is_file()):
+            return {"status": "BLOCKED", "files": verified, "reason": f"missing or unsafe evidence file: {relative}"}
+        if relative in seen:
+            return {"status": "BLOCKED", "files": verified, "reason": f"duplicate evidence path: {relative}"}
+        seen.add(relative)
+        actual = _actual_sha256(path)
+        verified.append({"path": relative, "expected_sha256": expected, "actual_sha256": actual})
+        if actual != expected:
+            return {"status": "BLOCKED", "files": verified, "reason": f"digest mismatch: {relative}"}
+    return {"status": "PASS", "files": verified}
+
+
+def validate_readiness(
+    design: dict, evidence: dict, *, root: str | Path | None = None,
+    design_path: str | Path | None = None,
+) -> dict:
+    """Evaluate pre-execution gates; never requires or invents execution outcomes."""
     assignments = registered_assignments(design)
     blockers = []
     checks = {
@@ -484,29 +601,46 @@ def validate_readiness(design: dict, evidence: dict) -> dict:
     }
     if len(assignments) != 520:
         blockers.append("registered assignment count is not 520")
-    required_hashes = evidence.get("hashes", {})
-    expected_hash_names = {"design", "source_commit", "generator", "inputs",
-                           "tool executables", "raw outputs", "artifact inventory", "archive"}
-    hashes_ok = expected_hash_names <= set(required_hashes) and all(
-        isinstance(required_hashes.get(key), str) and SHA256.fullmatch(required_hashes[key])
-        for key in expected_hash_names
+    root_path = Path(root).resolve() if root else Path.cwd().resolve()
+    file_report = verify_evidence_files(evidence, root=root_path)
+    design_digest = None
+    if design_path:
+        candidate = Path(design_path).resolve()
+        if candidate.is_file() and candidate.is_relative_to(root_path):
+            design_digest = _actual_sha256(candidate)
+    current_revision = _source_revision(root_path)
+    checkout_clean = _checkout_is_clean(root_path)
+    hashes_ok = (
+        file_report["status"] == "PASS"
+        and design_digest is not None
+        and evidence.get("design_sha256") == design_digest
+        and current_revision is not None
+        and evidence.get("source_commit") == current_revision
+        and checkout_clean
     )
-    checks["evidence_hashes"] = {"status": "PASS" if hashes_ok else "BLOCKED"}
+    checks["evidence_integrity"] = {
+        "status": "PASS" if hashes_ok else "BLOCKED",
+        "files": file_report.get("files", []),
+        "design_sha256": design_digest,
+        "source_commit": current_revision,
+        "checkout_clean": checkout_clean,
+        "reason": file_report.get("reason"),
+    }
     if not hashes_ok:
-        blockers.append("one or more required SHA-256 evidence digests are missing or malformed")
+        blockers.append("actual evidence files, design digest, or source commit do not match the expected manifest")
     tools = evidence.get("tools", {})
+    detected_tool_report = inspect_assembler_provenance()
+    detected_tools = detected_tool_report.get("tools", {})
+    identity_fields = (
+        "available", "version", "executable_sha256", "runtime_sha256",
+        "archive_sha256",
+    )
     tools_ok = all(
         isinstance(tools.get(name), dict)
-        and tools[name].get("available") is True
-        and bool(tools[name].get("version"))
-        and isinstance(tools[name].get("executable_sha256"), str)
-        and SHA256.fullmatch(tools[name]["executable_sha256"])
+        and detected_tools.get(name, {}).get("status") == "PASS"
+        and all(tools[name].get(field) == detected_tools[name].get(field)
+                for field in identity_fields)
         for name in ("spades", "tadpole")
-    )
-    tools_ok = tools_ok and (
-        isinstance(tools.get("tadpole"), dict)
-        and SHA256.fullmatch(str(tools["tadpole"].get("archive_sha256", "")))
-        and SHA256.fullmatch(str(tools["tadpole"].get("runtime_sha256", "")))
     )
     checks["assembler_provenance"] = {"status": "PASS" if tools_ok else "BLOCKED"}
     if not tools_ok:
@@ -557,33 +691,22 @@ def validate_readiness(design: dict, evidence: dict) -> dict:
     checks["one_vcpu_limit"] = {"status": "PASS" if cpu_ok else "BLOCKED"}
     if not cpu_ok:
         blockers.append("one-vCPU enforcement is not evidenced; CPU budget remains conditional")
-    statuses = evidence.get("assignment_statuses")
-    status_ok = isinstance(statuses, list) and len(statuses) == 520
-    if status_ok:
-        observed = []
-        for row in statuses:
-            if (not isinstance(row, dict)
-                    or row.get("status") not in TERMINAL_STATUSES
-                    or not all(isinstance(row.get(key), str) for key in (
-                        "block_id", "family_id", "condition_id", "repeat_id", "assembler_id"
-                    ))
-                    or not SHA256.fullmatch(str(row.get("evidence_sha256", "")))):
-                status_ok = False
-                break
-            observed.append((
-                row["block_id"], row["family_id"], row["condition_id"],
-                row["repeat_id"], row["assembler_id"],
-            ))
-        expected_assignments = {
-            (row["block_id"], row["family_id"], row["condition_id"],
-             row["repeat_id"], row["assembler_id"])
-            for row in assignments
-        }
-        status_ok = (status_ok and len(set(observed)) == 520
-                     and set(observed) == expected_assignments)
-    checks["status_accounting"] = {"status": "PASS" if status_ok else "BLOCKED"}
-    if not status_ok:
-        blockers.append("complete 520-row status and evidence accounting is absent or invalid")
+    # The roster is a plan, not an execution receipt. Every blocked assignment
+    # carries the gate reasons; no attempt result or raw-output digest is made up.
+    pre_execution_ready = not blockers
+    assignment_manifest = [
+        {**row, "status": "PLANNED" if pre_execution_ready else "BLOCKED",
+         **({} if pre_execution_ready else {"blocked_reasons": list(blockers)})}
+        for row in assignments
+    ]
+    checks["assignment_accounting"] = {
+        "status": "PASS" if len(assignment_manifest) == 520 else "BLOCKED",
+        "planned": sum(row["status"] == "PLANNED" for row in assignment_manifest),
+        "blocked": sum(row["status"] == "BLOCKED" for row in assignment_manifest),
+        "execution_outcomes_required": False,
+    }
+    if len(assignment_manifest) != 520:
+        blockers.append("pre-execution assignment roster does not cover the registered denominator")
     governance = design.get("governance", {})
     governance_ok = (
         design.get("status") == "DESIGN_ONLY"
@@ -597,11 +720,57 @@ def validate_readiness(design: dict, evidence: dict) -> dict:
     if not governance_ok:
         blockers.append("governance is not restricted to design/preparation-only work")
     return {
-        "schema": "m36-phase2a-readiness-v1",
-        "status": "BLOCKED" if blockers else "PREPARATION_GATES_PASS",
+        "schema": "m36-phase2a-pre-execution-readiness-v2",
+        "status": "BLOCKED" if blockers else "PRE-EXECUTION READY",
         "checks": checks,
         "blockers": blockers,
         "registered_assignment_count": len(assignments),
+        "assignment_manifest": assignment_manifest,
+        "execution_statuses": None,
         "matrix_execution_performed": False,
         "phase2b_authorized": False,
+    }
+
+
+def validate_post_execution_results(
+    design: dict, statuses: list[dict], *, root: str | Path,
+) -> dict:
+    """Validate terminal results only when each row binds to actual evidence bytes."""
+    assignments = registered_assignments(design)
+    expected = {
+        (row["block_id"], row["family_id"], row["condition_id"],
+         row["repeat_id"], row["assembler_id"])
+        for row in assignments
+    }
+    observed = []
+    valid = isinstance(statuses, list) and len(statuses) == len(assignments)
+    evidence_files = []
+    if valid:
+        for row in statuses:
+            if (not isinstance(row, dict) or row.get("status") not in TERMINAL_STATUSES
+                    or not all(isinstance(row.get(key), str) for key in (
+                        "block_id", "family_id", "condition_id", "repeat_id", "assembler_id"
+                    ))
+                    or not isinstance(row.get("evidence_path"), str)
+                    or not SHA256.fullmatch(str(row.get("evidence_sha256", "")))):
+                valid = False
+                break
+            evidence_files.append({
+                "path": row["evidence_path"], "sha256": row["evidence_sha256"],
+            })
+            observed.append((
+                row["block_id"], row["family_id"], row["condition_id"],
+                row["repeat_id"], row["assembler_id"],
+            ))
+        valid = valid and len(set(observed)) == len(assignments) and set(observed) == expected
+        verified = verify_evidence_files({"evidence_files": evidence_files}, root=root)
+        valid = valid and verified["status"] == "PASS"
+    else:
+        verified = {"status": "BLOCKED"}
+    return {
+        "schema": "m36-phase2a-post-execution-validation-v1",
+        "status": "PASS" if valid else "BLOCKED",
+        "registered_assignment_count": len(assignments),
+        "terminal_result_count": len(statuses) if isinstance(statuses, list) else 0,
+        "evidence_integrity": verified,
     }

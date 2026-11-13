@@ -13,7 +13,9 @@ from satellite_discovery.m36_preparation import (
     registered_assignments,
     validate_blinded_artifacts,
     validate_readiness,
+    validate_post_execution_results,
     validate_truth_support_crosswalk,
+    verify_evidence_files,
     _read_fastq_bytes,
 )
 from satellite_discovery.m36_preparation import _sha
@@ -122,6 +124,42 @@ class M36PreparationTests(unittest.TestCase):
                 case_ids={case},
             )
 
+    def test_synthetic_blind_handoff_scans_paths_commands_manifests_and_logs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            if os.name == "nt":
+                self.skipTest("Owner-only evaluator sidecar cannot be verified on Windows")
+            sidecar_path = Path(folder) / "restricted" / "evaluator.json"
+            create_restricted_sidecar(sidecar_path, [{
+                "family_id": "f01", "split": "held_out", "truth": "ACGT",
+                "factor": "coverage_24", "condition": "c01",
+            }])
+            sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+            opaque = sidecar["entries"][0]["opaque_case_id"]
+            fastq = gzip.compress(
+                f"@{opaque}-r00001\nACGT\n+\nIIII\n".encode("ascii")
+            )
+            visible = {
+                f"runs/{opaque}/reads.fastq.gz": fastq,
+                f"runs/stage-{('b' * 24)}-s01/manifest.json":
+                    json.dumps({"stage_id": "stage-" + "b" * 24 + "-s01"}),
+                "commands/assembler.txt": f"assembler reads/{opaque}/reads.fastq.gz",
+                "logs/sanitized.log": f"completed {opaque}",
+            }
+            validate_blinded_artifacts(
+                visible, case_ids={opaque},
+                forbidden_values={"held_out", "coverage_24", "ACGT"},
+            )
+            for name, value in (
+                ("commands/argv.txt", "run --condition coverage_24"),
+                ("logs/sanitized.log", "split=held_out"),
+                ("runs/held_out/reads.fastq", "@r1\nACGT\n+\nIIII\n"),
+            ):
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    validate_blinded_artifacts(
+                        {name: value}, case_ids={opaque},
+                        forbidden_values={"held_out", "coverage_24", "ACGT"},
+                    )
+
     def test_malformed_fastq_and_unavailable_registered_condition_fail_closed(self):
         for payload in (
             b"not-gzip",
@@ -158,10 +196,31 @@ class M36PreparationTests(unittest.TestCase):
                 "supported_contig_ids": ["contig-1"],
                 "supported_read_sha256": {"read-1": _sha(b"ACGT")},
                 "supported_contig_sha256": {"contig-1": _sha(truth.encode("ascii"))},
+                "read_placements": [{
+                    "read_id": "read-1", "contig_id": "contig-1",
+                    "start": 0, "cigar": "4=",
+                }],
             },
         )
         self.assertEqual(supported["support"], "READ_SUPPORTED_ASSEMBLY")
+        self.assertEqual(supported["verified_read_placement_count"], 1)
         self.assertEqual(supported["downstream_handoff"], "NOT_EVALUATED")
+        mismatched_placement = {
+            "supported_read_ids": ["read-1"],
+            "supported_contig_ids": ["contig-1"],
+            "supported_read_sha256": {"read-1": _sha(b"ACGT")},
+            "supported_contig_sha256": {"contig-1": _sha(truth.encode("ascii"))},
+            "read_placements": [{
+                "read_id": "read-1", "contig_id": "contig-1",
+                "start": 1, "cigar": "4=",
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, "disagrees with sequences"):
+            validate_truth_support_crosswalk(
+                truth_sequence=truth, read_sequences=reads, placement_ledger=ledger,
+                contigs={"contig-1": truth},
+                support_evidence=mismatched_placement,
+            )
         bad = {"read_provenance": {"read-1": {
             **ledger["read_provenance"]["read-1"], "source_record_sha256": "0" * 64
         }}}
@@ -179,47 +238,67 @@ class M36PreparationTests(unittest.TestCase):
         self.assertFalse(report["phase2b_authorized"])
         self.assertEqual(report["checks"]["governance_restrictions"]["status"], "PASS")
         self.assertEqual(report["checks"]["one_vcpu_limit"]["status"], "BLOCKED")
-        self.assertEqual(report["checks"]["status_accounting"]["status"], "BLOCKED")
+        self.assertEqual(report["checks"]["assignment_accounting"]["status"], "PASS")
+        self.assertEqual(report["checks"]["assignment_accounting"]["blocked"], 520)
+        self.assertTrue(all(
+            row["status"] == "BLOCKED" and row["blocked_reasons"]
+            for row in report["assignment_manifest"]
+        ))
+        self.assertIsNone(report["execution_statuses"])
+        self.assertNotIn("status_accounting", report["checks"])
 
+    def test_evidence_manifest_recomputes_digest_and_rejects_placeholders(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            payload = b"actual fixture evidence\n"
+            (root / "evidence.bin").write_bytes(payload)
+            good = verify_evidence_files({
+                "evidence_files": [{
+                    "path": "evidence.bin", "sha256": _sha(payload),
+                }],
+            }, root=root)
+            self.assertEqual(good["status"], "PASS")
+            wrong = verify_evidence_files({
+                "evidence_files": [{
+                    "path": "evidence.bin", "sha256": "a" * 64,
+                }],
+            }, root=root)
+            self.assertEqual(wrong["status"], "BLOCKED")
+            self.assertIn("digest mismatch", wrong["reason"])
+            malformed = verify_evidence_files({
+                "evidence_files": [{"path": "evidence.bin", "sha256": "a" * 63}],
+            }, root=root)
+            self.assertEqual(malformed["status"], "BLOCKED")
+            traversal = verify_evidence_files({
+                "evidence_files": [{"path": "../outside", "sha256": "a" * 64}],
+            }, root=root)
+            self.assertEqual(traversal["status"], "BLOCKED")
+
+    def test_post_execution_validation_is_separate_and_requires_exact_terminal_roster(self):
         assignments = registered_assignments(DESIGN)
-        evidence = {
-            "hashes": {name: "a" * 64 for name in (
-                "design", "source_commit", "generator", "inputs", "tool executables",
-                "raw outputs", "artifact inventory", "archive",
-            )},
-            "tools": {name: {"available": True, "version": "pinned",
-                             "executable_sha256": "b" * 64,
-                             **({"archive_sha256": "d" * 64, "runtime_sha256": "e" * 64}
-                                if name == "tadpole" else {})}
-                      for name in ("spades", "tadpole")},
-            "generator_audit": {
-                "status": "PASS", "deterministic_same_seed": True,
-                "target_absent_control": {"target_derived_reads": 0},
-                "one_to_nine_status": "PASS",
-            },
-            "blinding_audit": {
-                "sidecar_isolated": True, "raw_evidence_preserved": True,
-                "leakage_checks_passed": True,
-            },
-            "truth_support_crosswalk": {
-                "generation": "PASS", "assembly": "CONTIGS_EMITTED",
-                "support": "READ_SUPPORTED_ASSEMBLY",
-            },
-            "compatibility_smoke": {"status": "PASS"},
-            "resource_limits": {"max_vcpus_per_attempt": 1,
-                                "enforcement_verified": True,
-                                "enforcement_mechanism": "test cgroup"},
-            "assignment_statuses": [
-                {**row, "status": "COMPLETE", "evidence_sha256": "c" * 64}
-                for row in assignments
-            ],
-            "matrix_execution_requested": False,
-        }
-        passing = validate_readiness(DESIGN, evidence)
-        self.assertEqual(passing["status"], "PREPARATION_GATES_PASS")
-        evidence["assignment_statuses"].pop()
-        blocked = validate_readiness(DESIGN, evidence)
-        self.assertEqual(blocked["checks"]["status_accounting"]["status"], "BLOCKED")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            empty = validate_post_execution_results(DESIGN, [], root=root)
+            self.assertEqual(empty["status"], "BLOCKED")
+            self.assertEqual(empty["terminal_result_count"], 0)
+            actual = []
+            for index, row in enumerate(assignments):
+                path = root / f"evidence-{index:03d}.json"
+                payload = f"synthetic validator fixture {index}\n".encode()
+                path.write_bytes(payload)
+                actual.append({
+                    **row, "status": "COMPLETE", "evidence_path": path.name,
+                    "evidence_sha256": _sha(payload),
+                })
+            self.assertEqual(
+                validate_post_execution_results(DESIGN, actual, root=root)["status"],
+                "PASS",
+            )
+            actual[0]["evidence_sha256"] = "c" * 64
+            self.assertEqual(
+                validate_post_execution_results(DESIGN, actual, root=root)["status"],
+                "BLOCKED",
+            )
 
     def test_tool_inventory_never_runs_assembly(self):
         report = inspect_assembler_provenance()
