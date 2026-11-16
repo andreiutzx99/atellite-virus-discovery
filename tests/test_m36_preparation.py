@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from satellite_discovery.m36_preparation import (
+    _verified_ci_smoke_report,
     audit_m25_generator,
     create_restricted_sidecar,
     inspect_assembler_provenance,
@@ -27,6 +28,97 @@ DESIGN = json.loads(Path(__file__).resolve().parents[1].joinpath(
 
 
 class M36PreparationTests(unittest.TestCase):
+    def test_ci_smoke_evidence_requires_exact_run_commit_and_child_limits(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            smokes = []
+            for assembler in ("spades", "tadpole"):
+                for layout in ("single", "paired"):
+                    smokes.append({
+                        "assembler": assembler,
+                        "layout": layout,
+                        "status": "PASS",
+                        "resource_enforcement": {
+                            "status": "PASS",
+                            "mechanism": (
+                                "systemd transient service with cgroup-v2 "
+                                "CPUQuota and MemoryMax"
+                            ),
+                            "max_vcpus": 1.0,
+                            "memory_max_bytes": 4 * 1024**3,
+                            "child_process_inherited_cgroup": True,
+                        },
+                    })
+            report = {
+                "schema": "m36-phase2a-ci-contract-smoke-v1",
+                "status": "PASS",
+                "source_commit": "a" * 40,
+                "actions_run_id": "123456789",
+                "actions_run_attempt": "1",
+                "assemblies_executed": False,
+                "registered_matrix_executed": False,
+                "smokes": smokes,
+                "assembler_provenance": {
+                    "status": "PASS",
+                    "tools": {
+                        "spades": {
+                            "status": "PASS", "available": True,
+                            "version": "SPAdes v4.1.0",
+                            "executable_sha256": "c" * 64,
+                        },
+                        "tadpole": {
+                            "status": "PASS", "available": True,
+                            "version": "BBTools 40.01",
+                            "executable_sha256": "d" * 64,
+                            "runtime_sha256": "e" * 64,
+                            "archive_sha256":
+                                "36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725",
+                        },
+                    },
+                },
+                "design_budget_compatibility": {
+                    "max_concurrent_attempts": 4,
+                    "attempt_timeout_seconds": 180,
+                    "matrix_slot_hours": 26,
+                    "wall_time_hours_at_four_workers": 6.5,
+                    "within_total_wall_budget": True,
+                },
+            }
+            payload = json.dumps(report, sort_keys=True).encode("utf-8")
+            (root / "smoke.json").write_bytes(payload)
+            evidence = {
+                "compatibility_smoke": {
+                    "status": "PASS", "evidence_path": "smoke.json",
+                },
+                "resource_limits": {
+                    "max_vcpus_per_attempt": 1,
+                    "enforcement_verified": True, "evidence_path": "smoke.json",
+                },
+            }
+            files = {
+                "status": "PASS",
+                "files": [{
+                    "path": "smoke.json",
+                    "actual_sha256": _sha(payload),
+                }],
+            }
+            self.assertIsNotNone(_verified_ci_smoke_report(
+                evidence, files, root=root, source_commit="a" * 40,
+            ))
+            self.assertIsNone(_verified_ci_smoke_report(
+                evidence, files, root=root, source_commit="b" * 40,
+            ))
+            report["smokes"][0]["resource_enforcement"][
+                "child_process_inherited_cgroup"
+            ] = False
+            (root / "smoke.json").write_text(json.dumps(report), encoding="utf-8")
+            files["files"][0]["actual_sha256"] = _sha(
+                (root / "smoke.json").read_bytes()
+            )
+            self.assertIsNone(_verified_ci_smoke_report(
+                evidence, files, root=root, source_commit="a" * 40,
+            ))
+
     def test_registry_expands_to_all_520_unique_assignments(self):
         assignments = registered_assignments(DESIGN)
         self.assertEqual(len(assignments), 520)

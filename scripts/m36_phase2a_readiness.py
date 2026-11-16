@@ -56,6 +56,7 @@ def main() -> int:
         "assembler_provenance": provenance,
         "registered_assignments": registered_assignments(DESIGN),
         "registered_matrix_executed": False,
+        "registered_matrix_status": "NOT_RUN",
     }
     rendered = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:

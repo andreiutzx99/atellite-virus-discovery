@@ -586,6 +586,96 @@ def verify_evidence_files(evidence: dict, *, root: str | Path) -> dict:
     return {"status": "PASS", "files": verified}
 
 
+def _verified_ci_smoke_report(
+    evidence: dict, file_report: dict, *, root: Path, source_commit: str | None,
+) -> dict | None:
+    """Load the exact retained CI report, never trust caller-supplied booleans."""
+    references = {
+        evidence.get("compatibility_smoke", {}).get("evidence_path"),
+        evidence.get("resource_limits", {}).get("evidence_path"),
+    }
+    if len(references) != 1:
+        return None
+    relative = next(iter(references))
+    if not isinstance(relative, str):
+        return None
+    verified = {
+        row["path"]: row["actual_sha256"]
+        for row in file_report.get("files", [])
+        if isinstance(row, dict) and isinstance(row.get("path"), str)
+    }
+    if relative not in verified:
+        return None
+    try:
+        path = root / relative
+        if path.is_symlink() or not path.is_file() or _actual_sha256(path) != verified[relative]:
+            return None
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if (
+        report.get("schema") != "m36-phase2a-ci-contract-smoke-v1"
+        or report.get("status") != "PASS"
+        or report.get("source_commit") != source_commit
+        or not isinstance(report.get("actions_run_id"), str)
+        or not report["actions_run_id"].isdigit()
+        or not isinstance(report.get("actions_run_attempt"), str)
+        or not report["actions_run_attempt"].isdigit()
+        or report.get("assemblies_executed") is not False
+        or report.get("registered_matrix_executed") is not False
+    ):
+        return None
+    smokes = report.get("smokes")
+    expected = {
+        ("spades", "single"), ("spades", "paired"),
+        ("tadpole", "single"), ("tadpole", "paired"),
+    }
+    if not isinstance(smokes, list) or len(smokes) != 4:
+        return None
+    observed = set()
+    for smoke in smokes:
+        if not isinstance(smoke, dict) or smoke.get("status") != "PASS":
+            return None
+        key = (smoke.get("assembler"), smoke.get("layout"))
+        limits = smoke.get("resource_enforcement", {})
+        if (
+            key not in expected or key in observed
+            or limits.get("status") != "PASS"
+            or limits.get("mechanism")
+            != "systemd transient service with cgroup-v2 CPUQuota and MemoryMax"
+            or limits.get("max_vcpus") != 1.0
+            or limits.get("memory_max_bytes") != 4 * 1024**3
+            or limits.get("child_process_inherited_cgroup") is not True
+        ):
+            return None
+        observed.add(key)
+    budget = report.get("design_budget_compatibility", {})
+    tool_report = report.get("assembler_provenance", {})
+    tools = tool_report.get("tools", {})
+    if (
+        observed != expected
+        or tool_report.get("status") != "PASS"
+        or any(
+            not isinstance(tools.get(name), dict)
+            or tools[name].get("status") != "PASS"
+            or tools[name].get("available") is not True
+            or not isinstance(tools[name].get("version"), str)
+            or not SHA256.fullmatch(str(tools[name].get("executable_sha256", "")))
+            for name in ("spades", "tadpole")
+        )
+        or not SHA256.fullmatch(str(tools["tadpole"].get("runtime_sha256", "")))
+        or tools["tadpole"].get("archive_sha256")
+        != "36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725"
+        or budget.get("max_concurrent_attempts") != 4
+        or budget.get("attempt_timeout_seconds") != 180
+        or budget.get("matrix_slot_hours") != 26
+        or budget.get("wall_time_hours_at_four_workers") != 6.5
+        or budget.get("within_total_wall_budget") is not True
+    ):
+        return None
+    return report
+
+
 def validate_readiness(
     design: dict, evidence: dict, *, root: str | Path | None = None,
     design_path: str | Path | None = None,
@@ -610,6 +700,9 @@ def validate_readiness(
             design_digest = _actual_sha256(candidate)
     current_revision = _source_revision(root_path)
     checkout_clean = _checkout_is_clean(root_path)
+    ci_smoke = _verified_ci_smoke_report(
+        evidence, file_report, root=root_path, source_commit=current_revision,
+    )
     hashes_ok = (
         file_report["status"] == "PASS"
         and design_digest is not None
@@ -678,17 +771,25 @@ def validate_readiness(
     if not crosswalk_ok:
         blockers.append("truth-to-support crosswalk has not passed the synthetic compatibility fixture")
     compatibility = evidence.get("compatibility_smoke", {})
-    compatibility_ok = compatibility.get("status") == "PASS"
+    compatibility_ok = (
+        compatibility.get("status") == "PASS" and ci_smoke is not None
+    )
     checks["assembler_compatibility"] = {
         "status": "PASS" if compatibility_ok else "BLOCKED"
     }
     if not compatibility_ok:
         blockers.append("assembler input/output compatibility smoke check is missing or failed")
     resource = evidence.get("resource_limits", {})
-    cpu_ok = (resource.get("max_vcpus_per_attempt") == 1
-              and resource.get("enforcement_verified") is True
-              and bool(resource.get("enforcement_mechanism")))
-    checks["one_vcpu_limit"] = {"status": "PASS" if cpu_ok else "BLOCKED"}
+    cpu_ok = (
+        resource.get("max_vcpus_per_attempt") == 1
+        and resource.get("enforcement_verified") is True
+        and ci_smoke is not None
+    )
+    checks["one_vcpu_limit"] = {
+        "status": "PASS" if cpu_ok else "BLOCKED",
+        "evidence_run_id": ci_smoke.get("actions_run_id") if ci_smoke else None,
+        "mechanism": "cgroup-v2 CPUQuota" if cpu_ok else None,
+    }
     if not cpu_ok:
         blockers.append("one-vCPU enforcement is not evidenced; CPU budget remains conditional")
     # The roster is a plan, not an execution receipt. Every blocked assignment

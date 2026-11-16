@@ -384,3 +384,57 @@ jobs:
         env:
           RUN_OPTIONAL_TOOL_TESTS: '1'
           M21_SKIP_PHASE7B_REPLAY_TESTS: '1'
+
+  m36-phase2a-contract-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Provision the Linux assemblers for synthetic contracts only
+        run: sudo apt-get update && sudo apt-get install -y spades default-jre-headless
+      - name: Verify per-attempt cgroup limits and both assembler contracts
+        run: |
+          set -euo pipefail
+          test -x "$(command -v systemd-run)"
+          test -f /sys/fs/cgroup/cgroup.controllers
+          python scripts/m36_ci_contract_smoke.py \
+            --output "$RUNNER_TEMP/m36-phase2a-contract-smoke"
+      - name: Write the canonical 520-assignment readiness report
+        shell: bash
+        run: |
+          set +e
+          python scripts/m36_phase2a_readiness.py \
+            --output "$RUNNER_TEMP/m36-phase2a-contract-smoke/m36_phase2a_readiness.json"
+          result=$?
+          set -e
+          if [ "$result" -ne 2 ]; then
+            echo "Expected fail-closed readiness exit 2; received $result."
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/m36-phase2a-contract-smoke/m36_phase2a_readiness.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          readiness = report["readiness"]
+          assert len(report["registered_assignments"]) == 520
+          assert readiness["registered_assignment_count"] == 520
+          assert readiness["matrix_execution_performed"] is False
+          assert readiness["phase2b_authorized"] is False
+          assert report["registered_matrix_status"] == "NOT_RUN"
+          assert all(row["status"] == "BLOCKED" for row in readiness["assignment_manifest"])
+          print("Readiness report contains all 520 blocked assignments; matrix is NOT_RUN.")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m36-phase2a-contract-smoke
+          path: ${{ runner.temp }}/m36-phase2a-contract-smoke/
+          if-no-files-found: error
+          retention-days: 30

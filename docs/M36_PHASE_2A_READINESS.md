@@ -23,6 +23,12 @@ endpoints remain unchanged.
 - Recomputes SHA-256 for manifest-listed evidence files and binds the design
   digest and source commit to the current checkout. Tool provenance must match
   the installed tool report exactly.
+- Uses an isolated GitHub Actions synthetic-smoke job to request a Linux
+  cgroup-v2 `CPUQuota=100%`, `MemoryMax=4 GiB`, and `TasksMax=512` for each
+  SPAdes/Tadpole single- or paired-read compatibility attempt. The smoke checks
+  the kernel-reported limits and verifies a child process remains in the same
+  cgroup. Its retained report binds the evidence to the exact Actions run and
+  source commit.
 - Emits all 520 registered assignments as `PLANNED` or `BLOCKED` with reasons.
   Pre-execution readiness never requires terminal results or raw execution
   evidence and never fabricates completed attempts.
@@ -35,17 +41,28 @@ endpoints remain unchanged.
 ## Known gate states
 
 The generator, blinded-sidecar, leakage, registry, and synthetic crosswalk
-checks can be exercised with synthetic fixtures. Exact SPAdes identity remains
-environment-dependent; Tadpole must also pass its pinned archive/runtime
-verification. Current adapters pass thread and memory arguments but do not
-provide hard OS CPU quotas, so the 26 CPU-hour estimate remains conditional
-until an enforcement mechanism is evidenced or a revised bounded budget is
-reviewed. Pre-execution readiness requires the full planned/blocked assignment
-roster; terminal outcomes and raw-output hashes belong only to the separate
+checks can be exercised with synthetic fixtures. The new Actions job must
+actually pass before its tool and cgroup evidence can count; local availability
+or thread settings alone do not prove a hard CPU cap. With 520 attempts capped
+at 180 seconds and four concurrent attempts, the preregistered execution
+window is 6.5 hours, plus 0.75 hours each for setup/teardown and validation,
+fitting the 8-hour budget exactly. This is a capacity calculation, not a
+measured runtime guarantee.
+
+If the intended runner cannot provide verifiable cgroup enforcement, a
+separate review proposal is to run one attempt at a time on a verified
+two-vCPU runner, preserve the 180-second attempt timeout, 4 GiB memory and
+400 MB output ceilings, disable automatic retries, and increase the total
+window to 28 hours (26 attempt-hours plus the 1.5-hour reserve, rounded up).
+This changes concurrency and the wall-time budget and must not replace the
+frozen design without independent approval.
+
+Pre-execution readiness requires the full planned/blocked assignment roster;
+terminal outcomes and raw-output hashes belong only to the separate
 post-execution validator. The checker fails closed when installed tool
 identities, actual evidence-file digests, source/design binding, compatibility
-smoke evidence, or resource-limit evidence are absent. The current draft does
-not authorize Phase 2B.
+smoke evidence, or resource-limit evidence are absent. The CI report marks the
+registered matrix `NOT_RUN`; it does not authorize Phase 2B.
 
 ## Command
 
@@ -54,6 +71,9 @@ readiness and blockers. `--evidence PATH` supplies the evaluator's evidence
 manifest; `--audit-one-to-nine` additionally checks the exact ratio with a
 small synthetic fixture. `--output PATH` writes the canonical JSON report,
 including the complete assignment roster and current environment provenance.
+The `m36-phase2a-contract-smoke` Actions job retains the four bounded synthetic
+assembler smokes and the full readiness report as the
+`m36-phase2a-contract-smoke` artifact.
 Exit status 2 means one or more readiness gates remain blocked. The separate
 post-execution validator accepts only a complete terminal roster with
 evidence digests. Neither command executes the registered matrix.
