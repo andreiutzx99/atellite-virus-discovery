@@ -427,9 +427,10 @@ def validate_truth_support_crosswalk(
             raise ValueError("malformed read-placement row")
         read_id, contig_id = placement.get("read_id"), placement.get("contig_id")
         start, cigar = placement.get("start"), placement.get("cigar")
+        strand = placement.get("strand", "+")
         if (read_id not in supported or contig_id not in supported_contigs
                 or read_id in placed_reads or type(start) is not int or start < 0
-                or not isinstance(cigar, str)):
+                or not isinstance(cigar, str) or strand not in ("+", "-")):
             raise ValueError("read placement has invalid identity or coordinates")
         ops = re.findall(r"(\d+)([M=XID])", cigar)
         if not ops or "".join(count + op for count, op in ops) != cigar:
@@ -437,6 +438,8 @@ def validate_truth_support_crosswalk(
         query_pos = 0
         ref_pos = start
         read = read_sequences[read_id].upper()
+        if strand == "-":
+            read = read.translate(str.maketrans("ACGTN", "TGCAN"))[::-1]
         contig = contigs[contig_id].upper()
         for count_text, operation in ops:
             count = int(count_text)

@@ -322,6 +322,33 @@ class M36PreparationTests(unittest.TestCase):
                 contigs={}, support_evidence={},
             )
 
+    def test_truth_to_support_crosswalk_validates_reverse_strand_reads(self):
+        truth = "AACCGGTT"
+        reads = {"read-1": "AACC"}
+        ledger = {"read_provenance": {"read-1": {
+            "source_role": "target_truth", "source_interval": [0, 4],
+            "source_record_sha256": _sha(truth.encode("ascii")),
+            "source_sequence_sha256": _sha(b"AACC"),
+        }}}
+        result = validate_truth_support_crosswalk(
+            truth_sequence=truth,
+            read_sequences=reads,
+            placement_ledger=ledger,
+            contigs={"contig-1": truth},
+            support_evidence={
+                "supported_read_ids": ["read-1"],
+                "supported_contig_ids": ["contig-1"],
+                "supported_read_sha256": {"read-1": _sha(b"AACC")},
+                "supported_contig_sha256": {"contig-1": _sha(truth.encode("ascii"))},
+                "read_placements": [{
+                    "read_id": "read-1", "contig_id": "contig-1",
+                    "start": 4, "cigar": "4=", "strand": "-",
+                }],
+            },
+        )
+        self.assertEqual(result["support"], "READ_SUPPORTED_ASSEMBLY")
+        self.assertEqual(result["verified_read_placement_count"], 1)
+
     def test_readiness_checker_blocks_missing_tools_budget_and_accounting(self):
         report = validate_readiness(DESIGN, {})
         self.assertEqual(report["status"], "BLOCKED")

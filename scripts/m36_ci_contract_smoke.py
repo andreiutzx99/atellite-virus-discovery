@@ -95,6 +95,11 @@ def validate_actual_read_support(output: Path, assembler: str, paired: bool) -> 
         if truth[start:end] != sequence:
             raise RuntimeError("generated synthetic read does not match its truth interval")
         contig_start = contig.find(sequence)
+        strand = "+"
+        if contig_start < 0:
+            reverse = sequence.translate(str.maketrans("ACGTN", "TGCAN"))[::-1]
+            contig_start = contig.find(reverse)
+            strand = "-"
         if contig_start < 0:
             continue
         supported_reads[read_id] = sequence
@@ -106,7 +111,7 @@ def validate_actual_read_support(output: Path, assembler: str, paired: bool) -> 
         }
         placements.append({
             "read_id": read_id, "contig_id": "contig-1",
-            "start": contig_start, "cigar": f"{len(sequence)}=",
+            "start": contig_start, "cigar": f"{len(sequence)}=", "strand": strand,
         })
     if not supported_reads:
         raise RuntimeError("assembled contig has no exact synthetic read placements")
@@ -348,9 +353,7 @@ def run_bounded_attempt(kind: str, paired: bool, output: Path, report_path: Path
         "sudo", "systemd-run", "--quiet", "--wait", "--pipe", "--collect",
         f"--unit={unit}",
         "--property=Type=exec",
-        "--property=CPUAccounting=yes",
         "--property=CPUQuota=100%",
-        "--property=MemoryAccounting=yes",
         f"--property=MemoryMax={MEMORY_MAX_BYTES}",
         "--property=TasksMax=512",
         f"--property=RuntimeMaxSec={SERVICE_TIMEOUT_SECONDS}s",
