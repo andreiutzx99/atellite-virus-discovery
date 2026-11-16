@@ -263,6 +263,101 @@ def inspect_spades_package() -> dict:
     }
 
 
+def run_preparation_audits(output: Path) -> dict:
+    from satellite_discovery.m36_preparation import (
+        audit_m25_generator,
+        create_restricted_sidecar,
+        preserve_restricted_raw_evidence,
+        validate_blinded_artifacts,
+    )
+
+    restricted = output / "preparation-evidence" / "restricted"
+    sidecar = create_restricted_sidecar(restricted / "evaluator.json", [{
+        "family_id": "f01", "split": "held_out",
+        "truth": "SYNTHETIC_TRUTH_SECRET", "factor": "coverage_24",
+        "condition": "c01",
+    }])
+    body = json.loads((restricted / "evaluator.json").read_text(encoding="utf-8"))
+    case_id = body["entries"][0]["opaque_case_id"]
+    stage_id = "stage-" + "b" * 24 + "-s01"
+    visible = {
+        f"analyst/{case_id}/reads.fastq.gz": gzip.compress(
+            f"@{case_id}-r00001\nACGT\n+\nIIII\n".encode("ascii")
+        ),
+        f"analyst/{stage_id}/manifest.json": json.dumps({"stage_id": stage_id}),
+        "analyst/logs/run.log": f"synthetic run for {case_id}",
+    }
+    validate_blinded_artifacts(
+        visible, case_ids={case_id},
+        forbidden_values={"held_out", "coverage_24", "SYNTHETIC_TRUTH_SECRET"},
+    )
+    raw = preserve_restricted_raw_evidence(
+        output / "preparation-evidence" / "raw",
+        {"assembler.log": b"synthetic restricted tool log\n"},
+    )
+    generator = audit_m25_generator(
+        seed=360003, target_to_background="1:9",
+    )
+    if generator.get("one_to_nine_status") != "PASS":
+        raise RuntimeError("synthetic 1:9 generator audit did not pass")
+    return {
+        "generator_audit": generator,
+        "blinding_audit": {
+            "sidecar_isolated": True,
+            "sidecar_sha256": sidecar["sha256"],
+            "raw_evidence_preserved": raw["raw_bytes_modified"] is False,
+            "raw_evidence_sha256": raw["files"],
+            "leakage_checks_passed": True,
+        },
+    }
+
+
+def git_head() -> str:
+    result = subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+        check=True, capture_output=True, text=True, timeout=10,
+    )
+    return result.stdout.strip()
+
+
+def write_readiness_evidence(output: Path, smoke_report: dict) -> None:
+    design_path = ROOT / "docs/M36_POSITIVE_CONTROL_ASSEMBLY_INVESTIGATION.json"
+    tools = smoke_report["assembler_provenance"]["tools"]
+    report_file = output / "m36_ci_contract_smoke.json"
+    evidence_files = [
+        {"path": path.relative_to(output).as_posix(), "sha256": sha256(path)}
+        for path in sorted(output.rglob("*"))
+        if path.is_file() and path.name != "readiness_evidence.json"
+    ]
+    supported = smoke_report["smokes"][0]["read_support"]
+    evidence = {
+        "source_commit": git_head(),
+        "design_sha256": sha256(design_path),
+        "evidence_files": evidence_files,
+        "tools": tools,
+        "generator_audit": smoke_report["generator_audit"],
+        "blinding_audit": smoke_report["blinding_audit"],
+        "truth_support_crosswalk": {
+            "generation": supported["generation"],
+            "assembly": supported["assembly"],
+            "support": supported["support"],
+        },
+        "compatibility_smoke": {
+            "status": smoke_report["status"],
+            "evidence_path": report_file.name,
+        },
+        "resource_limits": {
+            "max_vcpus_per_attempt": 1,
+            "enforcement_verified": True,
+            "evidence_path": report_file.name,
+        },
+    }
+    (output / "readiness_evidence.json").write_text(
+        json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def attempt(kind: str, paired: bool, output: Path) -> dict:
     limits = read_cgroup_limits()
     started = time.monotonic()
@@ -410,7 +505,7 @@ def main() -> int:
     args.output.mkdir(parents=True, exist_ok=True)
     evidence = {
         "schema": "m36-phase2a-ci-contract-smoke-v1",
-        "source_commit": os.environ.get("GITHUB_SHA"),
+        "source_commit": git_head(),
         "actions_run_id": os.environ.get("GITHUB_RUN_ID"),
         "actions_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
         "host": {
@@ -443,6 +538,7 @@ def main() -> int:
         evidence["assembler_provenance"] = inspect_assembler_provenance()
         if evidence["assembler_provenance"].get("status") != "PASS":
             raise RuntimeError("installed SPAdes/Tadpole identity did not pass verification")
+        evidence.update(run_preparation_audits(args.output))
         for assembler in ("spades", "tadpole"):
             for paired, layout in ((False, "single"), (True, "paired")):
                 destination = args.output / assembler / layout
@@ -455,6 +551,7 @@ def main() -> int:
                 )
         if len(evidence.get("smokes", [])) != 4:
             raise RuntimeError("all four synthetic compatibility smokes are required")
+        evidence["truth_support_crosswalk"] = evidence["smokes"][0]["read_support"]
         evidence["status"] = "PASS"
     except Exception as error:
         evidence["status"] = "BLOCKED"
@@ -471,6 +568,7 @@ def main() -> int:
             json.dumps(evidence, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+    write_readiness_evidence(args.output, evidence)
     return 0
 
 

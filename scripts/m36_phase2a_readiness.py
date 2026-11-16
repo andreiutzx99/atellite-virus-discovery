@@ -31,6 +31,11 @@ def main() -> int:
         help="evaluator-side readiness evidence JSON; omit to show current blockers",
     )
     parser.add_argument(
+        "--evidence-root",
+        type=Path,
+        help="directory containing the actual files listed in the evidence manifest",
+    )
+    parser.add_argument(
         "--audit-one-to-nine",
         action="store_true",
         help="run the small synthetic 1:9 generator fixture only",
@@ -46,6 +51,7 @@ def main() -> int:
     readiness = validate_readiness(
         DESIGN, evidence, root=ROOT,
         design_path=ROOT / "docs/M36_POSITIVE_CONTROL_ASSEMBLY_INVESTIGATION.json",
+        evidence_root=args.evidence_root,
     )
     result = {
         "schema": "m36-phase2a-pre-execution-report-v1",

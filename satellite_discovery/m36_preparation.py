@@ -655,9 +655,11 @@ def _verified_ci_smoke_report(
     budget = report.get("design_budget_compatibility", {})
     tool_report = report.get("assembler_provenance", {})
     tools = tool_report.get("tools", {})
+    spades_package = report.get("spades_package", {})
     if (
         observed != expected
         or tool_report.get("status") != "PASS"
+        or not SHA256.fullmatch(str(spades_package.get("runtime_tree_sha256", "")))
         or any(
             not isinstance(tools.get(name), dict)
             or tools[name].get("status") != "PASS"
@@ -682,6 +684,7 @@ def _verified_ci_smoke_report(
 def validate_readiness(
     design: dict, evidence: dict, *, root: str | Path | None = None,
     design_path: str | Path | None = None,
+    evidence_root: str | Path | None = None,
 ) -> dict:
     """Evaluate pre-execution gates; never requires or invents execution outcomes."""
     assignments = registered_assignments(design)
@@ -695,7 +698,8 @@ def validate_readiness(
     if len(assignments) != 520:
         blockers.append("registered assignment count is not 520")
     root_path = Path(root).resolve() if root else Path.cwd().resolve()
-    file_report = verify_evidence_files(evidence, root=root_path)
+    evidence_root_path = Path(evidence_root).resolve() if evidence_root else root_path
+    file_report = verify_evidence_files(evidence, root=evidence_root_path)
     design_digest = None
     if design_path:
         candidate = Path(design_path).resolve()
@@ -704,7 +708,7 @@ def validate_readiness(
     current_revision = _source_revision(root_path)
     checkout_clean = _checkout_is_clean(root_path)
     ci_smoke = _verified_ci_smoke_report(
-        evidence, file_report, root=root_path, source_commit=current_revision,
+        evidence, file_report, root=evidence_root_path, source_commit=current_revision,
     )
     hashes_ok = (
         file_report["status"] == "PASS"
@@ -717,6 +721,7 @@ def validate_readiness(
     checks["evidence_integrity"] = {
         "status": "PASS" if hashes_ok else "BLOCKED",
         "files": file_report.get("files", []),
+        "evidence_root": str(evidence_root_path),
         "design_sha256": design_digest,
         "source_commit": current_revision,
         "checkout_clean": checkout_clean,

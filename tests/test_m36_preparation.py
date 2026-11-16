@@ -76,6 +76,7 @@ class M36PreparationTests(unittest.TestCase):
                         },
                     },
                 },
+                "spades_package": {"runtime_tree_sha256": "f" * 64},
                 "design_budget_compatibility": {
                     "max_concurrent_attempts": 4,
                     "attempt_timeout_seconds": 180,

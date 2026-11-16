@@ -406,17 +406,11 @@ jobs:
           python scripts/m36_ci_contract_smoke.py \
             --output "$RUNNER_TEMP/m36-phase2a-contract-smoke"
       - name: Write the canonical 520-assignment readiness report
-        shell: bash
         run: |
-          set +e
           python scripts/m36_phase2a_readiness.py \
+            --evidence "$RUNNER_TEMP/m36-phase2a-contract-smoke/readiness_evidence.json" \
+            --evidence-root "$RUNNER_TEMP/m36-phase2a-contract-smoke" \
             --output "$RUNNER_TEMP/m36-phase2a-contract-smoke/m36_phase2a_readiness.json"
-          result=$?
-          set -e
-          if [ "$result" -ne 2 ]; then
-            echo "Expected fail-closed readiness exit 2; received $result."
-            exit 1
-          fi
           python - "$RUNNER_TEMP/m36-phase2a-contract-smoke/m36_phase2a_readiness.json" <<'PY'
           import json
           import sys
@@ -428,8 +422,10 @@ jobs:
           assert readiness["matrix_execution_performed"] is False
           assert readiness["phase2b_authorized"] is False
           assert report["registered_matrix_status"] == "NOT_RUN"
-          assert all(row["status"] == "BLOCKED" for row in readiness["assignment_manifest"])
-          print("Readiness report contains all 520 blocked assignments; matrix is NOT_RUN.")
+          assert readiness["status"] == "PRE-EXECUTION READY"
+          assert all(row["status"] == "PLANNED" for row in readiness["assignment_manifest"])
+          assert all(check["status"] == "PASS" for check in readiness["checks"].values())
+          print("All 520 assignments are readiness-checked; matrix is NOT_RUN.")
           PY
       - uses: actions/upload-artifact@v4
         if: always()
