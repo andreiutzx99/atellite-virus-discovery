@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from satellite_discovery.m36_preparation import (
@@ -236,9 +237,13 @@ class M36RunnerTests(unittest.TestCase):
                     "M36_RESOURCE_EVIDENCE " + json.dumps(proof) + "\nassembly ok\n",
                     "",
                 )
-            result = bounded_systemd_command(
-                ["spades.py", "-h"], cwd=folder, run=fake_run,
-            )
+            with (
+                patch("satellite_discovery.m36_runner.os", SimpleNamespace(name="posix")),
+                patch("satellite_discovery.m36_runner.Path.is_file", return_value=True),
+            ):
+                result = bounded_systemd_command(
+                    ["spades.py", "-h"], cwd=folder, run=fake_run,
+                )
         self.assertEqual(result["status"], "COMPLETE")
         self.assertEqual(result["enforcement_evidence"], proof)
 
