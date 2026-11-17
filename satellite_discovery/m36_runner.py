@@ -50,7 +50,7 @@ FROZEN_SEED_POLICY = {
     "family_seed_role": "independent_sequence_family",
     "read_seed_role": "independent_read_simulation",
     "technical_repeat_rule": "distinct_read_seed",
-    "paired_assembler_rule": "same_read_seed_within_assignment",
+    "paired_assembler_rule": "same_read_seed_across_paired_assembler_assignments",
 }
 
 
