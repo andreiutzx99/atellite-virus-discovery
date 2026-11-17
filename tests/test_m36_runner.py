@@ -33,6 +33,7 @@ from satellite_discovery.m36_runner import (
     FROZEN_SEED_POLICY,
     validate_input_identity,
     verify_byte_artifacts,
+    write_public_artifact,
     verify_tool_identity,
     run_registered_matrix,
 )
@@ -186,6 +187,23 @@ class M36RunnerTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(RunnerBlocked, "path"):
             verify_byte_artifacts({"../escape": b"bad"})
+
+    def test_public_artifact_is_created_without_overwriting(self):
+        payload = b"validated blinded synthetic result\n"
+        digest = hashlib.sha256(payload).hexdigest()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "case-opaque").mkdir()
+            self.assertEqual(
+                write_public_artifact(
+                    root, "case-opaque", "report.json", payload, digest,
+                ),
+                digest,
+            )
+            with self.assertRaises(FileExistsError):
+                write_public_artifact(
+                    root, "case-opaque", "report.json", b"replacement", digest,
+                )
 
     def test_scheduler_runs_only_small_synthetic_fixture_set(self):
         assignments = registered_assignments(DESIGN)[:3]
@@ -430,6 +448,10 @@ class M36RunnerTests(unittest.TestCase):
             )
             digest = store.write_bytes("attempts/raw.log", b"partial synthetic log")
             self.assertEqual(digest, _sha(b"partial synthetic log"))
+            self.assertEqual(
+                store.read_bytes("attempts/raw.log", expected_sha256=digest),
+                b"partial synthetic log",
+            )
             self.assertEqual(
                 store.inventory_directory("attempts"),
                 {"raw.log": digest},

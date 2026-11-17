@@ -226,6 +226,20 @@ class RestrictedEvidenceStore:
             "sha256": self.write_bytes(relative_path, content),
         }
 
+    def read_bytes(self, relative_path: str, *, expected_sha256: str) -> bytes:
+        target = self._target(relative_path)
+        if target.is_symlink() or not target.resolve(strict=True).is_relative_to(self.root):
+            raise RunnerBlocked("restricted evidence path is unsafe")
+        parent = target.parent
+        while parent != self.root:
+            self._assert_private_directory(parent)
+            parent = parent.parent
+        _secure_regular_file(target, owner_uid=os.geteuid())
+        content = target.read_bytes()
+        if hashlib.sha256(content).hexdigest() != expected_sha256:
+            raise RunnerBlocked("restricted evidence bytes changed after storage")
+        return content
+
     def load_manifest(self, path: str | Path) -> tuple[dict, str]:
         """Read the evaluator manifest only from this private store."""
         manifest_path = Path(path)

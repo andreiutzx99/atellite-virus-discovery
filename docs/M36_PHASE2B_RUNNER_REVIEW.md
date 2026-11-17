@@ -34,6 +34,8 @@ integrated, and independently reviewed.
 - Rehashes actual generated input bytes and analyst-facing output bytes. The
   runner checks paired-input identity and records exactly one terminal status
   per registered assignment, including unstarted, interrupted, and failed work.
+  Candidate outputs stay restricted until all run-level input-identity checks
+  pass; only completed, blinded outputs are copied into the public evidence tree.
 - The existing M36 contract-smoke workflow still uses only small, unregistered
   synthetic fixtures for SPAdes/Tadpole compatibility and read-support checks.
   Its restricted sidecar and raw-log audit files now live in a temporary

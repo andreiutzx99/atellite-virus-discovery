@@ -330,6 +330,48 @@ def verify_byte_artifacts(
     return normalized, digests
 
 
+def write_public_artifact(
+    public_root: Path, case_id: str, name: str, content: bytes, expected_sha256: str,
+) -> str:
+    relative = Path(name)
+    if (
+        not name or relative.is_absolute() or "\\" in name
+        or ":" in name.split("/", 1)[0]
+        or any(part in ("", ".", "..") for part in relative.parts)
+    ):
+        raise RunnerBlocked("public artifact path is malformed")
+    base = public_root / case_id
+    if base.is_symlink() or not base.is_dir():
+        raise RunnerBlocked("public attempt output directory is unsafe")
+    target = base
+    parts = relative.parts
+    for part in parts[:-1]:
+        target = target / part
+        if target.is_symlink():
+            raise RunnerBlocked("public artifact path contains a symlink")
+        target.mkdir(mode=0o755, exist_ok=True)
+        if not target.is_dir():
+            raise RunnerBlocked("public artifact parent is not a directory")
+    target = target / parts[-1]
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(target, flags, 0o644)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        observed = target.read_bytes()
+        digest = hashlib.sha256(observed).hexdigest()
+        if observed != content or digest != expected_sha256:
+            raise RunnerBlocked("public output bytes changed during storage")
+        return digest
+    except BaseException:
+        target.unlink(missing_ok=True)
+        raise
+
+
 def verify_tool_identity(expected: dict, observed: dict) -> None:
     """Bind both assembler identities and package/runtime digests before execution."""
     for name in ("spades", "tadpole"):
@@ -798,10 +840,9 @@ def run_registered_matrix(
 ) -> dict:
     """Coordinate the authorized registry; never called by tests or CI.
 
-    The injected stage adapter must consume the authenticated per-assignment
-    seeds and condition parameters, invoke each assembly through
-    :func:`bounded_systemd_command`, and return separate public and restricted
-    evidence. An operator signature verifier is mandatory.
+    Only the source-controlled M36 adapter class may perform registered work.
+    It must consume authenticated seeds/parameters, use
+    :func:`bounded_systemd_command`, and return separated evidence.
     """
     workflow_started = clock()
     budget.validate()
@@ -862,6 +903,16 @@ def run_registered_matrix(
         budget=budget,
     )
     try:
+        from .m36_adapters import M36Phase2BAttemptAdapter
+    except ImportError as error:
+        raise RunnerBlocked(
+            "registered condition-specific M36 stage adapter is not implemented"
+        ) from error
+    if type(execute_attempt) is not M36Phase2BAttemptAdapter:
+        raise RunnerBlocked(
+            "registered matrix requires the source-controlled M36 stage adapter"
+        )
+    try:
         pickle.dumps(execute_attempt)
     except Exception as error:
         raise RunnerBlocked(
@@ -888,6 +939,7 @@ def run_registered_matrix(
     matrix_deadline = matrix_started + budget.matrix_window_seconds
     total_deadline = workflow_started + budget.total_budget_seconds
     rows = [None] * len(assignments)
+    public_candidates: dict[int, dict[str, dict[str, str]]] = {}
     pending: dict[Future, tuple[int, dict, str, float]] = {}
     next_index = 0
     slot_seconds = 0.0
@@ -1116,20 +1168,20 @@ def run_registered_matrix(
                             public_bytes, case_ids={token},
                             forbidden_values=forbidden,
                         )
-                        written_public_hashes = {}
+                        candidate_hashes = {}
                         for name, content in public_bytes.items():
-                            target = (public / token / name).resolve()
-                            if not target.is_relative_to((public / token).resolve()):
-                                raise RunnerBlocked("public attempt output escaped its directory")
-                            target.parent.mkdir(parents=True, exist_ok=True)
-                            target.write_bytes(content)
-                            actual_bytes = target.read_bytes()
-                            actual_digest = hashlib.sha256(actual_bytes).hexdigest()
-                            if actual_bytes != content or actual_digest != computed_public_hashes[name]:
-                                raise RunnerBlocked("public output bytes changed during storage")
-                            written_public_hashes[name] = actual_digest
+                            relative = f"m36-{run_token}-{token}/public-candidate/{name}"
+                            digest = restricted_store.write_bytes(relative, content)
+                            if digest != computed_public_hashes[name]:
+                                raise RunnerBlocked(
+                                    "candidate output bytes changed during restricted storage"
+                                )
+                            candidate_hashes[name] = {
+                                "path": relative, "sha256": digest,
+                            }
+                        public_candidates[index] = candidate_hashes
                     else:
-                        written_public_hashes = {}
+                        candidate_hashes = {}
                     resource_proofs = outcome.get("assembly_resource_proofs", [])
                     assembly_started = outcome.get("assembly_started") is True
                     if assembly_started and (
@@ -1161,10 +1213,11 @@ def run_registered_matrix(
                         "provenance": provenance,
                         "input_sha256": actual_input_hashes,
                         "assembly_resource_proofs": resource_proofs,
-                        "public_artifacts": sorted(public_bytes),
+                        "public_artifacts": [],
                         "restricted_artifacts": sorted(
                             [f"inputs/{name}" for name in actual_input_hashes]
                             + [f"raw/{name}" for name in stored["files"]]
+                            + [f"public-candidate/{name}" for name in candidate_hashes]
                         ),
                         "restricted_sha256": {
                             **{
@@ -1175,8 +1228,12 @@ def run_registered_matrix(
                                 f"raw/{name}": digest
                                 for name, digest in stored["files"].items()
                             },
+                            **{
+                                f"public-candidate/{name}": item["sha256"]
+                                for name, item in candidate_hashes.items()
+                            },
                         },
-                        "public_sha256": written_public_hashes,
+                        "public_sha256": {},
                     }
                 except AttemptInterrupted:
                     cancelled = True
@@ -1258,13 +1315,46 @@ def run_registered_matrix(
         )
         rows[index]["status"] = "INPUT_DIGEST_MISMATCH"
         rows[index]["failure_evidence_sha256"] = digest
+    for index, row in enumerate(rows):
+        token = row["case_id"]
+        candidates = public_candidates.get(index, {})
+        if row["status"] == "COMPLETE" and not candidates:
+            row["status"] = "ASSEMBLY_OUTPUT_INVALID"
+            row.update(record_attempt_failure(token, {
+                "reason": "completed attempt has no validated public output candidate",
+            }))
+        if row["status"] == "COMPLETE":
+            written = []
+            public_hashes = {}
+            try:
+                for name, candidate in candidates.items():
+                    content = restricted_store.read_bytes(
+                        candidate["path"], expected_sha256=candidate["sha256"],
+                    )
+                    public_hashes[name] = write_public_artifact(
+                        public, token, name, content, candidate["sha256"],
+                    )
+                    written.append(public / token / name)
+                row["public_artifacts"] = sorted(public_hashes)
+                row["public_sha256"] = public_hashes
+            except (OSError, RunnerBlocked, ValueError) as error:
+                for path in written:
+                    path.unlink(missing_ok=True)
+                row["status"] = "ASSEMBLY_OUTPUT_INVALID"
+                row.update(record_attempt_failure(token, {
+                    "error_type": type(error).__name__,
+                    "reason": str(error),
+                }))
         restricted_store.write_terminal_record(
-            row["case_id"],
-            {"case_id": row["case_id"], "status": row["status"], **{
+            token,
+            {
+                "case_id": token,
+                "status": row["status"],
                 "evidence_sha256": row.get("failure_evidence_sha256"),
                 "restricted_sha256": row.get("restricted_sha256", {}),
                 "partial_sha256": row.get("partial_sha256", {}),
-            }},
+                "public_sha256": row.get("public_sha256", {}),
+            },
         )
     if (
         len(rows) != len(assignments)
