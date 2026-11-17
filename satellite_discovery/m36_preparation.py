@@ -30,6 +30,10 @@ TERMINAL_STATUSES = {
 }
 
 
+class RunnerBlocked(RuntimeError):
+    """Raised when an M36 execution prerequisite is missing or inconsistent."""
+
+
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

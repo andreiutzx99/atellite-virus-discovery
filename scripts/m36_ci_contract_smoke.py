@@ -13,6 +13,7 @@ import grp
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 import zipfile
@@ -271,30 +272,40 @@ def run_preparation_audits(output: Path) -> dict:
         validate_blinded_artifacts,
     )
 
-    restricted = output / "preparation-evidence" / "restricted"
-    sidecar = create_restricted_sidecar(restricted / "evaluator.json", [{
-        "family_id": "f01", "split": "held_out",
-        "truth": "SYNTHETIC_TRUTH_SECRET", "factor": "coverage_24",
-        "condition": "c01",
-    }])
-    body = json.loads((restricted / "evaluator.json").read_text(encoding="utf-8"))
-    case_id = body["entries"][0]["opaque_case_id"]
-    stage_id = "stage-" + "b" * 24 + "-s01"
-    visible = {
-        f"analyst/{case_id}/reads.fastq.gz": gzip.compress(
-            f"@{case_id}-r00001\nACGT\n+\nIIII\n".encode("ascii")
-        ),
-        f"analyst/{stage_id}/manifest.json": json.dumps({"stage_id": stage_id}),
-        "analyst/logs/run.log": f"synthetic run for {case_id}",
-    }
-    validate_blinded_artifacts(
-        visible, case_ids={case_id},
-        forbidden_values={"held_out", "coverage_24", "SYNTHETIC_TRUTH_SECRET"},
-    )
-    raw = preserve_restricted_raw_evidence(
-        output / "preparation-evidence" / "raw",
-        {"assembler.log": b"synthetic restricted tool log\n"},
-    )
+    with tempfile.TemporaryDirectory(prefix="m36-restricted-smoke-") as folder:
+        restricted = Path(folder)
+        restricted.chmod(0o700)
+        sidecar = create_restricted_sidecar(restricted / "evaluator.json", [{
+            "family_id": "f01", "split": "held_out",
+            "truth": "SYNTHETIC_TRUTH_SECRET", "factor": "coverage_24",
+            "condition": "c01",
+        }])
+        body = json.loads((restricted / "evaluator.json").read_text(encoding="utf-8"))
+        case_id = body["entries"][0]["opaque_case_id"]
+        stage_id = "stage-" + "b" * 24 + "-s01"
+        visible = {
+            f"analyst/{case_id}/reads.fastq.gz": gzip.compress(
+                f"@{case_id}-r00001\nACGT\n+\nIIII\n".encode("ascii")
+            ),
+            f"analyst/{stage_id}/manifest.json": json.dumps({"stage_id": stage_id}),
+            "analyst/logs/run.log": f"synthetic run for {case_id}",
+        }
+        validate_blinded_artifacts(
+            visible, case_ids={case_id},
+            forbidden_values={"held_out", "coverage_24", "SYNTHETIC_TRUTH_SECRET"},
+        )
+        raw = preserve_restricted_raw_evidence(
+            restricted / "raw",
+            {"assembler.log": b"synthetic restricted tool log\n"},
+        )
+        # Only digests and pass/fail facts leave this temporary restricted store.
+        sidecar_result = {
+            "sidecar_isolated": True,
+            "sidecar_sha256": sidecar["sha256"],
+            "raw_evidence_preserved": raw["raw_bytes_modified"] is False,
+            "raw_evidence_sha256": raw["files"],
+            "leakage_checks_passed": True,
+        }
     generator = audit_m25_generator(
         seed=360003, target_to_background="1:9",
     )
@@ -302,13 +313,7 @@ def run_preparation_audits(output: Path) -> dict:
         raise RuntimeError("synthetic 1:9 generator audit did not pass")
     return {
         "generator_audit": generator,
-        "blinding_audit": {
-            "sidecar_isolated": True,
-            "sidecar_sha256": sidecar["sha256"],
-            "raw_evidence_preserved": raw["raw_bytes_modified"] is False,
-            "raw_evidence_sha256": raw["files"],
-            "leakage_checks_passed": True,
-        },
+        "blinding_audit": sidecar_result,
     }
 
 
@@ -443,6 +448,8 @@ def attempt(kind: str, paired: bool, output: Path) -> dict:
 
 
 def run_bounded_attempt(kind: str, paired: bool, output: Path, report_path: Path) -> dict:
+    from satellite_discovery.m36_runner import _terminate_systemd_unit
+
     unit = f"m36-smoke-{kind}-{'paired' if paired else 'single'}-{os.getpid()}"
     command = [
         "sudo", "systemd-run", "--quiet", "--wait", "--pipe", "--collect",
@@ -450,6 +457,9 @@ def run_bounded_attempt(kind: str, paired: bool, output: Path, report_path: Path
         "--property=Type=exec",
         "--property=CPUQuota=100%",
         f"--property=MemoryMax={MEMORY_MAX_BYTES}",
+        "--property=KillMode=control-group",
+        "--property=SendSIGKILL=yes",
+        "--property=TimeoutStopSec=2s",
         "--property=TasksMax=512",
         f"--property=RuntimeMaxSec={SERVICE_TIMEOUT_SECONDS}s",
         f"--working-directory={ROOT}",
@@ -461,9 +471,23 @@ def run_bounded_attempt(kind: str, paired: bool, output: Path, report_path: Path
     if paired:
         command.append("--paired")
     started = time.monotonic()
-    result = subprocess.run(
-        command, capture_output=True, text=True, timeout=SERVICE_TIMEOUT_SECONDS + 30,
-    )
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True,
+            timeout=SERVICE_TIMEOUT_SECONDS + 30,
+        )
+    except subprocess.TimeoutExpired as error:
+        if not _terminate_systemd_unit(unit, run=subprocess.run):
+            raise RuntimeError(
+                "timed-out synthetic smoke service cleanup could not be verified"
+            ) from error
+        raise RuntimeError("bounded synthetic smoke exceeded its service timeout") from error
+    except KeyboardInterrupt:
+        if not _terminate_systemd_unit(unit, run=subprocess.run):
+            raise RuntimeError(
+                "cancelled synthetic smoke service cleanup could not be verified"
+            )
+        raise
     report_path.write_text(
         json.dumps(
             {
