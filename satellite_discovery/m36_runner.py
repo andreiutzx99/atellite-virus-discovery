@@ -188,7 +188,8 @@ def validate_evaluator_manifest(
             or row["family_seed"] < 0 or row["read_seed"] < 0
             or not isinstance(row.get("condition_parameters"), dict)
             or not row["condition_parameters"]
-            or row.get("split") not in {"development", "tuning", "held_out"}
+            or not isinstance(row.get("split"), str)
+            or row["split"] not in {"development", "tuning", "held_out"}
         ):
             raise RunnerBlocked("evaluator entry lacks frozen seeds, split, or parameters")
         declared_parameters = parameter_catalog.get((row["block_id"], row["condition_id"]))

@@ -85,7 +85,7 @@ def _load_external_public_key() -> Ed25519PublicKey:
     _secure_regular_file(TRUST_ANCHOR_PATH, owner_uid=0)
     try:
         key = serialization.load_pem_public_key(TRUST_ANCHOR_PATH.read_bytes())
-    except (OSError, ValueError) as error:
+    except (OSError, TypeError, ValueError) as error:
         raise RunnerBlocked("authorization trust anchor cannot be read") from error
     if not isinstance(key, Ed25519PublicKey):
         raise RunnerBlocked("authorization trust anchor must be Ed25519")
@@ -245,7 +245,9 @@ class RestrictedEvidenceStore:
         digest = hashlib.sha256(content).hexdigest()
         try:
             manifest = strict_json_loads(content)
-        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+        except (
+            UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError,
+        ) as error:
             raise RunnerBlocked("restricted evaluator manifest is malformed") from error
         if not isinstance(manifest, dict):
             raise RunnerBlocked("restricted evaluator manifest must be an object")

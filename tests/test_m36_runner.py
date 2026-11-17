@@ -138,6 +138,14 @@ class M36RunnerTests(unittest.TestCase):
                 DESIGN, manifest, design_sha256=manifest["design_sha256"],
             )
 
+    def test_evaluator_manifest_rejects_malformed_split_type(self):
+        manifest = evaluator_fixture()
+        manifest["assignments"][0]["split"] = []
+        with self.assertRaisesRegex(RunnerBlocked, "lacks frozen seeds"):
+            validate_evaluator_manifest(
+                DESIGN, manifest, design_sha256=manifest["design_sha256"],
+            )
+
     def test_actual_input_hashes_enforce_pairing_and_repeat_independence(self):
         assignments = [
             {
