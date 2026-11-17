@@ -338,7 +338,7 @@ def run_frozen_m8_m31_handoff(
     }
     expected_queries = {
         (candidate_id, role)
-        for candidate_id in candidate_ids for role in snapshot["roles"]
+        for candidate_id in candidate_ids for role in m8_contracts.PANEL_ROLES
     }
     if observed_queries != expected_queries:
         raise ValueError("M8 query roster does not match candidates and snapshot roles")
