@@ -1,4 +1,5 @@
 import hashlib
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -72,7 +73,8 @@ class M36AdapterTests(unittest.TestCase):
             self.assertEqual(result["detection"]["status"], "NOT_EVALUATED")
             self.assertEqual(result["status"], "INCOMPLETE")
             self.assertFalse(result["registered_matrix_executed"])
-            self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+            if os.name == "posix":
+                self.assertEqual(root.stat().st_mode & 0o777, 0o700)
 
     def test_failed_assembly_does_not_call_support_or_detection(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -95,6 +96,10 @@ class M36ManifestBuilderTests(unittest.TestCase):
         with self.assertRaises(Exception):
             build_manifest(DESIGN, source_map, design_sha256="a" * 64)
 
+    @unittest.skipUnless(
+        os.name == "posix",
+        "owner-only restricted storage requires verifiable POSIX ownership and modes",
+    )
     def test_restricted_storage_is_immutable_and_reports_only_digests(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
