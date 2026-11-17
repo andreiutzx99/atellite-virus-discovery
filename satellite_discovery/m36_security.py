@@ -180,11 +180,11 @@ class RestrictedEvidenceStore:
         if not isinstance(content, bytes):
             raise TypeError("restricted evidence must be bytes")
         target = self._target(relative_path)
-        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        current = target.parent
-        while current != self.root:
+        current = self.root
+        for part in target.parent.relative_to(self.root).parts:
+            current = current / part
+            current.mkdir(mode=0o700, exist_ok=True)
             self._assert_private_directory(current)
-            current = current.parent
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW

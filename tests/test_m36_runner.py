@@ -34,6 +34,7 @@ from satellite_discovery.m36_runner import (
     validate_input_identity,
     verify_byte_artifacts,
     write_public_artifact,
+    release_completed_public_outputs,
     verify_tool_identity,
     run_registered_matrix,
 )
@@ -456,6 +457,31 @@ class M36RunnerTests(unittest.TestCase):
                 store.inventory_directory("attempts"),
                 {"raw.log": digest},
             )
+            good_bytes = b"blinded synthetic output"
+            good_hash = _sha(good_bytes)
+            good_path = "attempts/case-good/public-candidate/report.json"
+            bad_path = "attempts/case-bad/public-candidate/report.json"
+            store.write_bytes(good_path, good_bytes)
+            store.write_bytes(bad_path, b"must remain restricted")
+            (public / "case-good").mkdir(mode=0o700)
+            (public / "case-bad").mkdir(mode=0o700)
+            rows = [
+                {"case_id": "case-good", "status": "COMPLETE"},
+                {"case_id": "case-bad", "status": "INPUT_DIGEST_MISMATCH"},
+            ]
+            candidates = {
+                0: {"report.json": {"path": good_path, "sha256": good_hash}},
+                1: {"report.json": {"path": bad_path, "sha256": _sha(b"must remain restricted")}},
+            }
+            self.assertEqual(
+                release_completed_public_outputs(public, rows, candidates, store),
+                {},
+            )
+            self.assertEqual(
+                (public / "case-good/report.json").read_bytes(), good_bytes,
+            )
+            self.assertFalse((public / "case-bad/report.json").exists())
+            self.assertEqual(rows[1]["status"], "INPUT_DIGEST_MISMATCH")
             self.assertEqual(
                 (restricted / "attempts/raw.log").stat().st_mode & 0o777,
                 0o600,

@@ -372,6 +372,43 @@ def write_public_artifact(
         raise
 
 
+def release_completed_public_outputs(
+    public_root: Path,
+    rows: list[dict],
+    candidates_by_index: dict[int, dict[str, dict[str, str]]],
+    restricted_store: RestrictedEvidenceStore,
+) -> dict[int, str]:
+    """Release only COMPLETE outputs after run-wide identity checks have passed."""
+    errors = {}
+    for index, row in enumerate(rows):
+        if row["status"] != "COMPLETE":
+            continue
+        candidates = candidates_by_index.get(index, {})
+        if not candidates:
+            row["status"] = "ASSEMBLY_OUTPUT_INVALID"
+            errors[index] = "completed attempt has no validated public output candidate"
+            continue
+        written = []
+        public_hashes = {}
+        try:
+            for name, candidate in candidates.items():
+                content = restricted_store.read_bytes(
+                    candidate["path"], expected_sha256=candidate["sha256"],
+                )
+                public_hashes[name] = write_public_artifact(
+                    public_root, row["case_id"], name, content, candidate["sha256"],
+                )
+                written.append(public_root / row["case_id"] / name)
+            row["public_artifacts"] = sorted(public_hashes)
+            row["public_sha256"] = public_hashes
+        except (OSError, RunnerBlocked, ValueError) as error:
+            for path in written:
+                path.unlink(missing_ok=True)
+            row["status"] = "ASSEMBLY_OUTPUT_INVALID"
+            errors[index] = f"{type(error).__name__}: {error}"
+    return errors
+
+
 def verify_tool_identity(expected: dict, observed: dict) -> None:
     """Bind both assembler identities and package/runtime digests before execution."""
     for name in ("spades", "tadpole"):
@@ -1315,36 +1352,13 @@ def run_registered_matrix(
         )
         rows[index]["status"] = "INPUT_DIGEST_MISMATCH"
         rows[index]["failure_evidence_sha256"] = digest
-    for index, row in enumerate(rows):
+    for index, reason in release_completed_public_outputs(
+        public, rows, public_candidates, restricted_store,
+    ).items():
+        token = rows[index]["case_id"]
+        rows[index].update(record_attempt_failure(token, {"reason": reason}))
+    for row in rows:
         token = row["case_id"]
-        candidates = public_candidates.get(index, {})
-        if row["status"] == "COMPLETE" and not candidates:
-            row["status"] = "ASSEMBLY_OUTPUT_INVALID"
-            row.update(record_attempt_failure(token, {
-                "reason": "completed attempt has no validated public output candidate",
-            }))
-        if row["status"] == "COMPLETE":
-            written = []
-            public_hashes = {}
-            try:
-                for name, candidate in candidates.items():
-                    content = restricted_store.read_bytes(
-                        candidate["path"], expected_sha256=candidate["sha256"],
-                    )
-                    public_hashes[name] = write_public_artifact(
-                        public, token, name, content, candidate["sha256"],
-                    )
-                    written.append(public / token / name)
-                row["public_artifacts"] = sorted(public_hashes)
-                row["public_sha256"] = public_hashes
-            except (OSError, RunnerBlocked, ValueError) as error:
-                for path in written:
-                    path.unlink(missing_ok=True)
-                row["status"] = "ASSEMBLY_OUTPUT_INVALID"
-                row.update(record_attempt_failure(token, {
-                    "error_type": type(error).__name__,
-                    "reason": str(error),
-                }))
         restricted_store.write_terminal_record(
             token,
             {
