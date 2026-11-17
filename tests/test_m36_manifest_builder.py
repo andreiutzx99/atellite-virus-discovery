@@ -3,10 +3,14 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stderr
+from io import StringIO
+from unittest.mock import patch
 
 from satellite_discovery.m36_manifest_builder import (
     SOURCE_SCHEMA,
     build_manifest,
+    main,
     store_manifest,
 )
 from satellite_discovery.m36_runner import (
@@ -15,6 +19,7 @@ from satellite_discovery.m36_runner import (
     validate_evaluator_manifest,
     FROZEN_SEED_POLICY,
 )
+from satellite_discovery.m36_preparation import RunnerBlocked
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,6 +100,38 @@ class M36ManifestBuilderTests(unittest.TestCase):
         source_map["families"][0]["family_seed"] = "not-a-seed"
         with self.assertRaises(Exception):
             build_manifest(DESIGN, source_map, design_sha256="a" * 64)
+
+    def test_cli_returns_controlled_failure_for_malformed_or_blocked_inputs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            malformed_design = root / "malformed-design.json"
+            malformed_design.write_text("{invalid", encoding="utf-8")
+            errors = StringIO()
+            with redirect_stderr(errors):
+                result = main([
+                    "--design", str(malformed_design),
+                    "--source-map", str(root / "source-map.json"),
+                    "--source-root", str(root / "source"),
+                    "--restricted-root", str(root / "restricted"),
+                    "--public-root", str(root / "public"),
+                ])
+            self.assertEqual(result, 2)
+            self.assertIn("M36 manifest preparation blocked:", errors.getvalue())
+
+            errors = StringIO()
+            with patch(
+                "satellite_discovery.m36_manifest_builder.store_manifest",
+                side_effect=RunnerBlocked("restricted store is not trusted"),
+            ), redirect_stderr(errors):
+                result = main([
+                    "--design", str(DESIGN_PATH),
+                    "--source-map", str(root / "source-map.json"),
+                    "--source-root", str(root / "source"),
+                    "--restricted-root", str(root / "restricted"),
+                    "--public-root", str(root / "public"),
+                ])
+            self.assertEqual(result, 2)
+            self.assertIn("restricted store is not trusted", errors.getvalue())
 
     @unittest.skipUnless(
         os.name == "posix",

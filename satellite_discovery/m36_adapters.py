@@ -93,6 +93,17 @@ def build_m6_candidate_handoff(
             sequence_by_id[current_id] += line
     if not sequence_by_id:
         raise ValueError("completed assembly emitted no canonical contigs")
+    supported_ids = support_evidence.get("supported_contig_ids", [])
+    if (
+        not isinstance(supported_ids, (list, tuple, set))
+        or any(not isinstance(identifier, str) for identifier in supported_ids)
+    ):
+        raise ValueError("M6 supported contig IDs must be an explicit collection")
+    supported_ids = set(supported_ids)
+    if not supported_ids <= set(sequence_by_id):
+        raise ValueError("M6 support names a contig absent from the assembly")
+    if (support_status == "READ_SUPPORTED_ASSEMBLY") != bool(supported_ids):
+        raise ValueError("M6 support status and supported contig set disagree")
     (output_dir / "candidate_sequences.fasta").write_bytes(fasta_bytes)
     reconstruction = {
         "schema": "m6-reconstruction-evidence-v1",
@@ -100,7 +111,7 @@ def build_m6_candidate_handoff(
         "contigs": [
             {"contig_id": identifier, "m6_support_status": (
                 "READ_SUPPORTED_ASSEMBLY"
-                if identifier in set(support_evidence.get("supported_contig_ids", []))
+                if identifier in supported_ids
                 else "UNSUPPORTED_ASSEMBLY"
             )}
             for identifier in sorted(sequence_by_id)
@@ -146,7 +157,7 @@ def build_m6_candidate_handoff(
             "source_artifact_sha256": source_ref["sha256"],
             "m6_support_status": (
                 "READ_SUPPORTED_ASSEMBLY"
-                if contig_id in set(support_evidence.get("supported_contig_ids", []))
+                if contig_id in supported_ids
                 else "UNSUPPORTED_ASSEMBLY"
             ),
             "m7_context": None,
@@ -275,6 +286,38 @@ def run_frozen_m8_m31_handoff(
     stage_root = output_root / "workflow" / workflow["stages"][0]["output_path"]
     query_doc = json.loads((stage_root / "query_status.json").read_text(encoding="utf-8"))
     match_doc = json.loads((stage_root / "matches.json").read_text(encoding="utf-8"))
+    summary_doc = json.loads((stage_root / "summary.json").read_text(encoding="utf-8"))
+    m8_homology.validate_m8_artifact(stage_root / "query_status.json", "m8_query_status")
+    m8_homology.validate_m8_artifact(stage_root / "matches.json", "m8_match_evidence")
+    m8_homology.validate_m8_artifact(stage_root / "summary.json", "m8_summary")
+    if (
+        summary_doc.get("aggregate_status") != query_doc.get("aggregate_status")
+        or summary_doc.get("aggregate_status") not in {"COMPLETE", "PARTIAL"}
+    ):
+        raise ValueError("M8 query and summary aggregate outcomes do not reconcile")
+    reference_summary = summary_doc.get("reference_panel")
+    if (
+        not isinstance(reference_summary, dict)
+        or reference_summary.get("snapshot_id") != snapshot["snapshot_id"]
+        or reference_summary.get("snapshot_digest") != snapshot["snapshot_digest"]
+        or reference_summary.get("membership_digest") != snapshot["membership_digest"]
+    ):
+        raise ValueError("M8 output provenance does not match the supplied snapshot")
+    expected_indexes = {
+        (row["filename"], row["sha256"], row["size_bytes"])
+        for row in snapshot["index_files"]
+    }
+    reported_indexes = {
+        (row.get("filename"), row.get("sha256"), row.get("size_bytes"))
+        for row in reference_summary.get("index_files", [])
+    }
+    if expected_indexes != reported_indexes:
+        raise ValueError("M8 output index provenance does not match the snapshot")
+    if summary_doc.get("reference_panel_state") == "VALID":
+        m8_reference_panels.validate_external_snapshot_files(
+            manifest_path,
+            {filename: reference_root / filename for filename in filenames},
+        )
     candidate_doc = json.loads(candidate_path.read_text(encoding="utf-8"))
     fasta_path = candidate_path.parent / candidate_doc["availability"]["fasta_artifact"]["path"]
     sequences = {}
@@ -288,14 +331,56 @@ def run_frozen_m8_m31_handoff(
             elif current == identifier:
                 sequence += line
         sequences[row["candidate_id"]] = sequence
-    outcomes = triage_m8_outputs(query_doc["queries"], match_doc["matches"], sequences)
+    candidate_ids = set(sequences)
+    observed_queries = {
+        (row.get("candidate_id"), row.get("panel_role"))
+        for row in query_doc["queries"]
+    }
+    expected_queries = {
+        (candidate_id, role)
+        for candidate_id in candidate_ids for role in snapshot["roles"]
+    }
+    if observed_queries != expected_queries:
+        raise ValueError("M8 query roster does not match candidates and snapshot roles")
+    for match in match_doc["matches"]:
+        if (
+            match.get("candidate_id") not in candidate_ids
+            or match.get("reference_snapshot", {}).get("snapshot_digest")
+            != snapshot["snapshot_digest"]
+        ):
+            raise ValueError("M8 match evidence is outside the candidate/snapshot scope")
+    raw_outcomes = triage_m8_outputs(
+        query_doc["queries"], match_doc["matches"], sequences,
+    )
+    outcomes = [
+        {key: value for key, value in row.items() if key != "split"}
+        for row in raw_outcomes
+    ]
     summary = {
         "schema": "m36-m8-m31-handoff-v1",
+        "m8_execution_status": query_doc["aggregate_status"],
         "m8_aggregate_status": query_doc.get("aggregate_status"),
+        "m6_support_status": candidate_doc["m6_evidence"]["support_status"],
+        "pipeline_detection_status": (
+            "EVIDENCE_SCREENED"
+            if candidate_doc["m6_evidence"]["support_status"]
+            == "READ_SUPPORTED_ASSEMBLY"
+            else "NOT_EVALUATED"
+        ),
         "candidate_count": len(candidate_doc["records"]),
-        "snapshot_digest": snapshot["snapshot_digest"],
+        "snapshot_provenance": {
+            "snapshot_id": snapshot["snapshot_id"],
+            "snapshot_digest": snapshot["snapshot_digest"],
+            "membership_digest": snapshot["membership_digest"],
+            "reference_record_count": len(snapshot["references"]),
+            "reference_panel_state": summary_doc["reference_panel_state"],
+            "index_digests": [
+                {"filename": name, "sha256": digest, "size_bytes": size}
+                for name, digest, size in sorted(expected_indexes)
+            ],
+        },
         "triage": outcomes,
-        "truth_or_split_mapping_included": False,
+        "private_mapping_included": False,
     }
     (output_root / "m36_m8_m31_handoff.json").write_bytes(_json_bytes(summary))
     return summary

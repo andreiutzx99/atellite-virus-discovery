@@ -20,6 +20,7 @@ from .m36_runner import (
     validate_evaluator_manifest,
 )
 from .m36_security import RestrictedEvidenceStore, canonical_json_bytes
+from .m36_preparation import RunnerBlocked
 
 
 SOURCE_SCHEMA = "m36-approved-evaluator-source-map-v1"
