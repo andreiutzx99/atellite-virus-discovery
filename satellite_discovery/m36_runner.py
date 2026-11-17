@@ -949,6 +949,11 @@ def run_registered_matrix(
         raise RunnerBlocked(
             "registered matrix requires the source-controlled M36 stage adapter"
         )
+    if getattr(M36Phase2BAttemptAdapter, "REGISTERED_EXECUTION_READY", False) is not True:
+        raise RunnerBlocked(
+            "registered M36 attempts remain blocked until the scientific and "
+            "downstream adapter contracts are independently reviewed"
+        )
     try:
         pickle.dumps(execute_attempt)
     except Exception as error:

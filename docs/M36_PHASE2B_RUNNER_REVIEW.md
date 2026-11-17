@@ -40,6 +40,13 @@ integrated, and independently reviewed.
   synthetic fixtures for SPAdes/Tadpole compatibility and read-support checks.
   Its restricted sidecar and raw-log audit files now live in a temporary
   directory outside the uploaded artifact.
+- A new restricted-manifest builder joins approved family/split and read-seed
+  rows to the frozen 520-row registration, validates the complete manifest,
+  writes it immutably, and reports only aggregate counts and digests.
+- A small unregistered M25-to-support fixture harness records distinct
+  generation, assembly, support, and detection receipts. The registered adapter
+  class remains disabled, and the coordinator now rejects it before attempt
+  expansion until the full scientific and downstream contracts are reviewed.
 
 ## Fixture-tested controls
 
@@ -67,11 +74,11 @@ integrated, and independently reviewed.
   cannot establish that an arbitrary host path survives host loss.
 - No root-controlled Ed25519 trust anchor or approved signer identity is
   installed. The production approval path therefore fails closed.
-- The repository still lacks a concrete registered condition-to-M25/SPAdes/
-  Tadpole/downstream adapter that consumes the restricted manifest, verifies
-  generator placement evidence, preserves frozen M6/M8/M31 behavior, and
-  writes raw partial artifacts into the restricted store. The small CI smoke
-  adapter is not a substitute for this production contract.
+- The registered condition-to-M25/SPAdes/Tadpole/M6/M8/M31 adapter is still not
+  execution-ready. The fixture harness uses injected stage implementations;
+  it is not evidence that registered generation, assembly, read-support, or
+  detection can run from the private manifest. A complete, source-verified
+  adapter and approved M8 reference-panel contract remain required.
 - No M36 execution workflow is added or enabled. The final CI link and exact
   commit are recorded in the PR description after the final-head run.
 
