@@ -93,6 +93,13 @@ and exact ratio failure. Recompute all counts using an independent parser.
 **Amendment decision:** required if no authoritative approval record already
 specifies this exact denominator, allocation, stage, and failure policy.
 
+**Matrix/statistical impact:** Apply this count rule only to the existing
+1:9 abundance condition and its two registered coverage-by-abundance corners.
+It adds no family, split, repeat, or attempt: 12 families remain split 4/4/4,
+the ceiling remains 520, and existing endpoints and family-level comparisons
+remain unchanged. Analyze each family's outcomes after summarizing its two
+technical repeats; read records are not independent observations.
+
 ## 2. Composition-matched periodic low-complexity sequence
 
 ### Current frozen definition
@@ -161,6 +168,12 @@ and paired assembler arms.
 **Amendment decision:** required. The recipe, motif length, seed domain,
 complexity acceptance rules, and generated input bytes are new frozen details.
 
+**Matrix/statistical impact:** Replace only the sequence recipe for the
+existing low-complexity condition, once per current family. Keep 12 families,
+the 4/4/4 split, two within-family repeats, the 520-attempt ceiling, and all
+registered endpoints/comparisons unchanged. Summarize at the family level;
+the 20-mer metrics are sequence descriptors, not additional observations.
+
 ## 3. Clustered substitutions with preserved per-read counts
 
 ### Current frozen definition
@@ -224,6 +237,13 @@ between substituted source coordinates must be `<20` for `k>1` and zero for
 **Amendment decision:** required. The event scope, 20-nt window, conditional
 eligibility rule, and placement law are new design parameters.
 
+**Matrix/statistical impact:** Apply this model only to the already registered
+alternate-error-position condition and its existing repeats. Add no family,
+split, condition, or attempt; preserve 12 families, the 4/4/4 split, the
+520-attempt maximum, and the existing family-level comparisons and endpoints.
+Per-read event counts validate the generator but do not enlarge statistical
+sample size.
+
 ## 4. Domain-separated deterministic random streams
 
 ### Current frozen definition
@@ -273,7 +293,11 @@ source control, analysis inputs, or analyst-visible logs. For each root seed:
    `floor(p*2^64)`; accept exactly when `x < floor(p*2^64)`. Rates are parsed
    as exact decimal rationals from the frozen JSON lexical value, not binary
    floating-point approximations.
-6. Text manifests are UTF-8; domain labels are ASCII; all integers in stream
+6. Cross-runtime conformance uses a reference implementation in CPython
+   3.11.11 and an independent implementation in Node.js 22.13.1. Both use only
+   their standard SHA-256 and HMAC-SHA-256 primitives; neither may delegate
+   random draws to a runtime PRNG. Text manifests are UTF-8; domain labels are
+   ASCII; all integers in stream
    derivation are unsigned big-endian. Sequence bytes are uppercase ASCII
    `ACGT`. These rules define the byte stream independently of Python, NumPy,
    platform, locale, and filesystem order.
@@ -281,7 +305,8 @@ source control, analysis inputs, or analyst-visible logs. For each root seed:
 ### Public non-secret test vector
 
 The following vector uses the public test-only seed bytes `00 01 ... 1f`; it is
-not an evaluator seed and must never be substituted for one:
+not an evaluator seed and must never be substituted for one. Both pinned
+implementations must match every listed byte:
 
 | Value | Expected hex |
 |---|---|
@@ -313,6 +338,12 @@ record private seed bytes or split mapping in public artifacts.
 
 **Amendment decision:** required unless an authoritative approved source already
 specifies an equivalent versioned derivation, byte encoding, and PRNG.
+
+**Matrix/statistical impact:** This changes generation bytes for existing
+registered family-condition-repeat units but does not change their identifiers
+or assignments. Keep 12 families, the 4/4/4 split, two technical repeats, the
+520-attempt ceiling, and all planned family-level comparisons. Do not use
+per-read or per-stream test-vector counts as inferential observations.
 
 ## 5. Uniform read starts, coverage, and indel semantics
 
@@ -401,6 +432,12 @@ counts as independent observations.
 only if the approved source confirms them exactly. Changing `uniform` to
 `random`, the start formula, count formula, or indel semantics requires an
 amendment and review.
+
+**Matrix/statistical impact:** Keep the existing start mode and assignments;
+make no addition to the 12 families, 4/4/4 split, two-repeat structure, or
+520-attempt ceiling. Coverage and indel measures remain covariates/outcomes for
+the same endpoints and family-level comparisons. Any changed starts or counts
+must be classified as an amendment before the existing assignments are run.
 
 ## Evidence, interpretation, and approval gates
 
