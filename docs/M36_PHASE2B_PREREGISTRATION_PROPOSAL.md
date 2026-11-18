@@ -5,6 +5,10 @@ proposal, not an amendment, approval, frozen parameter set, or execution plan.
 No option below is adopted by this document. The registered matrix remains
 disabled and **NOT RUN**.
 
+The review-completed, decision-ready algorithm details are in
+[`M36_PHASE2B_AMENDMENT_SPECIFICATION.md`](M36_PHASE2B_AMENDMENT_SPECIFICATION.md).
+That companion remains proposed and does not adopt or freeze any option.
+
 ## Scope and guardrails
 
 This proposal resolves the scientific questions needed to make the existing
