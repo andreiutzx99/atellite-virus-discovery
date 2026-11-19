@@ -165,6 +165,32 @@ remainder ties, primitive-period rejection and retry determinism, entropy and
 fraction bounds, exact-repeat construction, and identical bytes across repeats
 and paired assembler arms.
 
+### Feasibility review of proposed motif acceptance rules
+
+Hamilton apportionment guarantees the per-base fraction bound of at most
+`1/20 = 0.05`, but it does not guarantee a primitive motif or the entropy
+bound. These synthetic profiles were checked using exact apportionment and an
+independent Shannon-entropy calculation:
+
+| 900-nt source counts `(A,C,G,T)` | 20-nt counts | Entropy difference (bits) | Feasibility |
+|---|---:|---:|---|
+| `(900,0,0,0)` | `(20,0,0,0)` | 0.0000 | Impossible: period 1 only; fail `GENERATOR_INVALID`. |
+| `(899,1,0,0)` | `(20,0,0,0)` | 0.0125 | Impossible under the specified composition; fail `GENERATOR_INVALID`. |
+| `(877,23,0,0)` | `(19,1,0,0)` | 0.1148 | Feasible in principle; deterministic retry must find a primitive motif or fail at the fixed bound. |
+| `(225,225,225,225)` | `(5,5,5,5)` | 0.0000 | Feasible; primitive motif and bounds can be satisfied. |
+| `(630,90,90,90)` | `(14,2,2,2)` | 0.0000 | Feasible; primitive motif and bounds can be satisfied. |
+| `(540,180,90,90)` | `(12,4,2,2)` | 0.0000 | Feasible; primitive motif and bounds can be satisfied. |
+
+The first two rows show that these acceptance criteria are not universally
+satisfiable. Before an amendment is approved, run a synthetic feasibility
+suite over these and additional declared boundary compositions, independently
+enumerate possible 20-mer arrangements for each apportioned multiset, and
+report whether at least one arrangement is primitive and within both fraction
+and entropy bounds. Do not relax the criteria or retry with another recipe for
+an infeasible profile. Mark that family condition `GENERATOR_INVALID`; do not
+replace the sequence, omit the family, or alter the 12-family split. These are
+feasibility diagnostics, not registered-family results.
+
 **Amendment decision:** required. The recipe, motif length, seed domain,
 complexity acceptance rules, and generated input bytes are new frozen details.
 
@@ -261,6 +287,35 @@ family-condition-repeat read seed as exactly 32 secret bytes in the restricted
 sidecar. Do not generate, publish, or copy these values into this document,
 source control, analysis inputs, or analyst-visible logs. For each root seed:
 
+#### Proposed compatibility with the existing integer-seed manifest
+
+The current source-map and evaluator-manifest interfaces store seeds as
+non-negative JSON integers, and the validator rejects other types. The 32-byte
+root format above therefore requires an explicit compatibility rule; it does
+not imply changing those interfaces now.
+
+Proposed migration rule: preserve each approved integer seed unchanged in the
+existing private source map and manifest. For the proposed RNG v1 only, encode
+an integer `n` as exactly 32 unsigned big-endian bytes, zero-padded on the left;
+accept only `0 <= n < 2^256`. Never hash the integer's decimal text, truncate,
+reduce modulo `2^256`, or generate a replacement value. Derive the root key
+from those canonical bytes using the formula below. The manifest must identify
+this encoding as `unsigned_integer_32byte_big_endian_v1` if and only if a later
+amendment adopts it. Existing manifests without that version continue to mean
+the existing integer-seed behavior; they must not be silently reinterpreted.
+Before migration, independently check the approved private source values are
+within range without printing or exporting them. An out-of-range value blocks
+the proposed v1 migration and requires owner/reviewer resolution; it must not
+be coerced.
+
+Required synthetic tests include `0`, `1`, `2^64-1`, and `2^256-1` encodings;
+reject `-1`, booleans, strings, floats, and `2^256`; assert round-trip
+integer/32-byte correspondence and leading-zero preservation; verify that
+changing only the encoding version is rejected; and confirm the existing
+integer manifest validation and builder outputs remain unchanged until a
+separate approved amendment. Use synthetic test values only, never private
+evaluator seeds.
+
 1. Derive `K_root = SHA256(UTF8("M36/2B/RNG/v1") || 0x00 || seed32)`.
 2. A child stream has a fixed ASCII domain label. Encode it as UTF-8, require
    nonempty bytes and no NUL. Derive
@@ -269,13 +324,15 @@ source control, analysis inputs, or analyst-visible logs. For each root seed:
    `family/target/v1`, `family/background/<stable-source-id>/v1`,
    `family/technical-reference/<stable-source-id>/v1`,
    `low_complexity/motif/v1`, and
-   `read/<registered-block-id>/<registered-condition-id>/<repeat-id>/<event>/v1`.
+    `read/<registered-block-id>/<registered-condition-id>/<repeat-id>/<source-role>/<stable-source-id>/<read-ordinal>/<event>/v1`.
    `<event>` is one of `starts`, `deletions`, `substitution_window`,
-   `substitution_positions`, `substitution_bases`, `insertions`, or
-   `insertion_bases`. Identifiers use their frozen registered ASCII spellings;
-   they are not derived from list position, processing order, opaque case IDs,
-   or split names. Separate registered root seeds are used for family sequence
-   generation and each technical repeat's read generation.
+    `substitution_positions`, `substitution_bases`, `insertions`, or
+    `insertion_bases`. Identifiers use frozen registered ASCII spellings;
+    source-role and stable-source identifiers are assigned by the approved
+    source map, and read ordinal is zero-based within that source's prescribed
+    start list. None is derived from list position, processing order, opaque
+    case IDs, or split names. Separate registered root seeds are used for
+    family sequence generation and each technical repeat's read generation.
 3. Generate block `n` (zero-based unsigned 64-bit big-endian) as
    `HMAC-SHA256(key=K_child, message=UTF8("M36/2B/STREAM/v1") || 0x00 ||
    uint64_be(n))`. Concatenate each 32-byte block in ascending `n` to provide
@@ -285,7 +342,9 @@ source control, analysis inputs, or analyst-visible logs. For each root seed:
    limit`, consume the next 8 bytes, and return `x mod m`. Do not use modulo
    without rejection. For a uniform choice from an ordered list, use that
    integer as its zero-based index. Each domain has its own counter initialized
-   to zero; draws in one domain do not advance another.
+    to zero; draws in one domain do not advance another. Each source/read/event
+    tuple has its own stream; changing source or assignment iteration order
+    cannot change an existing tuple's generated bases, qualities, or errors.
 5. Fisher–Yates is descending-index swaps as specified in section 2.
    Without-replacement sampling uses partial Fisher–Yates on an ordered
    ascending candidate list, taking the first `k` elements. Bernoulli events
@@ -313,12 +372,12 @@ implementations must match every listed byte:
 | `K_root` | `225ca5009618c67cfec3d9e72174eae9f4fb2250753143bd74b0f06d81583a96` |
 | `K_child`, domain `family/target/v1` | `e2123b582b711e2555910b570543a54541a2da5b1d219bc769e62fd94af69a64` |
 | block 0 for that child | `bc00f654834b413c131eb88afbbc0a0cd786c75319d7209da82cf8fa8687df76` |
-| `K_child`, domain `read/positive_recovery/condition-01/repeat-01/substitution_positions/v1` | `261a2f83fea132fa1d32da943e8e36e46a3ddc4682101b4ae595a036e1ca16b8` |
-| block 0 for that child | `64c2570dca4e79bdd08b1c6d0ebf02949bcc8c163dc0ff06d109c35fbdddad9c` |
+| `K_child`, domain `read/positive_recovery/condition-01/repeat-01/synthetic_background/background-01/0/substitution_positions/v1` | `e8569dffd8ba424c4d016adb7161f8de1c4d254c417a3c72d19079d22de28661` |
+| block 0 for that child | `7bf5ce59379d3c4d83f9811ebb66b471dcdc7eace12adb9caddc9a8ec62b3106` |
 
-The second label above is an illustrative test label only; `condition-01` is
-not asserted to be a registered identifier. Actual stream labels must use the
-exact registered identifiers and event names. Test vectors must
+The second label above is an illustrative test label only; `condition-01` and
+`background-01` are not asserted to be registered identifiers. Actual stream
+labels must use the exact registered identifiers and event names. Test vectors must
 be implemented independently in at least two languages/runtimes before
 approval. Verify the full 32-byte outputs, rejection sampling, boundary
 probabilities `p=0` and `p=1`, and that changing one domain or root seed
@@ -329,10 +388,18 @@ independence proof; the family is still the inferential unit.
 
 This algorithm removes shared-stream/order coupling and gives reproducible
 substreams, but does not itself establish biological randomness or family
-independence. Test stable bytes when unrelated conditions are added or removed,
-distinct child keys for all distinct labels, repeated labels produce identical
-bytes, no counter wrap, deterministic candidate selection, source and FASTQ
-ledger agreement, and byte-identical paired assembler inputs. Record the
+independence. Traverse sources in UTF-8 bytewise ascending
+`(role, stable-source-id)` order; within each source traverse reads by ordinal
+start-list order; emit each complete FASTQ record before the next. This is a
+serialization rule only and allocates no random draws. Reordering source
+iteration must leave final FASTQ bytes identical. Adding or removing an
+unrelated assignment must leave an existing assignment's FASTQ bytes
+identical. Adding a source to the same assignment naturally changes the whole
+FASTQ by adding records, but must not change any pre-existing source/read
+record bytes. Test these invariants with a separately implemented per-read
+reference, distinct child keys for distinct labels, identical bytes for
+repeated labels, no counter wrap, deterministic candidate selection, ledger
+agreement, and byte-identical paired assembler inputs. Record the
 algorithm version, public test-vector result, and input/output digests; never
 record private seed bytes or split mapping in public artifacts.
 
@@ -371,10 +438,12 @@ length `R`, and nominal depth `C`:
    `i=0..N-1`. This is Python-compatible ties-to-even rounding. Starts are
    zero-based, inclusive, and read intervals are `[s_i,s_i+R)`.
 2. Require every start in `[0,L-R]`. When `N <= L-R+1`, require starts to be
-   strictly increasing and unique. If a future design permits more reads than
-   valid start positions, the formula may repeat starts; that situation must
-   be explicitly preregistered rather than silently deduplicated. The current
-   frozen M36 target settings do not require this exception.
+   strictly increasing and unique. When `N > L-R+1`, use every start produced
+   by the same formula, including repeats; never deduplicate, resample, or
+   change the count. This is the proposed repeated-start rule for all sources,
+   including the 1:9 background condition. For `L=R`, all starts are zero, so
+   all `N` reads repeat the sole valid start. For `L>R`, report each start's
+   multiplicity.
 3. Nominal depth is the requested `C`. Report nominal source-read depth
    `N*R/L`, source-window exposure `sum_i R / L` (which equals `N*R/L` here),
    and mean source-coordinate depth computed from the clipped intervals.
@@ -438,6 +507,23 @@ make no addition to the 12 families, 4/4/4 split, two-repeat structure, or
 520-attempt ceiling. Coverage and indel measures remain covariates/outcomes for
 the same endpoints and family-level comparisons. Any changed starts or counts
 must be classified as an amendment before the existing assignments are run.
+
+## Scientific acceptance matrix for independent review
+
+All checks below are proposed, unregistered, synthetic-only acceptance checks.
+They do not execute the registered matrix or change adapters/settings.
+
+| Amendment section | Exact fixtures and independent reference | Expected outcome | Classification |
+|---|---|---|---|
+| 1. Read-record ratio | Ledger/FASTQ fixtures with `T=1`, `B=9`; `T=2`, `B=18`; one and multiple sources with largest-remainder ties; omitted/duplicate IDs; technical-reference records; independent FASTQ parser. | Exact totals pass regardless of technical-reference count; tie allocation follows stable UTF-8 ID order; any role/ledger mismatch or non-1:9 count blocks `GENERATOR_INVALID`. | Amendment unless controlling approval source specifies denominator, stage, allocation, and failure rule. |
+| 2. Periodic motif | Profiles `(900,0,0,0)`, `(899,1,0,0)`, `(877,23,0,0)`, `(225,225,225,225)`, `(630,90,90,90)`, `(540,180,90,90)`; independent Hamilton, entropy, primitive-period and 20-mer enumeration. | Match listed apportioned counts/entropy; homopolymer apportioned profiles fail, feasible profiles have at least one qualifying arrangement; runtime draw exhaustion fails without changing recipe. | Amendment. |
+| 3. Clustered substitutions | `R=100,s=0.02,d=0`, `R=100,s=0`, deletion-heavy window with fewer than `k` surviving sites, valid starts `0` and `R-20`, and impossible windows; independent M25 count and coordinate implementation. | `k=2` and `k=0` respectively; exactly `k` substitutions among survivors, all within selected window; impossible case fails without fallback; insertion/deletion semantics and origin/quality identities match. | Amendment. |
+| 4. Seeds/streams | Integer boundaries `0`, `1`, `2^64-1`, `2^256-1`, rejected `-1`, `2^256`, booleans and floats; public HMAC vectors; source order permutations and unrelated-assignment additions; independent CPython and Node implementations. | Exact canonical 32-byte encoding and vector bytes match; invalid types/ranges block; same assignment/source/read tuples preserve record bytes; unrelated assignments do not alter existing assignment FASTQ; paired assemblers receive identical bytes. | Amendment; existing integer manifests/builders stay unchanged pending approval. |
+| 5. Starts/coverage/indels | `L=R`, `N=0`, `N=1`, `D=0`, half ties, `L=900,R=100,C=48`, and background fixtures with `N=L-R+1` and `N>L-R+1`; independent start/depth calculator. | Exact rounded starts and counts match; every start is in bounds; formula repeats are retained and multiplicities reported; coverage breadth/depth arrays equal the independent reference; indel accounting reconciles output lengths. | Clarification only if controlling source confirms exact semantics; otherwise amendment. |
+
+The independent references must not call M25, the registered adapter, or the
+generator under test. Failures stop the relevant proposal from approval; they
+do not trigger parameter tuning. Only synthetic fixtures may be used.
 
 ## Evidence, interpretation, and approval gates
 
