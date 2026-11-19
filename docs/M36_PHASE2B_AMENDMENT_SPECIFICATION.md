@@ -333,6 +333,9 @@ evaluator seeds.
     start list. None is derived from list position, processing order, opaque
     case IDs, or split names. Separate registered root seeds are used for
     family sequence generation and each technical repeat's read generation.
+    The `starts` event domain is reserved for any separately approved
+    stochastic start model; the proposed frozen `uniform` start formula in
+    section 5 is deterministic and consumes no `starts` stream.
 3. Generate block `n` (zero-based unsigned 64-bit big-endian) as
    `HMAC-SHA256(key=K_child, message=UTF8("M36/2B/STREAM/v1") || 0x00 ||
    uint64_be(n))`. Concatenate each 32-byte block in ascending `n` to provide
