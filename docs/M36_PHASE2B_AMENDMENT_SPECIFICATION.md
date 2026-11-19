@@ -172,21 +172,21 @@ Hamilton apportionment guarantees the per-base fraction bound of at most
 bound. These synthetic profiles were checked using exact apportionment and an
 independent Shannon-entropy calculation:
 
-| 900-nt source counts `(A,C,G,T)` | 20-nt counts | Entropy difference (bits) | Feasibility |
+| 900-nt source counts `(A,C,G,T)` | 20-nt counts | Entropy difference (bits) | Feasibility witness or result |
 |---|---:|---:|---|
 | `(900,0,0,0)` | `(20,0,0,0)` | 0.0000 | Impossible: period 1 only; fail `GENERATOR_INVALID`. |
 | `(899,1,0,0)` | `(20,0,0,0)` | 0.0125 | Impossible under the specified composition; fail `GENERATOR_INVALID`. |
-| `(877,23,0,0)` | `(19,1,0,0)` | 0.1148 | Feasible in principle; deterministic retry must find a primitive motif or fail at the fixed bound. |
-| `(225,225,225,225)` | `(5,5,5,5)` | 0.0000 | Feasible; primitive motif and bounds can be satisfied. |
-| `(630,90,90,90)` | `(14,2,2,2)` | 0.0000 | Feasible; primitive motif and bounds can be satisfied. |
-| `(540,180,90,90)` | `(12,4,2,2)` | 0.0000 | Feasible; primitive motif and bounds can be satisfied. |
+| `(877,23,0,0)` | `(19,1,0,0)` | 0.1148 | `AAAACAAAAAAAAAAAAAAA` has exact period 20 and satisfies both bounds. |
+| `(225,225,225,225)` | `(5,5,5,5)` | 0.0000 | `GATATGGAGATCCGCCACTT` has exact period 20 and satisfies both bounds. |
+| `(630,90,90,90)` | `(14,2,2,2)` | 0.0000 | `CAGATAAAAATAAAAAAAGC` has exact period 20 and satisfies both bounds. |
+| `(540,180,90,90)` | `(12,4,2,2)` | 0.0000 | `CAGATCCAAATAAAAAAAGC` has exact period 20 and satisfies both bounds. |
 
 The first two rows show that these acceptance criteria are not universally
 satisfiable. Before an amendment is approved, run a synthetic feasibility
-suite over these and additional declared boundary compositions, independently
-enumerate possible 20-mer arrangements for each apportioned multiset, and
-report whether at least one arrangement is primitive and within both fraction
-and entropy bounds. Do not relax the criteria or retry with another recipe for
+suite over these and additional declared boundary compositions. An independent
+checker must establish whether each apportioned multiset admits any primitive
+arrangement satisfying both fraction and entropy bounds, and verify any
+reported witness; test all proper divisors of 20. Do not relax the criteria or retry with another recipe for
 an infeasible profile. Mark that family condition `GENERATOR_INVALID`; do not
 replace the sequence, omit the family, or alter the 12-family split. These are
 feasibility diagnostics, not registered-family results.
