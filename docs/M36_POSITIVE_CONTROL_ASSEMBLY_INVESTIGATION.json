@@ -1,0 +1,243 @@
+{
+  "schema": "m36-positive-control-assembly-preregistration-v1",
+  "milestone": "M36",
+  "phase": 1,
+  "status": "DESIGN_ONLY",
+  "design_only": true,
+  "synthetic_only": true,
+  "source_evidence": {
+    "m35_merge_commit": "87aa70302d78b735e83c1cda6982e44f2f4142c2",
+    "positive_controls": {"generated": 3, "evaluable": 0, "unevaluable": 3, "reason": "No read-supported assembly."},
+    "spades": {"failed": 26, "executions": 28, "error": "Invalid kmer coverage histogram", "zero_substitution_supported": 2, "zero_substitution_denominator": 2, "mechanism_resolved": false}
+  },
+  "governance": {
+    "decision": "INCOMPLETE",
+    "overall_state": "BLOCKED_FOR_BENCHMARK_EXECUTION",
+    "phase1_design_only": true,
+    "m36_experiments_executed": false,
+    "biological_execution_authorized": false,
+    "production_promotion": false,
+    "m6_settings_changed": false,
+    "m8_settings_changed": false,
+    "m31_thresholds_changed": false,
+    "m34_m35_results_modified": false
+  },
+  "objectives": [
+    {
+      "id": "positive_control_recovery",
+      "hypotheses": [
+        "Recovery varies with realized target-read abundance, coverage, read length, complexity, or error profile.",
+        "Some loss occurs at support-evidence linkage or downstream handoff rather than read generation or assembly.",
+        "Generator-to-assembler interactions may explain outcomes not captured by marginal effects."
+      ],
+      "primary_endpoints": ["generation_validity", "assembly_completion", "target_recovery", "read_support_status", "downstream_detection_handoff"]
+    },
+    {
+      "id": "spades_failure_diagnostics",
+      "hypotheses": [
+        "Near-zero substitution contrasts reproduce across independent synthetic families.",
+        "The observed histogram error is associated with one or more read, error, composition, or coverage conditions."
+      ],
+      "mechanism_claim_permitted": false,
+      "stage_evidence": "Retain full raw logs and last documented stage; graph construction/coverage estimation remain unresolved if tool logs do not identify them."
+    },
+    {
+      "id": "alternative_assembly_comparison",
+      "hypothesis": "Separately namespaced SPAdes and Tadpole runs may differ on identical synthetic inputs.",
+      "interpretation": "Descriptive only; does not replace M6 or establish biological performance."
+    }
+  ],
+  "experimental_units": {
+    "independent_families": 12,
+    "families": [
+      {"family_id":"f01"},{"family_id":"f02"},{"family_id":"f03"},{"family_id":"f04"},
+      {"family_id":"f05"},{"family_id":"f06"},{"family_id":"f07"},{"family_id":"f08"},
+      {"family_id":"f09"},{"family_id":"f10"},{"family_id":"f11"},{"family_id":"f12"}
+    ],
+    "family_split_counts": {"development": 4, "tuning": 4, "held_out": 4},
+    "independent_unit": "synthetic_sequence_family",
+    "technical_repeat_is_independent_unit": false,
+    "family_seed_and_read_seed_separate": true,
+    "split_seed_and_truth_mapping": "Restricted evaluation sidecar; not present in analysis inputs or this public manifest.",
+    "held_out_truth_in_analysis_inputs": false,
+    "analysis_case_id_pattern": "m36x####-c##-r##",
+    "analysis_visible_ids_omit": ["truth", "split", "factor", "condition"],
+    "truth_and_split_mapping": "Restricted evaluation sidecar; unavailable to analysis stages until locked unblinding."
+  },
+  "frozen_baseline": {
+    "generator": "Existing M25 synthetic read generator; audit semantics before execution.",
+    "target_length_nt": 900,
+    "nominal_coverage": 48,
+    "read_length_nt": 100,
+    "substitution_rate": 0.02,
+    "insertion_rate": 0.01,
+    "deletion_rate": 0.01,
+    "read_start_mode": "uniform",
+    "synthetic_background_coverage": true,
+    "report_realized_values": true
+  },
+  "controls": [
+    {"id":"synthetic_exact_positive","role":"target-present recovery control"},
+    {"id":"synthetic_target_absent","role":"background-only negative control"},
+    {"id":"generator_payload_audit","role":"verify generated target reads and simulator placement ledger"},
+    {"id":"invalid_or_empty_fastq_integrity","role":"pipeline integrity control, not a biological negative"}
+  ],
+  "matrix": [
+    {
+      "block_id":"positive_recovery",
+      "condition_count_per_family":9,
+      "family_count":12,
+      "conditions":[
+        "frozen_baseline","coverage_24","coverage_80","read_length_75","read_length_150",
+        "target_background_abundance_1_to_9","low_complexity_stress_sequence",
+        "coverage_24_x_abundance_1_to_9","coverage_80_x_abundance_1_to_9"
+      ],
+      "technical_repeats_per_condition":2,
+      "planned_family_condition_units":108,
+      "planned_assembly_executions":216,
+      "comparison_design":"One factor at a time plus two prespecified coverage-by-abundance corners; not a full factorial.",
+      "blocked_condition":"1:9 target:background ratio is NOT_RUN until generator audit confirms the ratio can be set and measured exactly."
+    },
+    {
+      "block_id":"spades_error_diagnostic",
+      "condition_count_per_family":9,
+      "family_count":12,
+      "conditions":[
+        "frozen_m35_baseline_anchor","substitution_rate_0","substitution_rate_0_0025",
+        "substitution_rate_0_005","coverage_24","coverage_80","read_length_75",
+        "read_length_150","alternate_error_position_distribution_same_rates"
+      ],
+      "technical_repeats_per_condition":2,
+      "planned_family_condition_units":108,
+      "planned_assembly_executions":216,
+      "causal_claim_permitted":false,
+      "unvaried_factors_reported_as_uncontrolled":true,
+      "blocked_factors":[
+        {"factor":"SPAdes k-mer selection and compatibility","status":"NOT_RUN","blocker":"Current adapter does not expose k-mer selection; separately reviewed, version-compatible options and frozen values are required."},
+        {"factor":"Sequence-complexity interactions","status":"PARTIALLY_COVERED","limitation":"Low-complexity condition appears in the recovery block; it is not fully crossed with every SPAdes factor."}
+      ]
+    },
+    {
+      "block_id":"target_absent_controls",
+      "condition_count_per_family":1,
+      "family_count":12,
+      "conditions":["background_only_at_frozen_baseline"],
+      "technical_repeats_per_condition":2,
+      "planned_family_condition_units":12,
+      "planned_assembly_executions":24,
+      "family_assignment":"All 12 registered family tokens, one matched background-only control per family; target sequence and target-derived reads are absent.",
+      "purpose":"Synthetic target-absent specificity control, not a biological negative.",
+      "included_in_original_464_execution_estimate":false
+    },
+    {
+      "block_id":"alternative_assemblers",
+      "assemblers":[
+        {"id":"spades","executable":"spades.py or spades","version_requirement":"Freeze exact version output and executable SHA-256; M35 summary does not pin it."},
+        {"id":"tadpole","executable":"BBTools Tadpole","version_requirement":"BBTools 40.01; verify archive SHA-256 36b1c7be738f16185e967e33cab909e660b0f33a905b1fe06043f24a314a3725."}
+      ],
+      "family_selection":"Eight family tokens total; four development families are for exploratory compatibility checks and four held-out families are reserved for the locked final comparison. Exact family-to-split assignments exist only in the restricted sidecar.",
+      "locked_arms":["frozen_m35_baseline_input","zero_substitution_input"],
+      "family_count":8,
+      "condition_count_per_family":2,
+      "assembler_count":2,
+      "technical_repeats_per_assembler_arm":2,
+      "planned_family_condition_units":32,
+      "planned_assembly_executions":64,
+      "paired_input_rule":"For each family, arm, and repeat, SPAdes and Tadpole receive byte-identical FASTQ inputs. Repeat 1 and repeat 2 use independently simulated reads.",
+      "exploratory_role":"Development-family compatibility and output-contract checks only; cannot tune against held-out results.",
+      "held_out_role":"Locked final paired comparison after tools, inputs, analysis, and thresholds are frozen.",
+      "namespace_required":true,
+      "not_run_if_tool_identity_or_input_compatibility_unresolved":true
+    }
+  ],
+  "registered_case_manifest": {
+    "format":"cartesian_product_v1",
+    "purpose":"Complete preregistered family-condition-repeat-tool assignments; counts are derived by expanding these entries.",
+    "analysis_visible_case_ids":"Fresh opaque random tokens; never use family, split, truth, factor, condition, or assembler labels in paths, FASTQ headers, stage IDs, or analyst-facing logs.",
+    "analysis_visible_case_id_pattern":"case-[a-f0-9]{24}",
+    "analysis_visible_stage_id_pattern":"stage-[a-f0-9]{24}-s[0-9]{2}",
+    "analysis_visible_header_rule":"FASTQ headers contain only the opaque case token and read ordinal; no split, truth, family, condition, or factor labels.",
+    "analysis_visible_log_rule":"Blinded logs use opaque tokens only; raw tool logs remain restricted and sanitized logs remove paths and factor-revealing command echoes.",
+    "families":["f01","f02","f03","f04","f05","f06","f07","f08","f09","f10","f11","f12"],
+    "repeat_ids":["r01","r02"],
+    "blocks":[
+      {"block_id":"positive_recovery","family_ids":["f01","f02","f03","f04","f05","f06","f07","f08","f09","f10","f11","f12"],"condition_ids":["c01","c02","c03","c04","c05","c06","c07","c08","c09"],"assembler_ids":["spades"]},
+      {"block_id":"spades_error_diagnostic","family_ids":["f01","f02","f03","f04","f05","f06","f07","f08","f09","f10","f11","f12"],"condition_ids":["c01","c02","c03","c04","c05","c06","c07","c08","c09"],"assembler_ids":["spades"]},
+      {"block_id":"target_absent_controls","family_ids":["f01","f02","f03","f04","f05","f06","f07","f08","f09","f10","f11","f12"],"condition_ids":["c01"],"assembler_ids":["spades"]},
+      {"block_id":"alternative_assemblers","family_ids":["f01","f02","f03","f04","f05","f06","f07","f08"],"condition_ids":["c01","c02"],"assembler_ids":["spades","tadpole"]}
+    ],
+    "restricted_evaluation_sidecar":{
+      "contains":["family-to-split mapping","sequence/read seeds","truth sequences","factor and condition decoding","opaque-case-to-registered-case mapping"],
+      "access":"Evaluator only; excluded from generator/assembler/analysis stage inputs and analyst-facing logs.",
+      "unblinding_point":"Only after raw evidence and analysis outputs are hashed, denominator/status validation passes, the design and analysis are frozen, and the independent reviewer authorizes locked unblinding."
+    }
+  },
+  "planned_totals": {
+    "family_condition_units":260,
+    "assembly_executions_max":520,
+    "attempt_timeout_seconds":180,
+    "aggregate_attempt_slot_hours":26,
+    "estimated_cpu_hours_at_one_vcpu_per_attempt":26,
+    "cpu_estimate_status":"Planning estimate, not measured; execution is blocked unless each attempt can be constrained to one vCPU or the estimate is recalculated.",
+    "maximum_concurrent_jobs":4,
+    "wall_time_budget_hours":8,
+    "wall_budget_allocation_hours":{"matrix_execution_window":6.5,"runner_setup_and_teardown_reserve":0.75,"artifact_validation_reserve":0.75},
+    "budget_exhaustion":"Stop launching queued attempts at the wall or aggregate slot budget. Preserve in-progress evidence; mark cancelled attempts INTERRUPTED_BUDGET and unstarted attempts NOT_RUN_BUDGET_EXHAUSTED. Do not retry automatically."
+  },
+  "analysis": {
+    "binary_endpoint_interval":"95% Wilson interval at independent-family level",
+    "technical_repeats":"Repeats use independent read-simulation seeds; summarize within family-condition and never count as independent families.",
+    "paired_comparison":"Within each family, arm, and repeat, compare SPAdes and Tadpole on byte-identical reads. Compute paired differences per repeat, summarize repeats within family, then show each of the four family-level differences and their median and range; do not pool repeat-level rows as independent observations or claim inferential power from four families.",
+    "reporting":"All n/N, unevaluable, failure, interruption, and NOT_RUN blocker counts.",
+    "missing_data":"No imputation; retain all statuses.",
+    "held_out_unblinding":"Only after locked design, tools, and analyses validate.",
+    "threshold_tuning":false,
+    "biological_sensitivity_specificity_claims":false,
+    "unevaluable_positive_rule":"No supported assembly means unevaluable, not a positive or negative detection."
+  },
+  "failure_classifications":[
+    "GENERATOR_INVALID","INPUT_DIGEST_MISMATCH","ASSEMBLER_MISSING",
+    "ASSEMBLY_EXECUTION_FAILED","ASSEMBLY_INTERRUPTED","INTERRUPTED_BUDGET","NOT_RUN_BUDGET_EXHAUSTED","ASSEMBLY_OUTPUT_INVALID",
+    "SUPPORT_EVIDENCE_INVALID","DOWNSTREAM_HANDOFF_FAILED",
+    "UNEVALUABLE_NO_SUPPORTED_ASSEMBLY","NOT_RUN_WITH_BLOCKER","COMPLETE"
+  ],
+  "evidence_artifacts":[
+    "preregistration.json","generator_manifest.json","generated_reads.fastq.gz",
+    "simulator_placement_ledger.json","assembly_manifest.json","assembler_stdout.log",
+    "assembler_stderr.log","raw_assembler_logs/","raw_contigs.fasta",
+    "canonical_contigs.fasta","read_support.json","downstream_result.json",
+    "validation.json","artifact_inventory.json"
+  ],
+  "future_actions_plan":{
+    "enabled_in_phase1":false,
+    "trigger":"Manual and separately approved only",
+    "artifact_root":"m36/<design-sha>/<opaque-run-token>/",
+    "maximum_parallelism":4,
+    "timeout_seconds_per_attempt":180,
+    "workflow_timeout_hours":8,
+    "required_hashes":["design","source_commit","generator","inputs","tool executables","raw outputs","artifact inventory","archive"]
+  },
+  "acceptance_gates_for_phase2":[
+    "Independent scientific review approves design, endpoints, exclusions, uncertainty plan, and budget.",
+    "User explicitly authorizes Phase 2 synthetic execution.",
+    "Generator semantics, abundance, seed separation, complexity, and placement evidence are audited.",
+    "Exact executable versions and hashes are frozen and input/output compatibility is smoke-tested.",
+    "Held-out truth and factor labels are absent from analysis-visible inputs and identifiers.",
+    "CI validates denominator accounting, distinct failure statuses, evidence hashes, and frozen M6/M8/M31 constraints.",
+    "Authorization is scoped to the exact synthetic matrix, commit, tools, and resource limits."
+  ],
+  "capability_gaps":[
+    {"area":"M25 generator audit","gap":"Confirm abundance, coverage, composition, and placement-ledger semantics; exact 1:9 arm is blocked until verifiable.","state":"BLOCKS_EXECUTION"},
+    {"area":"SPAdes k-mer settings","gap":"Current adapter does not expose k-mer selection; implementation needs separate review.","state":"NOT_AVAILABLE_WITHOUT_ADDITIONAL_DEVELOPMENT"},
+    {"area":"SPAdes provenance","gap":"Freeze exact version output and executable digest.","state":"BLOCKS_EXECUTION"},
+    {"area":"Truth-to-support audit","gap":"Create a synthetic-only crosswalk without exposing truth to analysis stages.","state":"BLOCKS_EXECUTION"},
+    {"area":"M36 Actions execution","gap":"No execution workflow is added or enabled in Phase 1.","state":"DESIGN_ONLY"}
+  ],
+  "limitations":[
+    "M35's three exact-positive controls were unevaluable because none had supported assembly.",
+    "M35's 26/28 SPAdes failures do not identify a confirmed causal mechanism.",
+    "The small family count and one-factor matrix cannot resolve every interaction.",
+    "M35 summary evidence does not record exact SPAdes version.",
+    "Synthetic results cannot establish biological sensitivity, specificity, or validated discovery."
+  ]
+}
