@@ -129,10 +129,16 @@ construction.
    `low_complexity/motif` stream specified in section 4, then swap positions
    `i` and `j`. Do not retry based on downstream performance.
 4. Accept only a primitive 20-base motif: for each proper divisor `d` of 20,
-   require at least one `motif[i] != motif[i mod d]`. Otherwise consume the next
-   twenty draws from the same stream and repeat the shuffle, up to 1,000
-   candidates. If none is primitive, fail the family condition as
-   `GENERATOR_INVALID`; do not substitute another algorithm.
+   require at least one `motif[i] != motif[i mod d]`. A candidate uses exactly
+   19 accepted bounded-integer draws, one for each `i=19..1`. If it is rejected,
+   immediately start the next Fisher–Yates shuffle with the next 19 accepted
+   bounded-integer draws from the same stream. Do not discard an extra draw
+   between candidates. The unbiased integer sampler may consume additional
+   underlying 64-bit words when rejecting out-of-range values; those words are
+   part of that draw and do not count as accepted bounded-integer draws. Test at
+   most 1,000 candidate shuffles, including the first. If candidate 1,000 is
+   not primitive, fail the family condition as `GENERATOR_INVALID`; do not
+   substitute another algorithm.
 5. Repeat the accepted motif exactly 45 times to produce 900 nt. Preserve the
    resulting sequence as the low-complexity target for both technical repeats
    and all registered paired downstream comparisons. Its digest is a generated
@@ -190,6 +196,24 @@ reported witness; test all proper divisors of 20. Do not relax the criteria or r
 an infeasible profile. Mark that family condition `GENERATOR_INVALID`; do not
 replace the sequence, omit the family, or alter the 12-family split. These are
 feasibility diagnostics, not registered-family results.
+
+### Public synthetic rejection/retry vector
+
+This draw-injection vector tests Fisher–Yates ordering and stream continuation;
+it is not a seed or an evaluator value. Start with the ordered multiset of 18
+`A` bases followed by 2 `C` bases. Each draw list is ordered
+`j_19,j_18,...,j_1`; every entry is an accepted bounded-integer result for its
+corresponding index.
+
+| Candidate | `j_19,...,j_1` | Resulting motif | Expected result |
+|---|---|---|---|
+| 1 | `4,15,16,9,5,12,2,10,4,2,0,6,7,4,0,1,2,2,0` | `ACAAAAAAAAACAAAAAAAA` | Reject: exact period 10. |
+| 2 | `3,15,2,10,11,12,7,1,7,2,0,3,5,5,2,0,2,2,1` | `AAAAAACACAAAAAAAAAAA` | Accept: exact period 20. |
+
+The second list begins immediately after the nineteenth accepted bounded draw
+of candidate 1. An implementation that discards a draw between candidates
+fails this vector. Also test the 1,000-candidate boundary: 1,000 rejected
+candidates produce `GENERATOR_INVALID`, with no 1,001st shuffle.
 
 **Amendment decision:** required. The recipe, motif length, seed domain,
 complexity acceptance rules, and generated input bytes are new frozen details.
@@ -328,10 +352,10 @@ evaluator seeds.
    `<event>` is one of `starts`, `deletions`, `substitution_window`,
     `substitution_positions`, `substitution_bases`, `insertions`, or
     `insertion_bases`. Identifiers use frozen registered ASCII spellings;
-    source-role and stable-source identifiers are assigned by the approved
-    source map, and read ordinal is zero-based within that source's prescribed
-    start list. None is derived from list position, processing order, opaque
-    case IDs, or split names. Separate registered root seeds are used for
+    source-role and stable-source identifiers follow the canonical rules below,
+    and read ordinal is zero-based within that source's prescribed start list.
+    None is derived from list position, processing order, opaque case IDs, or
+    split names. Separate registered root seeds are used for
     family sequence generation and each technical repeat's read generation.
     The `starts` event domain is reserved for any separately approved
     stochastic start model; the proposed frozen `uniform` start formula in
@@ -357,12 +381,49 @@ evaluator seeds.
    floating-point approximations.
 6. Cross-runtime conformance uses a reference implementation in CPython
    3.11.11 and an independent implementation in Node.js 22.13.1. Both use only
-   their standard SHA-256 and HMAC-SHA-256 primitives; neither may delegate
-   random draws to a runtime PRNG. Text manifests are UTF-8; domain labels are
-   ASCII; all integers in stream
-   derivation are unsigned big-endian. Sequence bytes are uppercase ASCII
+    their standard SHA-256 and HMAC-SHA-256 primitives; neither may delegate
+    random draws to a runtime PRNG. Text manifests are UTF-8; domain labels are
+    ASCII; all integers in stream
+    derivation are unsigned big-endian. Sequence bytes are uppercase ASCII
    `ACGT`. These rules define the byte stream independently of Python, NumPy,
    platform, locale, and filesystem order.
+
+### Canonical source identifiers
+
+The stable source ID is a canonical ASCII token, not a list index or FASTQ
+record ID. Use these exact forms:
+
+| Source role | Canonical stable source ID |
+|---|---|
+| Family target | `family-target-<registered-family-id>`; for example, `family-target-f01`. |
+| Synthetic background | `synthetic-background-<registered-family-id>-<source-key>`. |
+| Technical reference | `technical-reference-<registered-family-id>-<source-key>`. |
+
+The target IDs for the registered families are exactly
+`family-target-f01` through `family-target-f12`, using each family's exact
+registered ID. For background and technical-reference sources, `<source-key>`
+is an ASCII lowercase token matching `[a-z][a-z0-9]*(?:-[a-z0-9]+)*`, with a
+maximum of 48 characters. The approved restricted source inventory assigns
+each key to one immutable logical source definition before generation; keys
+are not numeric ordinals, array positions, processing order, or values inferred
+from another source. Preserve a key when unrelated sources are inserted,
+removed, or reordered. Use a new key when a distinct logical source is
+introduced. Full IDs must be unique across the complete source inventory.
+Reject missing or malformed keys, unregistered family IDs, role/prefix
+mismatches, and duplicate full IDs as `GENERATOR_INVALID`; do not normalize,
+rename, or silently disambiguate them.
+
+These IDs do not change the existing private
+`m36-approved-evaluator-source-map-v1` schema or any private values. In that
+schema, `families[].family_id` identifies a registered family and its seed/split
+row; `read_seeds[]` is keyed by the registered block/family/condition/repeat
+tuple; and `provenance.source_id` identifies the approved source document, not
+a sequence source. The proposed stable IDs are a separate role-specific
+identity layer in the restricted source inventory, joined to existing
+assignments by their registered family/condition keys. They are not seed-map
+keys, do not replace registered identifiers, and must not be copied into
+public artifacts when they reveal restricted source mapping. If the required
+inventory or an ID is absent, stop rather than deriving one from source order.
 
 ### Public non-secret test vector
 
@@ -518,10 +579,10 @@ They do not execute the registered matrix or change adapters/settings.
 
 | Amendment section | Exact fixtures and independent reference | Expected outcome | Classification |
 |---|---|---|---|
-| 1. Read-record ratio | Ledger/FASTQ fixtures with `T=1`, `B=9`; `T=2`, `B=18`; one and multiple sources with largest-remainder ties; omitted/duplicate IDs; technical-reference records; independent FASTQ parser. | Exact totals pass regardless of technical-reference count; tie allocation follows stable UTF-8 ID order; any role/ledger mismatch or non-1:9 count blocks `GENERATOR_INVALID`. | Amendment unless controlling approval source specifies denominator, stage, allocation, and failure rule. |
-| 2. Periodic motif | Profiles `(900,0,0,0)`, `(899,1,0,0)`, `(877,23,0,0)`, `(225,225,225,225)`, `(630,90,90,90)`, `(540,180,90,90)`; independent Hamilton, entropy, primitive-period and 20-mer enumeration. | Match listed apportioned counts/entropy; homopolymer apportioned profiles fail, feasible profiles have at least one qualifying arrangement; runtime draw exhaustion fails without changing recipe. | Amendment. |
+| 1. Read-record ratio | Ledger/FASTQ fixtures with `T=1`, `B=9`; `T=2`, `B=18`; one and multiple sources with largest-remainder ties; canonical background IDs; omitted/duplicate IDs; technical-reference records; independent FASTQ parser. | Exact totals pass regardless of technical-reference count; tie allocation follows UTF-8 bytewise canonical-ID order; invalid/duplicate IDs or any role/ledger mismatch or non-1:9 count blocks `GENERATOR_INVALID`. | Amendment unless controlling approval source specifies denominator, stage, allocation, and failure rule. |
+| 2. Periodic motif | Profiles `(900,0,0,0)`, `(899,1,0,0)`, `(877,23,0,0)`, `(225,225,225,225)`, `(630,90,90,90)`, `(540,180,90,90)`; independent Hamilton, entropy, primitive-period and 20-mer enumeration; public two-candidate 19-draw retry vector. | Match listed apportioned counts/entropy; homopolymer apportioned profiles fail; vector candidate 1 is rejected at period 10, candidate 2 immediately consumes 19 fresh accepted draws and passes at period 20; 1,000 rejected candidates fail without a 1,001st shuffle. | Amendment. |
 | 3. Clustered substitutions | `R=100,s=0.02,d=0`, `R=100,s=0`, deletion-heavy window with fewer than `k` surviving sites, valid starts `0` and `R-20`, and impossible windows; independent M25 count and coordinate implementation. | `k=2` and `k=0` respectively; exactly `k` substitutions among survivors, all within selected window; impossible case fails without fallback; insertion/deletion semantics and origin/quality identities match. | Amendment. |
-| 4. Seeds/streams | Integer boundaries `0`, `1`, `2^64-1`, `2^256-1`, rejected `-1`, `2^256`, booleans and floats; public HMAC vectors; source order permutations and unrelated-assignment additions; independent CPython and Node implementations. | Exact canonical 32-byte encoding and vector bytes match; invalid types/ranges block; same assignment/source/read tuples preserve record bytes; unrelated assignments do not alter existing assignment FASTQ; paired assemblers receive identical bytes. | Amendment; existing integer manifests/builders stay unchanged pending approval. |
+| 4. Seeds/streams | Integer boundaries `0`, `1`, `2^64-1`, `2^256-1`, rejected `-1`, `2^256`, booleans and floats; public HMAC vectors; target IDs `family-target-f01` through `family-target-f12`; role-prefixed background/reference IDs; invalid/duplicate IDs; source-order permutations and unrelated-source additions; independent CPython and Node implementations. | Exact canonical 32-byte encoding and vector bytes match; invalid types/ranges/IDs block; existing IDs and source/read records remain unchanged after insertion or reordering of unrelated sources; paired assemblers receive identical bytes. | Amendment; existing integer manifests/builders stay unchanged pending approval. |
 | 5. Starts/coverage/indels | `L=R`, `N=0`, `N=1`, `D=0`, half ties, `L=900,R=100,C=48`, and background fixtures with `N=L-R+1` and `N>L-R+1`; independent start/depth calculator. | Exact rounded starts and counts match; every start is in bounds; formula repeats are retained and multiplicities reported; coverage breadth/depth arrays equal the independent reference; indel accounting reconciles output lengths. | Clarification only if controlling source confirms exact semantics; otherwise amendment. |
 
 The independent references must not call M25, the registered adapter, or the
